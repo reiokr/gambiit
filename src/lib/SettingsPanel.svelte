@@ -1033,15 +1033,16 @@
   }
 
   .panel {
+    display: flex;
     width: min(760px, 100%);
+    height: min(860px, calc(100vh - 64px));
     max-height: min(860px, calc(100vh - 64px));
+    flex-direction: column;
     overflow: hidden;
     border: 1px solid var(--border);
     border-radius: 18px;
     background: var(--panel);
     box-shadow: var(--shadow);
-    display: flex;
-    flex-direction: column;
   }
 
   .head {
@@ -1132,6 +1133,8 @@
   }
 
   .body {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding: 22px 26px;
   }
@@ -1300,8 +1303,11 @@
     top: calc(100% + 6px);
     right: 0;
     left: 0;
+    display: flex;
+    height: min(340px, 46vh);
     max-height: 340px;
-    overflow-y: auto;
+    flex-direction: column;
+    overflow: hidden;
     border: 1px solid var(--border);
     border-radius: 10px;
     background: var(--panel);
@@ -1335,7 +1341,10 @@
 
   .model-options {
     display: flex;
+    min-height: 0;
+    flex: 1;
     flex-direction: column;
+    overflow-y: auto;
     padding: 4px;
   }
 
@@ -1941,6 +1950,7 @@
       padding: 12px;
     }
     .panel {
+      height: calc(100vh - 24px);
       max-height: calc(100vh - 24px);
     }
     .head,
