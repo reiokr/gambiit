@@ -12,7 +12,7 @@ use std::{
     path::PathBuf,
     process::{Command, Stdio},
     thread,
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime},
 };
 use thiserror::Error;
 
@@ -341,19 +341,16 @@ impl AgentSession {
     where
         F: Fn(&AgentTurn) -> Result<(), String>,
     {
-        let mut varied = candidates.to_vec();
-        let recommended = choose_recommended(&mut varied);
         let mut last_error = None;
         let mut fallback = None;
         for attempt in 0..=self.config.retries {
             let prompt = if attempt == 0 {
-                build_move_prompt(game, &self.config, &varied, recommended.as_deref())
+                build_move_prompt(game, &self.config, candidates)
             } else {
                 build_retry_prompt(
                     game,
                     &self.config,
-                    &varied,
-                    recommended.as_deref(),
+                    candidates,
                     self.last_raw.as_deref().unwrap_or(""),
                     last_error.as_deref().unwrap_or("invalid response"),
                 )
@@ -465,12 +462,7 @@ impl AgentSession {
     }
 }
 
-pub fn build_move_prompt(
-    game: &Game,
-    config: &AgentConfig,
-    candidates: &[Candidate],
-    recommended: Option<&str>,
-) -> String {
+pub fn build_move_prompt(game: &Game, config: &AgentConfig, candidates: &[Candidate]) -> String {
     let agent_color = game.turn();
     let human_color = !agent_color;
     let legal = game.legal_moves();
@@ -480,20 +472,6 @@ pub fn build_move_prompt(
         .collect::<Vec<_>>()
         .join(", ");
     let candidates_text = format_candidates(candidates, &legal);
-    let recommendation = recommended
-        .map(|uci| {
-            let san = legal
-                .iter()
-                .find(|mv| mv.uci == uci)
-                .map(|mv| mv.san.as_str())
-                .unwrap_or("?");
-            format!(
-                "RECOMMENDED MOVE FOR THIS TURN: {uci} ({san})\n                 Play this move exactly. It was chosen from near-best candidates so your play feels varied.\n                 Do not substitute a different candidate just because it looks mathematically stronger."
-            )
-        })
-        .unwrap_or_else(|| {
-            "Choose one of the candidate moves; all are acceptable.".to_string()
-        });
     let history = game.pgn_moves();
     let history = if history.is_empty() {
         "(no moves yet)"
@@ -516,13 +494,11 @@ Move history (SAN): {history}
 Game status: {status}
 Legal moves (UCI (SAN)): {legal}
 
-Stockfish candidate moves for this turn (deliberately varied; all are from this difficulty's pool): {candidates}
-
-{recommendation}
+Stockfish candidate moves (strongest first): {candidates}
 
 MOVE SELECTION (the persona does not apply here):
 - Choose exactly one of the Stockfish candidate moves when the list is available. Do not choose a move outside it.
-- The recommended move above was selected from near-best candidates to keep your play varied. Play it.
+- Choose the strongest move from that pool. Never choose a weaker move for theatrical reasons.
 - Difficulty controls the candidate pool; the persona affects only the commentary.
 
 {persona}
@@ -556,7 +532,6 @@ Move must be UCI (preferred) or SAN. Commentary language: {language}.
         status = game.status_text(),
         legal = legal_text,
         candidates = candidates_text,
-        recommendation = recommendation,
         persona = persona,
         language = language,
     )
@@ -672,47 +647,6 @@ fn build_draw_retry_prompt(game: &Game, config: &AgentConfig, error: &str) -> St
     )
 }
 
-fn choose_recommended(candidates: &mut [Candidate]) -> Option<String> {
-    if candidates.is_empty() {
-        return None;
-    }
-    let pool = near_best_indexes(candidates);
-    if pool.len() < 2 {
-        return Some(candidates[0].uci.clone());
-    }
-    let seed = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_nanos() as usize)
-        .unwrap_or(0);
-    let chosen = pool[seed % pool.len()];
-    candidates.swap(0, chosen);
-    Some(candidates[0].uci.clone())
-}
-
-fn near_best_indexes(candidates: &[Candidate]) -> Vec<usize> {
-    let Some(best) = candidates.first() else {
-        return Vec::new();
-    };
-    candidates
-        .iter()
-        .enumerate()
-        .filter(|(_, candidate)| candidate_is_near_best(best, candidate))
-        .map(|(index, _)| index)
-        .collect()
-}
-
-fn candidate_is_near_best(best: &Candidate, candidate: &Candidate) -> bool {
-    match (best.mate_in, candidate.mate_in) {
-        (Some(best_mate), Some(candidate_mate)) => best_mate.signum() == candidate_mate.signum(),
-        (Some(_), None) | (None, Some(_)) => false,
-        (None, None) => {
-            let best_cp = best.score_cp.unwrap_or(0);
-            let candidate_cp = candidate.score_cp.unwrap_or(best_cp);
-            (best_cp - candidate_cp).max(0) <= 40
-        }
-    }
-}
-
 fn fallback_comment(game: &Game, config: &AgentConfig, mv: &str) -> String {
     let mut probe = game.clone();
     let san = probe
@@ -730,11 +664,10 @@ fn build_retry_prompt(
     game: &Game,
     config: &AgentConfig,
     candidates: &[Candidate],
-    recommended: Option<&str>,
     previous: &str,
     error: &str,
 ) -> String {
-    let base = build_move_prompt(game, config, candidates, recommended);
+    let base = build_move_prompt(game, config, candidates);
     let previous = truncate(previous, 2_000);
     format!(
         "{base}\n\nYour previous answer was rejected: {error}\nPrevious answer:\n{previous}\n\nReturn a corrected JSON object with exactly one legal move from the Stockfish candidate list when it is available."
@@ -753,7 +686,7 @@ fn format_candidates(candidates: &[Candidate], legal: &[MoveInfo]) -> String {
                 .find(|mv| mv.uci == candidate.uci)
                 .map(|mv| mv.san.as_str())
                 .unwrap_or("?");
-            format!("{} ({})", candidate.uci, san)
+            format!("{} ({}, {})", candidate.uci, san, candidate.score_text())
         })
         .collect::<Vec<_>>()
         .join(", ")
@@ -1024,7 +957,7 @@ mod tests {
             language_name: "Estonian".to_string(),
             ..Default::default()
         };
-        let prompt = build_move_prompt(&game, &config, &[], None);
+        let prompt = build_move_prompt(&game, &config, &[]);
         assert!(prompt.contains("Commentary language: Estonian"));
     }
 
@@ -1049,40 +982,9 @@ mod tests {
     #[test]
     fn move_prompt_requires_commentary_fields() {
         let game = Game::new();
-        let prompt = build_move_prompt(&game, &AgentConfig::default(), &[], None);
+        let prompt = build_move_prompt(&game, &AgentConfig::default(), &[]);
         assert!(prompt.contains("Every JSON field below is required"));
         assert!(prompt.contains("empty comment is invalid"));
-    }
-
-    fn candidate(uci: &str, cp: i32) -> Candidate {
-        Candidate {
-            uci: uci.to_string(),
-            score_cp: Some(cp),
-            mate_in: None,
-            depth: 10,
-            multipv: 1,
-            pv: Vec::new(),
-        }
-    }
-
-    #[test]
-    fn near_best_pool_prefers_close_candidates() {
-        let candidates = vec![
-            candidate("g1f3", 30),
-            candidate("b1c3", 18),
-            candidate("d2d4", -20),
-        ];
-        assert_eq!(near_best_indexes(&candidates), vec![0, 1]);
-    }
-
-    #[test]
-    fn prompt_marks_the_recommended_move() {
-        let game = Game::new();
-        let candidates = vec![candidate("g1f3", 30), candidate("b1c3", 18)];
-        let prompt = build_move_prompt(&game, &AgentConfig::default(), &candidates, Some("g1f3"));
-        assert!(prompt.contains("RECOMMENDED MOVE FOR THIS TURN: g1f3 (Nf3)"));
-        assert!(prompt.contains("deliberately varied"));
-        assert!(!prompt.contains("strongest first"));
     }
 
     #[test]

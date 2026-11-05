@@ -26,8 +26,9 @@ What works now:
   check marks, promotion picker and a theme editor;
 - five built-in SVG piece sets — Cburnett, Livius, Meridian, Meridian Shaded
   and Letter — plus custom piece-set folders;
-- Stockfish hybrid play: a near-best candidate (within 40 centipawns) is
-  recommended for variety, and the model plays it and explains;
+- Stockfish hybrid play: the engine proposes candidate moves, the model chooses
+  the strongest and explains; the Theater list is shuffled so it does not read
+  like a fixed ranking;
 - OpenCode prompt transport with strict JSON validation and retries;
 - automatic agent replies after the human move, or an “Agent move” button;
 - session reuse across moves, so the opponent remembers the game;

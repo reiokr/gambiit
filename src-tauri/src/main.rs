@@ -12,7 +12,10 @@ use gambiit_engine::Stockfish;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use shakmaty::{Color, Role, Square};
-use std::{sync::Arc, time::Instant};
+use std::{
+    sync::Arc,
+    time::{Instant, SystemTime, UNIX_EPOCH},
+};
 use tauri::State;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -850,7 +853,7 @@ impl Session {
 
         self.game
             .annotate_last(Some(turn.comment.clone()), turn.eval.clone());
-        let candidates = turn
+        let mut candidates: Vec<CandidateView> = turn
             .candidates
             .iter()
             .map(|candidate| CandidateView {
@@ -859,6 +862,7 @@ impl Session {
                 why_rejected: candidate.why_rejected.clone(),
             })
             .collect();
+        shuffle_candidates(&mut candidates);
         self.commentary.push(CommentaryCard {
             san: info.san.clone(),
             uci: info.uci.clone(),
@@ -1242,6 +1246,23 @@ fn credential_env_for_model(model: &str) -> Vec<(String, String)> {
         .collect()
 }
 
+fn shuffle_candidates(candidates: &mut [CandidateView]) {
+    if candidates.len() < 2 {
+        return;
+    }
+    let mut seed = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_nanos() as u64)
+        .unwrap_or(1);
+    for index in (1..candidates.len()).rev() {
+        seed = seed
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        let swap_with = (seed as usize) % (index + 1);
+        candidates.swap(index, swap_with);
+    }
+}
+
 fn status_parts(status: GameStatus, turn: Color) -> (String, Option<String>) {
     match status {
         GameStatus::Ongoing => ("ongoing".to_string(), Some(color_key(turn).to_string())),
@@ -1366,6 +1387,22 @@ mod tests {
         assert!(snapshot.game_over);
         assert_eq!(snapshot.winner.as_deref(), Some("black"));
         assert!(session.takeback().is_err());
+    }
+
+    #[test]
+    fn candidate_shuffle_keeps_every_entry() {
+        let mut candidates: Vec<CandidateView> = ["e2e4", "d2d4", "g1f3", "c2c4"]
+            .iter()
+            .map(|mv| CandidateView {
+                mv: (*mv).to_string(),
+                why: None,
+                why_rejected: None,
+            })
+            .collect();
+        shuffle_candidates(&mut candidates);
+        let mut moves: Vec<String> = candidates.into_iter().map(|item| item.mv).collect();
+        moves.sort();
+        assert_eq!(moves, vec!["c2c4", "d2d4", "e2e4", "g1f3"]);
     }
 
     #[test]
