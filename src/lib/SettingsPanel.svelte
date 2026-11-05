@@ -9,7 +9,7 @@
     setLocale,
   } from "./i18n";
   import { PERSONAS } from "./personas";
-  import { DIFFICULTIES } from "./difficulty";
+  import { DIFFICULTIES, type DifficultyOption } from "./difficulty";
 
   export let settings: Settings;
   export let models: string[] = [];
@@ -41,6 +41,14 @@
   function selectAgentLanguage(code: string) {
     draft.agentLanguage = code;
     draft.agentLanguageName = localeMeta(code).name;
+  }
+
+  function selectDifficulty(level: DifficultyOption) {
+    draft.difficulty = level.id;
+    if (level.id !== "custom") {
+      draft.stockfishDepth = level.depth;
+      draft.multipv = level.multipv;
+    }
   }
 
   function apply() {
@@ -124,6 +132,7 @@
               </button>
             {/each}
           </div>
+          <small class="persona-hint">{$i18n("settings.personaHint")}</small>
         </div>
 
         <div class="field">
@@ -265,20 +274,16 @@
                 type="button"
                 class="difficulty-card"
                 class:active={draft.difficulty === level.id}
-                on:click={() => (draft.difficulty = level.id)}
+                on:click={() => selectDifficulty(level)}
               >
                 <strong>{$i18n(`difficulty.${level.key}.name`)}</strong>
                 <small>{$i18n(`difficulty.${level.key}.description`)}</small>
                 {#if level.id !== "custom"}
                   <span class="difficulty-meta">
-                    {#if level.multipv === 0}
-                      {$i18n("settings.noEngine")}
-                    {:else}
-                      {$i18n("settings.engineMeta", {
-                        count: level.multipv,
-                        depth: level.depth,
-                      })}
-                    {/if}
+                    {$i18n("settings.engineMeta", {
+                      count: level.multipv,
+                      depth: level.depth,
+                    })}
                   </span>
                 {/if}
               </button>
@@ -286,36 +291,36 @@
           </div>
         </div>
 
-        {#if draft.difficulty === "custom"}
-          <div class="grid two custom-engine">
-            <label class="field">
-              <span>
-                {$i18n("settings.depth")}
-                <b>{draft.stockfishDepth}</b>
-              </span>
-              <input
-                type="range"
-                min="6"
-                max="20"
-                step="1"
-                bind:value={draft.stockfishDepth}
-              />
-            </label>
-            <label class="field">
-              <span>
-                {$i18n("settings.candidates")}
-                <b>{draft.multipv}</b>
-              </span>
-              <input
-                type="range"
-                min="1"
-                max="6"
-                step="1"
-                bind:value={draft.multipv}
-              />
-            </label>
-          </div>
-        {/if}
+        <div class="grid two custom-engine">
+          <label class="field">
+            <span>
+              {$i18n("settings.depth")}
+              <b>{draft.stockfishDepth}</b>
+            </span>
+            <input
+              type="range"
+              min="5"
+              max="20"
+              step="1"
+              bind:value={draft.stockfishDepth}
+              on:input={() => (draft.difficulty = "custom")}
+            />
+          </label>
+          <label class="field">
+            <span>
+              {$i18n("settings.candidates")}
+              <b>{draft.multipv}</b>
+            </span>
+            <input
+              type="range"
+              min="1"
+              max="6"
+              step="1"
+              bind:value={draft.multipv}
+              on:input={() => (draft.difficulty = "custom")}
+            />
+          </label>
+        </div>
         <p class="hint">{$i18n("settings.engineNote")}</p>
       </section>
     </div>
@@ -638,6 +643,13 @@
 
   .persona-copy small {
     color: var(--muted);
+    font-size: calc(10px * var(--font-scale));
+    line-height: 1.4;
+  }
+
+  .persona-hint {
+    margin-top: 6px;
+    color: var(--faint);
     font-size: calc(10px * var(--font-scale));
     line-height: 1.4;
   }

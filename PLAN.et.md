@@ -96,10 +96,12 @@ Valmis:
 - Lokaliseeritud UI + agendi keel: `src/locales/*.json` automaatne avastamine,
   inglise ja eesti kataloog; keelevaik ainult seadetes; UI- ja agendikeel on
   teineteisest sõltumatud.
-- Stockfishi raskusastmed: Teater (kandidaate pole), Vabaajamäng, Standard,
-  Tugev, Treener ja Kohandatud (depth/MultiPV liugurid).
-- Illustreeritud isiksusekaardid: Teatrimeister, Külm kalkulaator, Pettur,
-  Hirmunud, Treener ja Kaootiline; avatar kuvatakse ka mängijaribas ja
+- Viis Stockfishi raskusastet — Algaja, Harrastaja, Edasijõudnu, Tugev ja
+  Meister — pluss Kohandatud. Taseme valik seab depth/MultiPV liugurid; liuguri
+  liigutamine valib Kohandatud. Igal preseedil on ka Stockfishi `Skill Level`.
+- Illustreeritud teatri-isiksusekaardid: Teatrimeister, Külm kalkulaator, Pettur,
+  Hirmunud, Treener ja Kaootiline. Isiksus mõjutab ainult kommentaari; käik peab
+  tulema Stockfishi kandidaatide hulgast. Avatar kuvatakse ka mängijaribas ja
   kommentaarikaartidel.
 - Kommentaaripaneel: hinnang, kandidaadid koos tagasilükkamise põhjustega, plaan,
   mõtlemisaeg ja tokenikulu.
@@ -264,11 +266,16 @@ keelatakse.
 
 | Raskusaste | Käitumine |
 |---|---|
-| **Teater** | puhas LLM; ainult legaalsete käikude nimekiri |
-| **Casual** | Stockfishi top 5, rohkem juhuslikkust |
-| **Standard** (vaikimisi) | Stockfishi top 3; mudel valib ja põhjendab |
-| **Strong** | Stockfishi top 2; vähe juhuslikkust |
-| **Coach** | Stockfishi parim käik + aus selgitus |
+| **Algaja** | Skill 0, sügavus 5, top 6 kandidaati |
+| **Harrastaja** | Skill 5, sügavus 8, top 5 |
+| **Edasijõudnu** (vaikimisi) | Skill 10, sügavus 11, top 4 |
+| **Tugev** | Skill 15, sügavus 15, top 3 |
+| **Meister** | Skill 20, sügavus 19, top 2 |
+| **Kohandatud** | kasutaja depth/MultiPV, Skill 20 |
+
+Taseme valik seab depth/MultiPV liugurid; liuguri liigutamine valib Kohandatud.
+Mudel peab valima Stockfishi kandidaatide hulgast. Isiksus mõjutab ainult
+kommentaari, mitte käiguvalikut.
 
 Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusjuhis.
 
@@ -393,7 +400,8 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 ### Engine
 
 - Stockfishi tee (auto + custom);
-- hübriidrežiim: teater / casual / standard / strong / coach;
+- raskusaste: algaja / harrastaja / edasijõudnu / tugev / meister / kohandatud;
+- depth/MultiPV liugurid; preseet seab need, liuguri muutus valib Kohandatud;
 - MultiPV, depth/time;
 - analüüsi depth/time;
 - eval-riba mängu ajal (vaikimisi väljas);

@@ -156,6 +156,11 @@ impl Stockfish {
         self.send(&format!("setoption name {name} value {value}"))
     }
 
+    /// Set Stockfish's built-in strength limiter (0 = weakest, 20 = full).
+    pub fn set_skill(&mut self, skill: u8) -> Result<(), EngineError> {
+        self.set_option("Skill Level", &skill.min(20).to_string())
+    }
+
     /// Return the top `multipv` moves at the requested depth, sorted by rank.
     pub fn candidates(
         &mut self,

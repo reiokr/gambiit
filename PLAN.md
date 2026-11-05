@@ -20,7 +20,7 @@
    - **Auto** (default): the agent responds automatically after the human move.
    - **Button:** the agent moves only when the user clicks “Agent move”.
    - **Manual chat:** the app waits while the user talks to the agent in OpenCode (MCP mode, later).
-4. **Stockfish is included** as a first-class dependency for hybrid play and post-game analysis. It is an external binary (GPL); the app detects it, and if missing shows a clear install prompt. Pure-LLM “theater” mode remains available.
+4. **Stockfish is included** as a first-class dependency for hybrid play and post-game analysis. It is an external binary (GPL); the app detects it, and if missing shows a clear install prompt. Personas provide the theater; difficulty levels control Stockfish strength.
 5. **Default language: English.** Estonian is an optional UI/agent language. The project is intended for GitHub.
 6. **Settings are a major feature:** every game property and “theater” behavior can be toggled on/off, not buried in code.
 
@@ -72,11 +72,13 @@ Completed:
 - Localized UI + agent language: `src/locales/*.json` auto-discovery, English
   and Estonian catalogs, language selection only in Settings, independent UI
   and agent languages.
-- Stockfish difficulty presets: Theater (no candidates), Casual, Standard,
-  Strong, Coach and Custom (depth/MultiPV sliders).
-- Illustrated persona cards: Theater Master, Cold Calculator, Trickster,
-  Panicker, Coach and Chaotic; the avatar is also used in the player strip and
-  commentary cards.
+- Five Stockfish difficulty levels — Beginner, Casual, Intermediate, Strong and
+  Master — plus Custom. Selecting a level sets the depth/MultiPV sliders; moving
+  a slider selects Custom. Stockfish `Skill Level` is part of each preset.
+- Illustrated theater persona cards: Theater Master, Cold Calculator, Trickster,
+  Panicker, Coach and Chaotic. Personas affect commentary only; the move must
+  come from the Stockfish candidate pool. The avatar is also used in the player
+  strip and commentary cards.
 - Rust commands: `new_game`, `get_state`, `make_move`, `agent_move`, `takeback`,
   `resign`, `list_models`; all moves validated by `gambiit-core`.
 - Takeback policy enforced: only the human's own last move can be undone.
@@ -233,18 +235,23 @@ Flow:
 
 ### 4.3 Stockfish hybrid (required for a decent game)
 
-Pure LLM chess is weak. Default difficulty uses Stockfish as a candidate generator:
+Pure LLM chess is weak. Difficulty levels use Stockfish as a candidate generator:
 
-- **Theater:** pure LLM; legal-move list only; maximum personality and chaos.
-- **Casual:** Stockfish top 5 candidates; more randomness.
-- **Standard (default):** Stockfish top 3 candidates; LLM chooses and explains.
-- **Strong:** Stockfish top 2; minimal randomness.
-- **Coach:** Stockfish best move + honest explanation; no deception.
+- **Beginner:** Skill 0, depth 5, top 6 candidates.
+- **Casual:** Skill 5, depth 8, top 5.
+- **Intermediate (default):** Skill 10, depth 11, top 4.
+- **Strong:** Skill 15, depth 15, top 3.
+- **Master:** Skill 20, depth 19, top 2.
+- **Custom:** user-chosen depth/MultiPV, Skill 20.
+
+Selecting a level sets the depth/MultiPV sliders; moving a slider selects Custom.
+The LLM must choose from the Stockfish candidate pool. The persona affects the
+commentary only, never the move choice.
 
 Stockfish integration:
 
 - Detect `stockfish` in `PATH`; allow a custom binary path in Settings.
-- Spawn a persistent UCI process per session/analysis; `setoption name MultiPV value N`, `go depth D` / `movetime`.
+- Spawn a persistent UCI process per session/analysis; `setoption name Skill Level value N`, `setoption name MultiPV value N`, `go depth D` / `movetime`.
 - Parse `info` lines and `bestmove`; show candidate evals only where intended.
 - If missing: show an install banner (`sudo pacman -S stockfish` on Arch/CachyOS) and fall back to legal-moves-only mode.
 - Do not bundle Stockfish by default (GPL). Keep it an external binary; document licensing.
@@ -396,7 +403,8 @@ Settings must expose game properties and theater features without code edits.
 ### Engine
 
 - Stockfish path (auto-detect + custom).
-- Hybrid mode: theater / casual / standard / strong / coach.
+- Difficulty: beginner / casual / intermediate / strong / master / custom.
+- Depth/MultiPV sliders; presets set them, slider changes select Custom.
 - MultiPV candidates, depth/time limits.
 - Post-game analysis depth/time.
 - Show eval bar during game (off by default).

@@ -100,7 +100,8 @@
     "opponent": "Opponent",
     "opponentHint": "OpenCode model + persona",
     "model": "Model",
-    "persona": "Persona",
+    "persona": "Theater persona",
+    "personaHint": "Changes commentary and stage presence only — combine it with any difficulty.",
     "afterMove": "After your move",
     "auto": "Auto",
     "autoHint": "Agent answers immediately",
@@ -127,8 +128,7 @@
     "depth": "Depth",
     "candidates": "Candidate moves",
     "engineMeta": "top {count} · depth {depth}",
-    "noEngine": "No Stockfish candidates",
-    "engineNote": "Stockfish proposes the candidates; the model chooses one, explains it, and may still bluff about the evaluation. The board stays authoritative.",
+    "engineNote": "Difficulty sets the Stockfish candidate pool; the persona changes only the voice. Stockfish proposes the candidates, the model chooses one, and may still bluff about the evaluation. The board stays authoritative.",
     "cancel": "Cancel",
     "apply": "Apply & start new game",
     "modelsDiscovered": "{count} models discovered"
@@ -148,29 +148,29 @@
     "chaoticDescription": "Unpredictable and funny, but still legal."
   },
   "difficulty": {
-    "theater": {
-      "name": "Theater",
-      "description": "Pure model. No Stockfish candidates; maximum personality and risk."
+    "beginner": {
+      "name": "Beginner",
+      "description": "Weak engine, wide candidate pool. Depth 5, top 6, skill 0."
     },
     "casual": {
       "name": "Casual",
-      "description": "Top 5 candidates, depth 8. More variety and more mistakes."
+      "description": "Friendly resistance. Depth 8, top 5, skill 5."
     },
-    "standard": {
-      "name": "Standard",
-      "description": "Top 3 candidates, depth 12. A balanced game."
+    "intermediate": {
+      "name": "Intermediate",
+      "description": "Balanced club play. Depth 11, top 4, skill 10."
     },
     "strong": {
       "name": "Strong",
-      "description": "Top 2 candidates, depth 16. Fewer escapes."
+      "description": "Serious resistance. Depth 15, top 3, skill 15."
     },
-    "coach": {
-      "name": "Coach",
-      "description": "Engine best move, depth 18. Honest and instructive."
+    "master": {
+      "name": "Master",
+      "description": "Full engine strength. Depth 19, top 2, skill 20."
     },
     "custom": {
       "name": "Custom",
-      "description": "Choose depth and candidate count yourself."
+      "description": "Tune depth and candidate count yourself. Skill 20."
     }
   },
   "themes": {

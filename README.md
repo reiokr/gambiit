@@ -38,10 +38,10 @@ What works now:
   candidate count;
 - separate UI and agent languages, both selected in Settings; the agent can
   answer in English while the UI is Estonian;
-- illustrated personas: Theater Master, Cold Calculator, Trickster, Panicker,
-  Coach and Chaotic;
-- Stockfish difficulty presets: Theater, Casual, Standard, Strong, Coach and
-  Custom;
+- illustrated theater personas: Theater Master, Cold Calculator, Trickster,
+  Panicker, Coach and Chaotic; the persona changes commentary only;
+- five Stockfish difficulty levels — Beginner, Casual, Intermediate, Strong and
+  Master — plus Custom, with depth and MultiPV sliders;
 - localized UI and agent commentary from `src/locales/*.json`; English and
   Estonian included, new languages are added by dropping in a JSON catalog;
 - desktop and terminal builds share the same Rust core, engine and agent layers.

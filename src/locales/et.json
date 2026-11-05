@@ -100,7 +100,8 @@
     "opponent": "Vastane",
     "opponentHint": "OpenCode'i mudel + isiksus",
     "model": "Mudel",
-    "persona": "Isiksus",
+    "persona": "Teatri isiksus",
+    "personaHint": "Muudab ainult kommentaari ja lavalolekut — saab kombineerida iga raskusastmega.",
     "afterMove": "Pärast sinu käiku",
     "auto": "Automaatne",
     "autoHint": "Agent vastab kohe",
@@ -127,8 +128,7 @@
     "depth": "Sügavus",
     "candidates": "Kandidaatkäigud",
     "engineMeta": "top {count} · sügavus {depth}",
-    "noEngine": "Stockfishi kandidaate pole",
-    "engineNote": "Stockfish pakub kandidaadid; mudel valib ühe, selgitab ja võib hinnangu osas ikkagi bluffida. Laud jääb autoriteetseks.",
+    "engineNote": "Raskusaste määrab Stockfishi kandidaatide valiku; isiksus muudab ainult häält. Stockfish pakub kandidaadid, mudel valib ühe ja võib hinnangu osas ikkagi bluffida. Laud jääb autoriteetseks.",
     "cancel": "Tühista",
     "apply": "Rakenda ja alusta uut mängu",
     "modelsDiscovered": "{count} mudelit avastatud"
@@ -148,29 +148,29 @@
     "chaoticDescription": "Ettearvamatu ja naljakas, aga ikka seaduslik."
   },
   "difficulty": {
-    "theater": {
-      "name": "Teater",
-      "description": "Puhas mudel. Stockfishi kandidaate pole; maksimaalne isiksus ja risk."
+    "beginner": {
+      "name": "Algaja",
+      "description": "Nõrk mootor, lai kandidaatide valik. Sügavus 5, top 6, skill 0."
     },
     "casual": {
-      "name": "Vabaajamäng",
-      "description": "5 kandidaati, sügavus 8. Rohkem varieeruvust ja vigu."
+      "name": "Harrastaja",
+      "description": "Sõbralik vastupanu. Sügavus 8, top 5, skill 5."
     },
-    "standard": {
-      "name": "Standard",
-      "description": "3 kandidaati, sügavus 12. Tasakaalustatud mäng."
+    "intermediate": {
+      "name": "Edasijõudnu",
+      "description": "Tasakaalustatud klubimäng. Sügavus 11, top 4, skill 10."
     },
     "strong": {
       "name": "Tugev",
-      "description": "2 kandidaati, sügavus 16. Vähem võimalusi pääseda."
+      "description": "Tõsine vastupanu. Sügavus 15, top 3, skill 15."
     },
-    "coach": {
-      "name": "Treener",
-      "description": "Mootori parim käik, sügavus 18. Aus ja õpetlik."
+    "master": {
+      "name": "Meister",
+      "description": "Mootori täisjõud. Sügavus 19, top 2, skill 20."
     },
     "custom": {
       "name": "Kohandatud",
-      "description": "Vali sügavus ja kandidaatide arv ise."
+      "description": "Vali sügavus ja kandidaatide arv ise. Skill 20."
     }
   },
   "themes": {

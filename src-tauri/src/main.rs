@@ -36,9 +36,9 @@ impl Default for Settings {
             agent_language: "en".to_string(),
             agent_language_name: "English".to_string(),
             response_mode: "auto".to_string(),
-            stockfish_depth: 12,
-            multipv: 3,
-            difficulty: "standard".to_string(),
+            stockfish_depth: 11,
+            multipv: 4,
+            difficulty: "intermediate".to_string(),
             theme: "salon".to_string(),
             sound: true,
             animations: true,
@@ -238,37 +238,48 @@ impl Session {
             return Err("It is the human's turn.".into());
         }
 
-        let (multipv, depth) = engine_params(&self.settings);
-        let candidates = if multipv == 0 {
-            Vec::new()
-        } else {
-            match self.stockfish.as_mut() {
-                Some(engine) => match engine.candidates(&self.game.fen(), multipv, depth) {
+        let (multipv, depth, skill) = engine_params(&self.settings);
+        let candidates = match self.stockfish.as_mut() {
+            Some(engine) => {
+                if let Err(error) = engine.set_skill(skill) {
+                    eprintln!("Stockfish skill warning: {error}");
+                }
+                match engine.candidates(&self.game.fen(), multipv, depth) {
                     Ok(candidates) => candidates,
                     Err(error) => {
                         eprintln!("Stockfish warning: {error}");
                         Vec::new()
                     }
-                },
-                None => Vec::new(),
+                }
             }
+            None => Vec::new(),
         };
 
         let prompt_game = self.game.clone();
         let validation_game = prompt_game.clone();
         let legal_hint = prompt_game.legal_uci().join(", ");
+        let candidate_ucis: Vec<String> = candidates
+            .iter()
+            .map(|candidate| candidate.uci.clone())
+            .collect();
         let validate = move |turn: &AgentTurn| {
             let mut probe = validation_game.clone();
-            if probe.apply_uci(&turn.mv).is_ok() {
-                return Ok(());
+            let info = probe
+                .apply_uci(&turn.mv)
+                .or_else(|_| probe.apply_san(&turn.mv))
+                .map_err(|error| {
+                    format!(
+                        "'{}' is not a legal move ({error}). Legal UCI moves: {}",
+                        turn.mv, legal_hint
+                    )
+                })?;
+            if !candidate_ucis.is_empty() && !candidate_ucis.contains(&info.uci) {
+                return Err(format!(
+                    "You must choose one of the Stockfish candidate moves: {}. The persona must not change your move choice.",
+                    candidate_ucis.join(", ")
+                ));
             }
-            if probe.apply_san(&turn.mv).is_ok() {
-                return Ok(());
-            }
-            Err(format!(
-                "'{}' is not a legal move. Legal UCI moves: {}",
-                turn.mv, legal_hint
-            ))
+            Ok(())
         };
 
         let started = Instant::now();
@@ -461,30 +472,48 @@ fn normalize_settings(mut settings: Settings) -> Settings {
             _ => defaults.agent_language_name,
         };
     }
-    if !matches!(
-        settings.difficulty.as_str(),
-        "theater" | "casual" | "standard" | "strong" | "coach" | "custom"
-    ) {
-        settings.difficulty = defaults.difficulty;
+    let mapped = match settings.difficulty.as_str() {
+        "theater" => "beginner",
+        "standard" => "intermediate",
+        "coach" => "master",
+        other => other,
+    };
+    settings.difficulty = match mapped {
+        "beginner" | "casual" | "intermediate" | "strong" | "master" | "custom" => {
+            mapped.to_string()
+        }
+        _ => defaults.difficulty,
+    };
+    if let Some((multipv, depth, _)) = preset_params(&settings.difficulty) {
+        settings.multipv = multipv;
+        settings.stockfish_depth = depth;
+    } else {
+        settings.multipv = settings.multipv.clamp(1, 6);
+        settings.stockfish_depth = settings.stockfish_depth.clamp(5, 20);
     }
-    settings.stockfish_depth = settings.stockfish_depth.clamp(6, 20);
-    settings.multipv = settings.multipv.clamp(1, 6);
     if !(0.9..=1.5).contains(&settings.font_scale) {
         settings.font_scale = defaults.font_scale;
     }
     settings
 }
 
-fn engine_params(settings: &Settings) -> (usize, u32) {
-    match settings.difficulty.as_str() {
-        "theater" => (0, 0),
-        "casual" => (5, 8),
-        "standard" => (3, 12),
-        "strong" => (2, 16),
-        "coach" => (1, 18),
-        "custom" => (settings.multipv.max(1), settings.stockfish_depth.max(1)),
-        _ => (3, 12),
+fn preset_params(difficulty: &str) -> Option<(usize, u32, u8)> {
+    match difficulty {
+        "beginner" => Some((6, 5, 0)),
+        "casual" => Some((5, 8, 5)),
+        "intermediate" => Some((4, 11, 10)),
+        "strong" => Some((3, 15, 15)),
+        "master" => Some((2, 19, 20)),
+        _ => None,
     }
+}
+
+fn engine_params(settings: &Settings) -> (usize, u32, u8) {
+    preset_params(&settings.difficulty).unwrap_or((
+        settings.multipv.clamp(1, 6),
+        settings.stockfish_depth.clamp(5, 20),
+        20,
+    ))
 }
 
 fn agent_config(settings: &Settings) -> AgentConfig {
@@ -624,22 +653,22 @@ mod tests {
     #[test]
     fn difficulty_presets_map_to_engine_parameters() {
         let mut settings = Settings {
-            difficulty: "theater".to_string(),
+            difficulty: "beginner".to_string(),
             ..Default::default()
         };
-        assert_eq!(engine_params(&settings), (0, 0));
+        assert_eq!(engine_params(&settings), (6, 5, 0));
         settings.difficulty = "casual".to_string();
-        assert_eq!(engine_params(&settings), (5, 8));
-        settings.difficulty = "standard".to_string();
-        assert_eq!(engine_params(&settings), (3, 12));
+        assert_eq!(engine_params(&settings), (5, 8, 5));
+        settings.difficulty = "intermediate".to_string();
+        assert_eq!(engine_params(&settings), (4, 11, 10));
         settings.difficulty = "strong".to_string();
-        assert_eq!(engine_params(&settings), (2, 16));
-        settings.difficulty = "coach".to_string();
-        assert_eq!(engine_params(&settings), (1, 18));
+        assert_eq!(engine_params(&settings), (3, 15, 15));
+        settings.difficulty = "master".to_string();
+        assert_eq!(engine_params(&settings), (2, 19, 20));
         settings.difficulty = "custom".to_string();
         settings.multipv = 4;
         settings.stockfish_depth = 10;
-        assert_eq!(engine_params(&settings), (4, 10));
+        assert_eq!(engine_params(&settings), (4, 10, 20));
     }
 
     /// End-to-end smoke test against the real configured OpenCode model.

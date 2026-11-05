@@ -1,4 +1,9 @@
 import type { Settings } from "./types";
+import {
+  DIFFICULTIES,
+  DIFFICULTY_ALIASES,
+  difficultyFor,
+} from "./difficulty";
 
 const STORAGE_KEY = "gambiit.settings.v1";
 const COLOR_KEY = "gambiit.humanColor.v1";
@@ -10,9 +15,9 @@ export const DEFAULT_SETTINGS: Settings = {
   agentLanguage: "en",
   agentLanguageName: "English",
   responseMode: "auto",
-  stockfishDepth: 12,
-  multipv: 3,
-  difficulty: "standard",
+  stockfishDepth: 11,
+  multipv: 4,
+  difficulty: "intermediate",
   theme: "salon",
   sound: true,
   animations: true,
@@ -37,6 +42,18 @@ export function loadSettings(): Settings {
     }
     if (!stored.agentLanguageName && stored.languageName) {
       merged.agentLanguageName = stored.languageName;
+    }
+    const alias = DIFFICULTY_ALIASES[merged.difficulty];
+    if (alias) {
+      merged.difficulty = alias;
+    }
+    if (!DIFFICULTIES.some((level) => level.id === merged.difficulty)) {
+      merged.difficulty = "intermediate";
+    }
+    const preset = difficultyFor(merged.difficulty);
+    if (preset.id !== "custom") {
+      merged.stockfishDepth = preset.depth;
+      merged.multipv = preset.multipv;
     }
     return merged;
   } catch {

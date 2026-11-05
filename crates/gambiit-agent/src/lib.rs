@@ -395,12 +395,16 @@ Move history (SAN): {history}
 Game status: {status}
 Legal moves (UCI (SAN)): {legal}
 
-Stockfish candidate moves (optional, strongest first): {candidates}
-Choose one legal move. You may choose a move outside the candidate list if you have a concrete reason.
+Stockfish candidate moves (strongest first): {candidates}
+
+MOVE SELECTION (the persona does not apply here):
+- Choose exactly one of the Stockfish candidate moves when the list is available. Do not choose a move outside it.
+- Choose the strongest move from that pool. Never choose a weaker move for theatrical reasons.
+- Difficulty controls the candidate pool; the persona affects only the commentary.
 
 {persona}
 
-Commentary requirements (AGENTS.md protocol):
+COMMENTARY (the persona applies here):
 1. Briefly evaluate the position.
 2. Name 3-4 candidate moves and explain why each rejected candidate was rejected.
 3. Explain the chosen move and your plan.
@@ -442,7 +446,7 @@ fn build_retry_prompt(
     let base = build_move_prompt(game, config, candidates);
     let previous = truncate(previous, 2_000);
     format!(
-        "{base}\n\nYour previous answer was rejected: {error}\nPrevious answer:\n{previous}\n\nReturn a corrected JSON object with exactly one legal move."
+        "{base}\n\nYour previous answer was rejected: {error}\nPrevious answer:\n{previous}\n\nReturn a corrected JSON object with exactly one legal move from the Stockfish candidate list when it is available."
     )
 }
 
@@ -467,23 +471,27 @@ fn format_candidates(candidates: &[Candidate], legal: &[MoveInfo]) -> String {
 fn persona_instruction(persona: &str) -> String {
     match persona.to_ascii_lowercase().as_str() {
         "cold calculator" => {
-            "Persona: Cold Calculator. Be terse, precise and slightly superior. No jokes.".into()
+            "Persona: Cold Calculator. Commentary only: be terse, precise and slightly superior. Do not let the persona influence move choice."
+                .into()
         }
         "trickster" => {
-            "Persona: Trickster. Be charming, elusive and fond of plausible misdirection. Never wink at the audience."
+            "Persona: Trickster. Commentary only: be charming, elusive and fond of plausible misdirection. Never let it influence move choice."
                 .into()
         }
         "coach" => {
-            "Persona: Coach. Be honest, instructive and kind. Explain the chess, do not deceive.".into()
+            "Persona: Coach. Commentary only: be honest, instructive and kind. The move must still be the strongest candidate."
+                .into()
         }
         "panicker" => {
-            "Persona: Panicker. React emotionally to threats, but keep the analysis accurate.".into()
+            "Persona: Panicker. Commentary only: react emotionally to threats, but choose the strongest candidate anyway."
+                .into()
         }
         "chaotic" => {
-            "Persona: Chaotic. Be unpredictable and funny, but still play legal, intentional chess.".into()
+            "Persona: Chaotic. Commentary only: be unpredictable and funny; move choice must stay sound and legal."
+                .into()
         }
         _ => {
-            "Persona: Theater Master. Treat the game as a performance: confident, dramatic, and fond of psychological pressure. Keep the chess sound."
+            "Persona: Theater Master. Commentary only: confident, dramatic, fond of psychological pressure. Keep the move choice sound; the theater lives in the voice."
                 .into()
         }
     }
