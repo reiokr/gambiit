@@ -3,12 +3,14 @@
   import { invoke } from "@tauri-apps/api/core";
   import Board from "./lib/Board.svelte";
   import Commentary from "./lib/Commentary.svelte";
+  import GameLibrary from "./lib/GameLibrary.svelte";
   import MoveList from "./lib/MoveList.svelte";
   import PlayerBar from "./lib/PlayerBar.svelte";
   import SettingsPanel from "./lib/SettingsPanel.svelte";
   import type {
     ColorKey,
     GameSnapshot,
+    GameSummary,
     MoveInfo,
     Settings,
   } from "./lib/types";
@@ -37,6 +39,9 @@
   let error = "";
   let activeTab: Tab = "theater";
   let showSettings = false;
+  let showGames = false;
+  let games: GameSummary[] = [];
+  let pgnPreview = "";
   let models: string[] = [];
   let promotion: { from: string; to: string; options: MoveInfo[] } | null =
     null;
@@ -316,7 +321,116 @@
     }
   }
 
+  async function refreshGames() {
+    try {
+      games = await invoke<GameSummary[]>("list_games");
+    } catch {
+      games = [];
+    }
+  }
+
+  async function refreshGameLibrary() {
+    await refreshGames();
+    try {
+      pgnPreview = await invoke<string>("get_pgn");
+    } catch {
+      pgnPreview = "";
+    }
+  }
+
+  async function openGames() {
+    showSettings = false;
+    await refreshGameLibrary();
+    showGames = true;
+  }
+
+  async function loadSavedGame(id: string) {
+    if (thinking) {
+      error = "Wait for the agent to finish before opening another game.";
+      return;
+    }
+    try {
+      const next = await invoke<GameSnapshot>("load_game", { id });
+      applySnapshot(next);
+      flipped = next.humanColor === "black";
+      showGames = false;
+      error = "";
+      if (next.turn === next.agentColor && !next.gameOver) {
+        await agentMove();
+      }
+    } catch (value) {
+      error = errorMessage(value);
+    }
+  }
+
+  async function newGameFromLibrary() {
+    showGames = false;
+    await startGame(humanColor);
+  }
+
+  async function deleteSavedGame(id: string) {
+    try {
+      await invoke("delete_game", { id });
+      if (snapshot?.gameId === id) {
+        showGames = false;
+        await startGame(humanColor);
+      } else {
+        await refreshGames();
+      }
+    } catch (value) {
+      error = errorMessage(value);
+    }
+  }
+
+  async function renameSavedGame(id: string, name: string) {
+    try {
+      const summary = await invoke<GameSummary>("rename_game", { id, name });
+      await refreshGames();
+      if (snapshot && snapshot.gameId === id) {
+        snapshot = { ...snapshot, gameName: summary.name };
+      }
+    } catch (value) {
+      error = errorMessage(value);
+    }
+  }
+
+  async function savePgnFile(): Promise<string | void> {
+    try {
+      return await invoke<string>("export_pgn", {
+        name: snapshot?.gameName ?? "gambiit",
+      });
+    } catch (value) {
+      error = errorMessage(value);
+      throw value;
+    }
+  }
+
+  async function importPgn(pgn: string): Promise<boolean> {
+    if (thinking) {
+      error = "Wait for the agent to finish before importing a game.";
+      return false;
+    }
+    try {
+      const next = await invoke<GameSnapshot>("import_pgn", {
+        pgn,
+        settings,
+      });
+      applySnapshot(next);
+      flipped = next.humanColor === "black";
+      showGames = false;
+      error = "";
+      if (next.turn === next.agentColor && !next.gameOver) {
+        await agentMove();
+      }
+      return true;
+    } catch (value) {
+      error = errorMessage(value);
+      return false;
+    }
+  }
+
   function openSettings() {
+    showGames = false;
     showSettings = true;
   }
 
@@ -341,7 +455,13 @@
     applyFontScale(settings.fontScale);
     setLocale(settings.uiLanguage);
     void (async () => {
-      await startGame(humanColor);
+      await refreshGames();
+      if (games.length > 0) {
+        await loadSavedGame(games[0].id);
+      }
+      if (!snapshot) {
+        await startGame(humanColor);
+      }
       await refreshModels();
     })();
   });
@@ -369,6 +489,15 @@
           <i></i>
           {localizedStatus}
         </span>
+        <button
+          class="icon-btn"
+          type="button"
+          title={$i18n("games.title")}
+          aria-label={$i18n("games.title")}
+          on:click={openGames}
+        >
+          ▤
+        </button>
         <button
           class="icon-btn"
           type="button"
@@ -602,6 +731,22 @@
         onApply={applySettings}
         onClose={cancelSettings}
         onRefreshModels={refreshModels}
+      />
+    {/if}
+
+    {#if showGames}
+      <GameLibrary
+        {games}
+        currentId={snapshot.gameId}
+        pgn={pgnPreview}
+        onOpen={loadSavedGame}
+        onNew={newGameFromLibrary}
+        onDelete={deleteSavedGame}
+        onRename={renameSavedGame}
+        onRefresh={() => void refreshGameLibrary()}
+        onSavePgn={savePgnFile}
+        onImportPgn={importPgn}
+        onClose={() => (showGames = false)}
       />
     {/if}
   </div>

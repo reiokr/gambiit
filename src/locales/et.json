@@ -188,6 +188,32 @@
       "description": "Vali sügavus ja kandidaatide arv ise. Skill 20."
     }
   },
+  "games": {
+    "title": "Mängud",
+    "saved": "Salvestatud mängud",
+    "pgn": "PGN",
+    "new": "Uus mäng",
+    "open": "Ava",
+    "rename": "Nimeta ümber",
+    "delete": "Kustuta",
+    "empty": "Salvestatud mänge veel pole.",
+    "current": "Praegune",
+    "moves": "{count} käiku",
+    "refresh": "Värskenda",
+    "close": "Sulge",
+    "renamePrompt": "Mängu nimi",
+    "deleteConfirm": "Kustutada see salvestatud mäng?",
+    "exportTitle": "Ekspordi praegune mäng",
+    "importTitle": "Impordi PGN",
+    "exportHint": "PGN sisaldab silte, käike ja kommentaare.",
+    "importHint": "Kleebi standardne PGN SAN-käikudega. Looksulgudes kommentaarid säilitatakse.",
+    "copy": "Kopeeri PGN",
+    "copied": "Kopeeritud.",
+    "saveFile": "Salvesta .pgn",
+    "import": "Impordi",
+    "importPlaceholder": "Kleebi siia PGN…",
+    "pgnEmpty": "Käike veel pole."
+  },
   "themes": {
     "salon": {
       "name": "Salong",

@@ -70,7 +70,19 @@ export interface Settings {
   fontScale: number;
 }
 
+export interface GameSummary {
+  id: string;
+  name: string;
+  updatedAt: number;
+  humanColor: ColorKey;
+  model: string;
+  moveCount: number;
+  result: string;
+}
+
 export interface GameSnapshot {
+  gameId: string;
+  gameName: string;
   fen: string;
   turn: ColorKey;
   humanColor: ColorKey;

@@ -188,6 +188,32 @@
       "description": "Tune depth and candidate count yourself. Skill 20."
     }
   },
+  "games": {
+    "title": "Games",
+    "saved": "Saved games",
+    "pgn": "PGN",
+    "new": "New game",
+    "open": "Open",
+    "rename": "Rename",
+    "delete": "Delete",
+    "empty": "No saved games yet.",
+    "current": "Current",
+    "moves": "{count} moves",
+    "refresh": "Refresh",
+    "close": "Close",
+    "renamePrompt": "Game name",
+    "deleteConfirm": "Delete this saved game?",
+    "exportTitle": "Export current game",
+    "importTitle": "Import PGN",
+    "exportHint": "The PGN includes tags, moves and comments.",
+    "importHint": "Paste a standard PGN with SAN moves. Comments in braces are preserved.",
+    "copy": "Copy PGN",
+    "copied": "Copied.",
+    "saveFile": "Save .pgn",
+    "import": "Import",
+    "importPlaceholder": "Paste a PGN here…",
+    "pgnEmpty": "No moves yet."
+  },
   "themes": {
     "salon": {
       "name": "Salon",

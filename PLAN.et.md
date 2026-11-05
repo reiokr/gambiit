@@ -100,6 +100,8 @@ Valmis:
 - Valikulised pakkuja API-võtmed `~/.config/gambiit/credentials.json` failis
   (0600), edastatakse keskkonnamuutujana privaatsele OpenCode'i lapsprotsessile;
   tühi võti kasutab OpenCode'i enda autentimist.
+- Automaatne salvestus iga käigu järel, viimase mängu jätkamine, mängude
+  raamatukogu, PGN eksport/import kommentaaridega ja tolerantne PGN-parser.
 - Viis Stockfishi raskusastet — Algaja, Harrastaja, Edasijõudnu, Tugev ja
   Meister — pluss Kohandatud. Taseme valik seab depth/MultiPV liugurid; liuguri
   liigutamine valib Kohandatud. Igal preseedil on ka Stockfishi `Skill Level`.
@@ -127,8 +129,6 @@ Testid:
 
 ### 3.3 Mis veel puudub
 
-- mängu salvestamine ja jätkamine pärast rakenduse sulgemist;
-- PGN eksport/import ja mängude raamatukogu;
 - kellad;
 - pärastmängu Stockfishi analüüs, accuracy, eval-graaf;
 - teemaredaktor ja kohandatud malendikomplektide laadimine;
@@ -465,17 +465,17 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 | **2. UI shell** | Tauri + Svelte, laud, kohalik mäng | ✅ valmis |
 | **3. Agent UI-s** | Auto/Button, mudel, isiksus, kommentaarid | ✅ valmis |
 | **4. Disainisüsteem** | 3 teemat, malendikomplekt, seaded | ✅ valmis; editor järgmine |
-| **5. Mängu täiuslikkus** | PGN, kellad, tagasivõtt, analüüs, tulemus | osaliselt |
+| **5. Mängu täiuslikkus** | PGN ✅, salvestus ✅; kellad, analüüs, tulemus | osaliselt |
 | **6. Teater ja ekstra** | MCP, chat, Truth Lens, Director's Cut, edetabel | järgmine |
 | **7. Pakend** | PKGBUILD, `.desktop`, release, docs | hiljem |
 
 Soovitatud järjekord:
 
 1. **Teemaredaktor + kohandatud malendikomplektid** — sinu algne disainisoov.
-2. **Salvestus/jätkamine + PGN** — mäng ei kao akna sulgemisel.
-3. **Pärastmängu analüüs** — Stockfishi accuracy ja eval-graaf.
-4. **Chat + MCP** — agentchessi-kogemus ja psühholoogiline sõda.
-5. **Truth Lens / Director's Cut / edetabel / broadcast** — teatriekstra.
+2. **Pärastmängu analüüs** — Stockfishi accuracy ja eval-graaf.
+3. **Chat + MCP** — agentchessi-kogemus ja psühholoogiline sõda.
+4. **Truth Lens / Director's Cut / edetabel / broadcast** — teatriekstra.
+5. **Kellad ja pakend** — ajakontroll, release, PKGBUILD.
 
 ---
 
@@ -594,11 +594,10 @@ broadcast-režiim.
 ## 16. Järgmised sammud
 
 1. **Teemaredaktor + malendikomplektide valik** (soovitus nr 1).
-2. **Mängu salvestamine/jätkamine + PGN**.
-3. **Pärastmängu analüüs**.
-4. **Chat + MCP**.
-5. **Truth Lens / Director's Cut / edetabel / broadcast**.
-6. **Pakend** (PKGBUILD, `.desktop`, release).
+2. **Pärastmängu analüüs**.
+3. **Chat + MCP**.
+4. **Truth Lens / Director's Cut / edetabel / broadcast**.
+5. **Kellad + pakend** (PKGBUILD, `.desktop`, release).
 
-Kui soovid, võin järgmisena alustada teemaredaktoriga või salvestamise/PGN-iga.
-Mõlemad kasutavad olemasolevat arhitektuuri ega vaja suurt ümberehitust.
+Salvestamine, jätkamine, mängude raamatukogu ja PGN eksport/import on nüüd
+valmis. Teemaredaktor ja analüüs on järgmised suuremad tükid.

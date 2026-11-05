@@ -1,6 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod credentials;
+mod pgn;
+mod storage;
 
 use gambiit_agent::{AgentConfig, AgentSession, AgentTurn, OpenCodeClient};
 use gambiit_core::{Game, GameStatus, MoveInfo, MoveRecord, color_key};
@@ -13,7 +15,7 @@ use tauri::State;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct Settings {
+pub(crate) struct Settings {
     model: String,
     persona: String,
     ui_language: String,
@@ -64,18 +66,18 @@ struct SquareView {
     piece: Option<PieceView>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct CandidateView {
+pub(crate) struct CandidateView {
     #[serde(rename = "move")]
     mv: String,
     why: Option<String>,
     why_rejected: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct CommentaryCard {
+pub(crate) struct CommentaryCard {
     san: String,
     uci: String,
     comment: String,
@@ -90,6 +92,8 @@ struct CommentaryCard {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct GameSnapshot {
+    game_id: String,
+    game_name: String,
     fen: String,
     turn: String,
     human_color: String,
@@ -119,15 +123,96 @@ struct Session {
     stockfish: Option<Stockfish>,
     commentary: Vec<CommentaryCard>,
     thinking: bool,
+    game_id: String,
+    game_name: String,
+    created_at: u64,
+    persist_enabled: bool,
 }
 
 impl Session {
     fn new(settings: Settings, human_color: Color) -> Self {
-        let settings = normalize_settings(settings);
+        Self::new_with_persist(settings, human_color, true)
+    }
 
+    fn new_with_persist(settings: Settings, human_color: Color, persist_enabled: bool) -> Self {
+        let settings = normalize_settings(settings);
         let mut game = Game::new();
         game.set_human_color(human_color);
+        let game_id = storage::new_id();
+        let game_name = format!("Game vs {}", settings.persona);
+        let mut session = Self::assemble(
+            game,
+            settings,
+            Vec::new(),
+            game_id,
+            game_name,
+            storage::now(),
+        );
+        session.persist_enabled = persist_enabled;
+        if persist_enabled {
+            session.persist();
+        }
+        session
+    }
 
+    fn from_saved(saved: storage::SavedGame) -> Result<Self, String> {
+        let settings = normalize_settings(saved.settings);
+        let mut game = if saved.initial_fen.trim().is_empty() {
+            Game::new()
+        } else {
+            Game::from_fen(&saved.initial_fen).map_err(|error| error.to_string())?
+        };
+        for record in &saved.moves {
+            game.apply_uci(&record.uci)
+                .map_err(|error| format!("Could not replay {}: {error}", record.uci))?;
+            game.annotate_last(record.comment.clone(), record.eval.clone());
+        }
+        if let Some(color) = parse_color(&saved.human_color) {
+            game.set_human_color(color);
+        }
+        match saved.termination.as_str() {
+            "resigned_white" => game.resign(Color::Black),
+            "resigned_black" => game.resign(Color::White),
+            "aborted" => game.abort(),
+            _ => {}
+        }
+        Ok(Self::assemble(
+            game,
+            settings,
+            saved.commentary,
+            saved.id,
+            saved.name,
+            saved.created_at,
+        ))
+    }
+
+    fn from_import(
+        game: Game,
+        settings: Settings,
+        commentary: Vec<CommentaryCard>,
+        name: String,
+    ) -> Self {
+        let settings = normalize_settings(settings);
+        let session = Self::assemble(
+            game,
+            settings,
+            commentary,
+            storage::new_id(),
+            name,
+            storage::now(),
+        );
+        session.persist();
+        session
+    }
+
+    fn assemble(
+        game: Game,
+        settings: Settings,
+        commentary: Vec<CommentaryCard>,
+        game_id: String,
+        game_name: String,
+        created_at: u64,
+    ) -> Self {
         let mut agent_error = None;
         let credential_env = credential_env_for_model(&settings.model);
         let agent = match AgentSession::new(agent_config(&settings, credential_env)) {
@@ -152,8 +237,45 @@ impl Session {
             agent,
             agent_error,
             stockfish,
-            commentary: Vec::new(),
+            commentary,
             thinking: false,
+            game_id,
+            game_name,
+            created_at,
+            persist_enabled: true,
+        }
+    }
+
+    fn saved(&self) -> storage::SavedGame {
+        let termination = match self.game.status() {
+            GameStatus::Resigned {
+                winner: Color::White,
+            } => "resigned_black",
+            GameStatus::Resigned { .. } => "resigned_white",
+            GameStatus::Aborted => "aborted",
+            _ => "ongoing",
+        };
+        storage::SavedGame {
+            id: self.game_id.clone(),
+            name: self.game_name.clone(),
+            created_at: self.created_at,
+            updated_at: storage::now(),
+            human_color: color_key(self.game.human_color()).to_string(),
+            initial_fen: self.game.initial_fen().to_string(),
+            moves: self.game.history().to_vec(),
+            commentary: self.commentary.clone(),
+            settings: self.settings.clone(),
+            result: pgn::result(&self.game).to_string(),
+            termination: termination.to_string(),
+        }
+    }
+
+    fn persist(&self) {
+        if !self.persist_enabled {
+            return;
+        }
+        if let Err(error) = storage::save(&self.saved()) {
+            eprintln!("Could not save game: {error}");
         }
     }
 
@@ -187,6 +309,8 @@ impl Session {
         let status = self.game.status();
         let (status_key, status_side) = status_parts(status, turn);
         GameSnapshot {
+            game_id: self.game_id.clone(),
+            game_name: self.game_name.clone(),
             fen: self.game.fen(),
             turn: color_key(turn).to_string(),
             human_color: color_key(self.game.human_color()).to_string(),
@@ -220,6 +344,7 @@ impl Session {
             .apply_uci(mv)
             .or_else(|_| self.game.apply_san(mv))
             .map_err(|error| error.to_string())?;
+        self.persist();
         Ok(self.snapshot())
     }
 
@@ -341,6 +466,7 @@ impl Session {
             elapsed_ms: started.elapsed().as_millis() as u64,
         });
         self.agent_error = None;
+        self.persist();
         Ok(self.snapshot())
     }
 
@@ -357,6 +483,7 @@ impl Session {
             return Err("Only your own last move can be taken back.".into());
         }
         self.game.undo_last();
+        self.persist();
         Ok(self.snapshot())
     }
 
@@ -365,6 +492,7 @@ impl Session {
             return Err("The game is over.".into());
         }
         self.game.resign(!self.game.human_color());
+        self.persist();
         Ok(self.snapshot())
     }
 }
@@ -434,6 +562,61 @@ fn list_models() -> Result<Vec<String>, String> {
     models.sort();
     models.dedup();
     Ok(models)
+}
+
+#[tauri::command]
+fn list_games() -> Result<Vec<storage::GameSummary>, String> {
+    storage::list()
+}
+
+#[tauri::command]
+fn load_game(state: State<'_, AppState>, id: String) -> Result<GameSnapshot, String> {
+    let saved = storage::load(&id)?;
+    let session = Session::from_saved(saved)?;
+    let snapshot = session.snapshot();
+    *state.session.lock() = session;
+    Ok(snapshot)
+}
+
+#[tauri::command]
+fn delete_game(id: String) -> Result<(), String> {
+    storage::delete(&id)
+}
+
+#[tauri::command]
+fn rename_game(id: String, name: String) -> Result<storage::GameSummary, String> {
+    storage::rename(&id, &name)
+}
+
+#[tauri::command]
+fn get_pgn(state: State<'_, AppState>) -> Result<String, String> {
+    let session = state.session.lock();
+    Ok(pgn::export(&session.game, &session.settings))
+}
+
+#[tauri::command]
+fn export_pgn(state: State<'_, AppState>, name: String) -> Result<String, String> {
+    let session = state.session.lock();
+    let pgn = pgn::export(&session.game, &session.settings);
+    let name = if name.trim().is_empty() {
+        session.game_name.clone()
+    } else {
+        name
+    };
+    storage::save_pgn(&name, &pgn)
+}
+
+#[tauri::command]
+fn import_pgn(
+    state: State<'_, AppState>,
+    pgn: String,
+    settings: Settings,
+) -> Result<GameSnapshot, String> {
+    let imported = pgn::parse(&pgn)?;
+    let session = Session::from_import(imported.game, settings, imported.commentary, imported.name);
+    let snapshot = session.snapshot();
+    *state.session.lock() = session;
+    Ok(snapshot)
 }
 
 #[tauri::command]
@@ -585,7 +768,11 @@ fn status_parts(status: GameStatus, turn: Color) -> (String, Option<String>) {
 pub fn run() {
     tauri::Builder::default()
         .manage(AppState {
-            session: Arc::new(Mutex::new(Session::new(Settings::default(), Color::White))),
+            session: Arc::new(Mutex::new(Session::new_with_persist(
+                Settings::default(),
+                Color::White,
+                false,
+            ))),
         })
         .invoke_handler(tauri::generate_handler![
             get_state,
@@ -595,6 +782,13 @@ pub fn run() {
             takeback,
             resign,
             list_models,
+            list_games,
+            load_game,
+            delete_game,
+            rename_game,
+            get_pgn,
+            export_pgn,
+            import_pgn,
             credential_status,
             save_credential,
             delete_credential
@@ -612,7 +806,7 @@ mod tests {
     use super::*;
 
     fn session() -> Session {
-        Session::new(Settings::default(), Color::White)
+        Session::new_with_persist(Settings::default(), Color::White, false)
     }
 
     #[test]
@@ -661,7 +855,7 @@ mod tests {
 
     #[test]
     fn playing_as_black_starts_with_the_agent_to_move() {
-        let session = Session::new(Settings::default(), Color::Black);
+        let session = Session::new_with_persist(Settings::default(), Color::Black, false);
         let snapshot = session.snapshot();
         assert_eq!(snapshot.human_color, "black");
         assert_eq!(snapshot.agent_color, "white");
@@ -676,7 +870,7 @@ mod tests {
             agent_language_name: "English".to_string(),
             ..Default::default()
         };
-        let session = Session::new(settings, Color::White);
+        let session = Session::new_with_persist(settings, Color::White, false);
         let snapshot = session.snapshot();
         assert_eq!(snapshot.settings.ui_language, "et");
         assert_eq!(snapshot.settings.agent_language, "en");
@@ -702,6 +896,35 @@ mod tests {
         settings.multipv = 4;
         settings.stockfish_depth = 10;
         assert_eq!(engine_params(&settings), (4, 10, 20));
+    }
+
+    #[test]
+    fn replays_a_saved_game() {
+        let mut game = Game::new();
+        game.apply_san("e4").unwrap();
+        game.apply_san("e5").unwrap();
+        game.annotate_last(Some("A reply.".to_string()), Some("-0.1".to_string()));
+        let saved = storage::SavedGame {
+            id: "test-game".to_string(),
+            name: "Test game".to_string(),
+            created_at: 1,
+            updated_at: 1,
+            human_color: "white".to_string(),
+            initial_fen: game.initial_fen().to_string(),
+            moves: game.history().to_vec(),
+            commentary: Vec::new(),
+            settings: Settings::default(),
+            result: "*".to_string(),
+            termination: "ongoing".to_string(),
+        };
+        let restored = Session::from_saved(saved).unwrap();
+        assert_eq!(restored.game.history().len(), 2);
+        assert_eq!(restored.game.history()[1].san, "e5");
+        assert_eq!(
+            restored.game.history()[1].comment.as_deref(),
+            Some("A reply.")
+        );
+        assert_eq!(restored.game_name, "Test game");
     }
 
     /// End-to-end smoke test against the real configured OpenCode model.
@@ -739,7 +962,7 @@ mod tests {
             agent_language_name: "Estonian".to_string(),
             ..Default::default()
         };
-        let mut session = Session::new(settings, Color::White);
+        let mut session = Session::new_with_persist(settings, Color::White, false);
         session.make_move("e2e4").unwrap();
         let snapshot = session.agent_move().unwrap();
         assert_eq!(snapshot.history.len(), 2);

@@ -33,6 +33,9 @@ What works now:
 - commentary cards with evaluations, candidate moves, rejection reasons, plan,
   elapsed time and token usage;
 - takeback policy enforced per `AGENTS.md`: only your own last move is undoable;
+- automatic save after every move, resume of the latest game and a saved-game
+  library (open, rename, delete);
+- PGN export with tags/comments and tolerant PGN import;
 - settings for model, persona, response mode, colour, theme, font size
   (90–150%, default 120%), language, sound, animations, Stockfish depth and
   candidate count;
@@ -49,9 +52,8 @@ What works now:
   Estonian included, new languages are added by dropping in a JSON catalog;
 - desktop and terminal builds share the same Rust core, engine and agent layers.
 
-Not yet: game persistence/resume, PGN library, clocks, post-game analysis, theme
-editor, custom piece sets, MCP mode, chat, Truth Lens and broadcast mode. Those
-are the next phases in `PLAN.md`.
+Not yet: clocks, post-game analysis, theme editor, custom piece sets, MCP mode,
+chat, Truth Lens and broadcast mode. Those are the next phases in `PLAN.md`.
 
 ## Run the desktop app
 
@@ -91,6 +93,28 @@ code.
 
 See [`docs/LOCALES.md`](docs/LOCALES.md) for the format and translation workflow.
 English and Estonian are included.
+
+## Saving and PGN
+
+Every game is saved after each move. On the next launch Gambiit resumes the most
+recent game automatically. The **▤ Games** button in the top bar opens the saved
+game library, where you can open, rename or delete games.
+
+Saved games live in:
+
+```
+~/.local/share/gambiit/games/
+```
+
+The **PGN** tab exports the current game (tags, moves and comments) and imports
+standard PGN text. “Save .pgn” writes a copy to:
+
+```
+~/.local/share/gambiit/exports/
+```
+
+PGN import accepts standard SAN, comments in braces, `FEN`/`HumanColor` tags and
+ignores variations. OpenCode settings are stored with each saved game.
 
 ## Models and API keys
 
@@ -204,7 +228,8 @@ the rules, Stockfish integration and OpenCode contract before the UI is built.
   selection, commentary panel, error recovery.
 - **Phase 4:** themes, piece sets, theme editor, animations, sounds,
   accessibility, English/Estonian UI.
-- **Phase 5:** PGN, clocks, takeback rules, draw/resign, analysis, result screen.
+- **Phase 5:** clocks, takeback rules, draw/resign, analysis, result screen.
+  (PGN export/import and the saved-game library are done.)
 - **Phase 6:** MCP mode, personas/chat, Truth Lens, Director's Cut, leaderboard,
   broadcast mode.
 - **Phase 7:** packaging (PKGBUILD, `.desktop`), docs, performance.

@@ -4,7 +4,7 @@
 //! game-level concerns Gambiit needs: move records, repetition tracking,
 //! resignations and human/agent-facing status text.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use shakmaty::{
     CastlingMode, Chess, Color, EnPassantMode, KnownOutcome, Move, Outcome, Piece, Position, Role,
     Square, fen::Fen, san::San, uci::UciMove,
@@ -65,7 +65,7 @@ pub struct MoveInfo {
     pub is_en_passant: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MoveRecord {
     pub ply: u32,
