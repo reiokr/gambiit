@@ -1,0 +1,151 @@
+{
+  "_meta": {
+    "name": "Estonian",
+    "nativeName": "Eesti"
+  },
+  "app": {
+    "tagline": "Iga käik on etendus.",
+    "flipBoard": "Pööra lauda",
+    "settings": "Seaded",
+    "newGame": "Uus mäng",
+    "takeBack": "Võta tagasi",
+    "resign": "Alistu",
+    "agentMove": "Agendi käik",
+    "you": "Sina",
+    "localPlayer": "kohalik mängija",
+    "thinking": "{name} mõtleb…",
+    "settingTheStage": "Lava seatakse…",
+    "finalCurtain": "Lõplik eesriie",
+    "takesTheStage": "{side} võidab.",
+    "rematch": "Revanš",
+    "reviewBoard": "Vaata lauda",
+    "opponentUnavailable": "Vastane pole saadaval",
+    "retryAgent": "Proovi agenti uuesti",
+    "dismissError": "Sulge viga",
+    "onlyOwnMove": "Tagasi saab võtta ainult sinu enda viimase käigu",
+    "confirmNewGame": "Alustada uut mängu? Praegune mäng läheb kaotsi.",
+    "confirmResign": "Kas alistud sellele mängule?",
+    "analysisTitle": "Analüüs on veel kulisside taga.",
+    "analysisBody": "Täpsus, vigade kaardid, eval-graaf ja Tõeobjektiiv tulevad järgmises faasis. Pärast mängu peidab teater oma saladused; analüüs paljastab need.",
+    "gamePanels": "Mängu paneelid",
+    "tabMoves": "Käigud",
+    "tabTheater": "Teater",
+    "tabAnalysis": "Analüüs"
+  },
+  "board": {
+    "label": "Malelaud",
+    "empty": "tühi",
+    "legalMove": "seaduslik käik",
+    "choosePromotion": "Vali promotsioon",
+    "promoteTo": "Promoveeri"
+  },
+  "piece": {
+    "white": {
+      "p": "valge ettur",
+      "n": "valge ratsu",
+      "b": "valge oda",
+      "r": "valge vanker",
+      "q": "valge lipp",
+      "k": "valge kuningas"
+    },
+    "black": {
+      "p": "must ettur",
+      "n": "must ratsu",
+      "b": "must oda",
+      "r": "must vanker",
+      "q": "must lipp",
+      "k": "must kuningas"
+    }
+  },
+  "player": {
+    "ai": "AI",
+    "thinking": "mõtleb",
+    "captured": "Võetud malendid",
+    "toMove": "käigul",
+    "waiting": "ootab",
+    "won": "võitis",
+    "lost": "kaotas",
+    "draw": "viik"
+  },
+  "side": {
+    "white": "Valge",
+    "black": "Must"
+  },
+  "status": {
+    "ongoing": "{side} on käigul.",
+    "check": "{side} on tšeki all.",
+    "checkmate": "Matt — {side} võidab.",
+    "stalemate": "Patt — viik.",
+    "draw50": "Viik — 50-käiguline reegel.",
+    "drawThreefold": "Viik — kolmekordne kordus.",
+    "drawMaterial": "Viik — ebapiisav materjal.",
+    "draw": "Viik.",
+    "resigned": "{side} võidab — vastane alistus.",
+    "aborted": "Mäng katkestati."
+  },
+  "moves": {
+    "none": "Käike veel pole.",
+    "firstLine": "Esimene rida on sinu."
+  },
+  "commentary": {
+    "quiet": "Teater on vaikne.",
+    "emptyPrefix": "Tee käik.",
+    "emptySuffix": "vastab plaaniga, põhjendusega ja võib-olla valega.",
+    "tokens": "tokenit"
+  },
+  "settings": {
+    "gameSetup": "Mängu seadistamine",
+    "title": "Sea lava",
+    "close": "Sulge seaded",
+    "opponent": "Vastane",
+    "opponentHint": "OpenCode'i mudel + isiksus",
+    "model": "Mudel",
+    "persona": "Isiksus",
+    "afterMove": "Pärast sinu käiku",
+    "auto": "Automaatne",
+    "autoHint": "Agent vastab kohe",
+    "button": "Nupp",
+    "buttonHint": "Sina käivitad “Agendi käik”",
+    "playAs": "Mängi kui",
+    "white": "Valge",
+    "black": "Must",
+    "boardInterface": "Laud ja liides",
+    "livePreview": "Reaalajas eelvaade",
+    "language": "Keel",
+    "languageHint": "Liides ja agendi kommentaarid",
+    "fontSize": "Fondi suurus",
+    "interface": "Liides",
+    "sound": "Heli",
+    "animations": "Animatsioonid",
+    "engine": "Mootor",
+    "engineHint": "Stockfishi kandidaadid hübriidmänguks",
+    "depth": "Sügavus",
+    "candidates": "Kandidaatkäigud",
+    "engineNote": "Stockfish pakub kandidaadid; mudel valib ühe, selgitab ja võib hinnangu osas ikkagi bluffida. Laud jääb autoriteetseks.",
+    "cancel": "Tühista",
+    "apply": "Rakenda ja alusta uut mängu",
+    "modelsDiscovered": "{count} mudelit avastatud"
+  },
+  "personas": {
+    "theaterMaster": "Teatrimeister",
+    "coldCalculator": "Külm kalkulaator",
+    "trickster": "Pettur",
+    "panicker": "Hirmunud",
+    "coach": "Treener",
+    "chaotic": "Kaootiline"
+  },
+  "themes": {
+    "salon": {
+      "name": "Salong",
+      "description": "Pähkel, kreem ja messing. Vaikimisi lava."
+    },
+    "tournament": {
+      "name": "Turniir",
+      "description": "Klassikaline roheline ja kreem pikkadeks mängudeks."
+    },
+    "midnight": {
+      "name": "Südaöö",
+      "description": "Külm teras ja sinine valgus. Mängi pärast pimedat."
+    }
+  }
+}

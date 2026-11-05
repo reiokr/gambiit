@@ -63,6 +63,7 @@ pub struct AgentConfig {
     pub model: String,
     pub persona: String,
     pub language: String,
+    pub language_name: String,
     pub timeout_secs: u64,
     pub retries: usize,
 }
@@ -73,6 +74,7 @@ impl Default for AgentConfig {
             model: "opencode-go/deepseek-v4.1-flash".to_string(),
             persona: "Theater Master".to_string(),
             language: "en".to_string(),
+            language_name: "English".to_string(),
             timeout_secs: 180,
             retries: 1,
         }
@@ -286,6 +288,17 @@ impl AgentSession {
         &self.config
     }
 
+    /// Update the prompt configuration, keeping the current conversation
+    /// unless the model itself changes.
+    pub fn update_config(&mut self, config: AgentConfig) {
+        let model_changed = self.config.model != config.model;
+        self.config = config;
+        if model_changed {
+            self.session_id = None;
+            self.last_raw = None;
+        }
+    }
+
     pub fn session_id(&self) -> Option<&str> {
         self.session_id.as_deref()
     }
@@ -366,10 +379,10 @@ pub fn build_move_prompt(game: &Game, config: &AgentConfig, candidates: &[Candid
     } else {
         &history
     };
-    let language = if config.language.eq_ignore_ascii_case("et") {
-        "Estonian"
-    } else {
+    let language = if config.language_name.trim().is_empty() {
         "English"
+    } else {
+        config.language_name.as_str()
     };
     let persona = persona_instruction(&config.persona);
 
@@ -653,5 +666,17 @@ mod tests {
         let turn = parse_agent_turn(r#"{"move":"e2e4","candidates":["e2e4","d2d4"]}"#).unwrap();
         assert_eq!(turn.candidates.len(), 2);
         assert_eq!(turn.candidates[1].mv, "d2d4");
+    }
+
+    #[test]
+    fn prompt_uses_the_selected_language_name() {
+        let game = Game::new();
+        let config = AgentConfig {
+            language: "et".to_string(),
+            language_name: "Estonian".to_string(),
+            ..Default::default()
+        };
+        let prompt = build_move_prompt(&game, &config, &[]);
+        assert!(prompt.contains("Commentary language: Estonian"));
     }
 }

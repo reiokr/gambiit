@@ -12,11 +12,7 @@
     MoveInfo,
     Settings,
   } from "./lib/types";
-  import {
-    capturedPieces,
-    materialScore,
-    sideLabel,
-  } from "./lib/board";
+  import { capturedPieces, materialScore } from "./lib/board";
   import {
     applyFontScale,
     loadHumanColor,
@@ -26,6 +22,12 @@
   } from "./lib/settings";
   import { applyTheme } from "./lib/themes";
   import { playSound } from "./lib/sound";
+  import {
+    availableLocales,
+    i18n,
+    localeMeta,
+    setLocale,
+  } from "./lib/i18n";
 
   type Tab = "moves" | "theater" | "analysis";
 
@@ -87,6 +89,27 @@
   $: agentName = snapshot?.settings.persona ?? settings.persona;
   $: agentModel = snapshot?.settings.model ?? settings.model;
   $: agentError = snapshot?.agentError ?? "";
+  $: localizedStatus = snapshot
+    ? $i18n(
+        `status.${snapshot.statusKey}`,
+        snapshot.statusSide
+          ? { side: $i18n(`side.${snapshot.statusSide}`) }
+          : {},
+      )
+    : "";
+
+  const PERSONA_KEYS: Record<string, string> = {
+    "Theater Master": "theaterMaster",
+    "Cold Calculator": "coldCalculator",
+    Trickster: "trickster",
+    Panicker: "panicker",
+    Coach: "coach",
+    Chaotic: "chaotic",
+  };
+
+  function personaLabel(persona: string): string {
+    return $i18n(`personas.${PERSONA_KEYS[persona] ?? "theaterMaster"}`);
+  }
 
   function errorMessage(value: unknown): string {
     if (typeof value === "string") return value;
@@ -99,7 +122,7 @@
   }
 
   function playerStatus(color: ColorKey): string {
-    if (!snapshot) return "";
+    if (!snapshot) return "waiting";
     if (snapshot.gameOver) {
       if (snapshot.winner === color) return "won";
       if (snapshot.winner) return "lost";
@@ -107,7 +130,7 @@
     }
     if (thinking && color === snapshot.agentColor) return "thinking";
     if (snapshot.turn !== color) return "waiting";
-    return "to move";
+    return "toMove";
   }
 
   function applySnapshot(next: GameSnapshot) {
@@ -119,6 +142,7 @@
     saveHumanColor(next.humanColor);
     applyTheme(next.settings.theme);
     applyFontScale(next.settings.fontScale);
+    setLocale(next.settings.language);
     thinking = next.thinking;
 
     if (next.lastMove && next.lastMove.ply !== lastSoundPly) {
@@ -149,6 +173,12 @@
     humanColor = color;
     flipped = color === "black";
     saveHumanColor(color);
+
+    const languageName = localeMeta(settings.language).name;
+    if (settings.languageName !== languageName) {
+      settings = { ...settings, languageName };
+      saveSettings(settings);
+    }
 
     try {
       const next = await invoke<GameSnapshot>("new_game", {
@@ -268,7 +298,7 @@
 
   async function resign() {
     if (!snapshot || snapshot.gameOver) return;
-    if (!window.confirm("Resign this game?")) return;
+    if (!window.confirm($i18n("app.confirmResign"))) return;
     error = "";
     try {
       const next = await invoke<GameSnapshot>("resign");
@@ -283,11 +313,28 @@
       snapshot &&
       snapshot.history.length > 0 &&
       !snapshot.gameOver &&
-      !window.confirm("Start a new game? The current game will be lost.")
+      !window.confirm($i18n("app.confirmNewGame"))
     ) {
       return;
     }
     void startGame(humanColor);
+  }
+
+  async function changeLanguage(code: string) {
+    const previous = settings;
+    const meta = localeMeta(code);
+    settings = { ...settings, language: code, languageName: meta.name };
+    setLocale(code);
+    saveSettings(settings);
+    try {
+      const next = await invoke<GameSnapshot>("update_settings", { settings });
+      applySnapshot(next);
+    } catch (value) {
+      error = errorMessage(value);
+      settings = previous;
+      setLocale(previous.language);
+      saveSettings(previous);
+    }
   }
 
   function openSettings() {
@@ -297,6 +344,7 @@
   function cancelSettings() {
     applyTheme(settings.theme);
     applyFontScale(settings.fontScale);
+    setLocale(settings.language);
     showSettings = false;
   }
 
@@ -304,6 +352,7 @@
     settings = next;
     saveSettings(next);
     applyTheme(next.theme);
+    setLocale(next.language);
     showSettings = false;
     void startGame(color);
   }
@@ -311,6 +360,7 @@
   onMount(() => {
     applyTheme(settings.theme);
     applyFontScale(settings.fontScale);
+    setLocale(settings.language);
     void (async () => {
       await startGame(humanColor);
       try {
@@ -326,7 +376,7 @@
   <div class="loading-screen">
     <div class="loading-mark">G</div>
     <div class="spinner large"></div>
-    <p>Setting the stage…</p>
+    <p>{$i18n("app.settingTheStage")}</p>
   </div>
 {:else}
   <div class="app">
@@ -335,20 +385,30 @@
         <div class="brand-mark">G</div>
         <div class="brand-copy">
           <h1>GAMBIIT</h1>
-          <p>Every move is a performance.</p>
+          <p>{$i18n("app.tagline")}</p>
         </div>
       </div>
 
       <div class="top-actions">
         <span class="status-pill" class:live={!snapshot.gameOver}>
           <i></i>
-          {snapshot.statusText}
+          {localizedStatus}
         </span>
+        <select
+          class="language-select"
+          aria-label={$i18n("settings.language")}
+          value={settings.language}
+          on:change={(event) => changeLanguage(event.currentTarget.value)}
+        >
+          {#each availableLocales as language}
+            <option value={language.code}>{language.nativeName}</option>
+          {/each}
+        </select>
         <button
           class="icon-btn"
           type="button"
-          title="Flip board"
-          aria-label="Flip board"
+          title={$i18n("app.flipBoard")}
+          aria-label={$i18n("app.flipBoard")}
           on:click={() => (flipped = !flipped)}
         >
           ⇅
@@ -356,8 +416,8 @@
         <button
           class="icon-btn"
           type="button"
-          title="Settings"
-          aria-label="Settings"
+          title={$i18n("app.settings")}
+          aria-label={$i18n("app.settings")}
           on:click={openSettings}
         >
           ⚙
@@ -368,13 +428,13 @@
     <main class="main">
       <section class="stage">
         <PlayerBar
-          name={agentName}
-          subtitle={`${agentModel} · ${sideLabel(snapshot.agentColor)}`}
+          name={personaLabel(agentName)}
+          subtitle={`${agentModel} · ${$i18n(`side.${snapshot.agentColor}`)}`}
           color={snapshot.agentColor}
           isAgent
           thinking={thinking}
           active={snapshot.turn === snapshot.agentColor && !snapshot.gameOver}
-          status={playerStatus(snapshot.agentColor)}
+          statusKey={playerStatus(snapshot.agentColor)}
           captured={agentCaptured}
           material={agentMaterial}
         />
@@ -398,18 +458,20 @@
           {#if thinking}
             <div class="thinking-ribbon">
               <span class="spinner"></span>
-              {agentName} is thinking…
+              {$i18n("app.thinking", { name: personaLabel(agentName) })}
             </div>
           {/if}
 
           {#if snapshot.gameOver && !resultDismissed}
             <div class="result-overlay">
               <div class="result-card">
-                <p class="eyebrow">Final curtain</p>
-                <h2>{snapshot.statusText}</h2>
+                <p class="eyebrow">{$i18n("app.finalCurtain")}</p>
+                <h2>{localizedStatus}</h2>
                 {#if snapshot.winner}
                   <p class="winner">
-                    {sideLabel(snapshot.winner)} takes the stage.
+                    {$i18n("app.takesTheStage", {
+                      side: $i18n(`side.${snapshot.winner}`),
+                    })}
                   </p>
                 {/if}
                 <div class="result-actions">
@@ -419,14 +481,14 @@
                     on:click={() =>
                       snapshot && startGame(snapshot.humanColor)}
                   >
-                    Rematch
+                    {$i18n("app.rematch")}
                   </button>
                   <button
                     class="btn ghost"
                     type="button"
                     on:click={() => (resultDismissed = true)}
                   >
-                    Review board
+                    {$i18n("app.reviewBoard")}
                   </button>
                 </div>
               </div>
@@ -435,27 +497,27 @@
         </div>
 
         <PlayerBar
-          name="You"
-          subtitle={`${sideLabel(snapshot.humanColor)} · local player`}
+          name={$i18n("app.you")}
+          subtitle={`${$i18n(`side.${snapshot.humanColor}`)} · ${$i18n("app.localPlayer")}`}
           color={snapshot.humanColor}
           active={snapshot.turn === snapshot.humanColor && !snapshot.gameOver}
-          status={playerStatus(snapshot.humanColor)}
+          statusKey={playerStatus(snapshot.humanColor)}
           captured={humanCaptured}
           material={humanMaterial}
         />
 
         <div class="board-actions">
           <button class="btn ghost" type="button" on:click={newGame}>
-            New game
+            {$i18n("app.newGame")}
           </button>
           <button
             class="btn ghost"
             type="button"
             disabled={!canTakeback}
-            title="Only your own last move can be taken back"
+            title={$i18n("app.onlyOwnMove")}
             on:click={takeback}
           >
-            Take back
+            {$i18n("app.takeBack")}
           </button>
           <button
             class="btn ghost danger"
@@ -463,18 +525,22 @@
             disabled={snapshot.gameOver}
             on:click={resign}
           >
-            Resign
+            {$i18n("app.resign")}
           </button>
           {#if canAgentMove && snapshot.settings.responseMode === "button"}
             <button class="btn primary agent-move" type="button" on:click={agentMove}>
-              Agent move
+              {$i18n("app.agentMove")}
             </button>
           {/if}
         </div>
       </section>
 
       <aside class="sidebar">
-        <div class="tabs" role="tablist" aria-label="Game panels">
+        <div
+          class="tabs"
+          role="tablist"
+          aria-label={$i18n("app.gamePanels")}
+        >
           <button
             type="button"
             role="tab"
@@ -482,7 +548,7 @@
             class:active={activeTab === "moves"}
             on:click={() => (activeTab = "moves")}
           >
-            Moves
+            {$i18n("app.tabMoves")}
             <span>{snapshot.history.length}</span>
           </button>
           <button
@@ -492,7 +558,7 @@
             class:active={activeTab === "theater"}
             on:click={() => (activeTab = "theater")}
           >
-            Theater
+            {$i18n("app.tabTheater")}
             <span>{snapshot.commentary.length}</span>
           </button>
           <button
@@ -502,7 +568,7 @@
             class:active={activeTab === "analysis"}
             on:click={() => (activeTab = "analysis")}
           >
-            Analysis
+            {$i18n("app.tabAnalysis")}
           </button>
         </div>
 
@@ -512,18 +578,14 @@
           {:else if activeTab === "theater"}
             <Commentary
               cards={snapshot.commentary}
-              persona={agentName}
+              persona={personaLabel(agentName)}
               model={agentModel}
             />
           {:else}
             <div class="placeholder">
               <div class="placeholder-mark">⌕</div>
-              <h3>Analysis is still in the wings.</h3>
-              <p>
-                Accuracy, blunder cards, the evaluation graph and the Truth Lens
-                arrive in the next phase. After the game, the theater keeps its
-                secrets; the analysis will reveal them.
-              </p>
+              <h3>{$i18n("app.analysisTitle")}</h3>
+              <p>{$i18n("app.analysisBody")}</p>
             </div>
           {/if}
         </div>
@@ -531,11 +593,11 @@
         <footer class="sidebar-footer">
           {#if agentError}
             <div class="agent-error">
-              <strong>Opponent unavailable</strong>
+              <strong>{$i18n("app.opponentUnavailable")}</strong>
               <span>{agentError}</span>
               {#if canAgentMove}
                 <button class="btn small" type="button" on:click={agentMove}>
-                  Retry agent
+                  {$i18n("app.retryAgent")}
                 </button>
               {/if}
             </div>
@@ -544,7 +606,7 @@
               <span class="footer-dot"></span>
               <span class="footer-model">{agentModel}</span>
             </div>
-            <div class="footer-persona">{agentName}</div>
+            <div class="footer-persona">{personaLabel(agentName)}</div>
           {/if}
         </footer>
       </aside>
@@ -555,7 +617,7 @@
         <span>{error}</span>
         <button
           type="button"
-          aria-label="Dismiss error"
+          aria-label={$i18n("app.dismissError")}
           on:click={() => (error = "")}
         >
           ✕
@@ -637,6 +699,21 @@
     display: flex;
     align-items: center;
     gap: 9px;
+  }
+
+  .language-select {
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--panel);
+    color: var(--text);
+    font-size: calc(11px * var(--font-scale));
+    cursor: pointer;
+  }
+
+  .language-select:hover {
+    border-color: var(--accent);
   }
 
   .status-pill {

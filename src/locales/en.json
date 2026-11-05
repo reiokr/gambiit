@@ -1,0 +1,151 @@
+{
+  "_meta": {
+    "name": "English",
+    "nativeName": "English"
+  },
+  "app": {
+    "tagline": "Every move is a performance.",
+    "flipBoard": "Flip board",
+    "settings": "Settings",
+    "newGame": "New game",
+    "takeBack": "Take back",
+    "resign": "Resign",
+    "agentMove": "Agent move",
+    "you": "You",
+    "localPlayer": "local player",
+    "thinking": "{name} is thinking…",
+    "settingTheStage": "Setting the stage…",
+    "finalCurtain": "Final curtain",
+    "takesTheStage": "{side} takes the stage.",
+    "rematch": "Rematch",
+    "reviewBoard": "Review board",
+    "opponentUnavailable": "Opponent unavailable",
+    "retryAgent": "Retry agent",
+    "dismissError": "Dismiss error",
+    "onlyOwnMove": "Only your own last move can be taken back",
+    "confirmNewGame": "Start a new game? The current game will be lost.",
+    "confirmResign": "Resign this game?",
+    "analysisTitle": "Analysis is still in the wings.",
+    "analysisBody": "Accuracy, blunder cards, the evaluation graph and the Truth Lens arrive in the next phase. After the game, the theater keeps its secrets; the analysis will reveal them.",
+    "gamePanels": "Game panels",
+    "tabMoves": "Moves",
+    "tabTheater": "Theater",
+    "tabAnalysis": "Analysis"
+  },
+  "board": {
+    "label": "Chess board",
+    "empty": "empty",
+    "legalMove": "legal move",
+    "choosePromotion": "Choose promotion",
+    "promoteTo": "Promote to"
+  },
+  "piece": {
+    "white": {
+      "p": "white pawn",
+      "n": "white knight",
+      "b": "white bishop",
+      "r": "white rook",
+      "q": "white queen",
+      "k": "white king"
+    },
+    "black": {
+      "p": "black pawn",
+      "n": "black knight",
+      "b": "black bishop",
+      "r": "black rook",
+      "q": "black queen",
+      "k": "black king"
+    }
+  },
+  "player": {
+    "ai": "AI",
+    "thinking": "thinking",
+    "captured": "Captured pieces",
+    "toMove": "to move",
+    "waiting": "waiting",
+    "won": "won",
+    "lost": "lost",
+    "draw": "draw"
+  },
+  "side": {
+    "white": "White",
+    "black": "Black"
+  },
+  "status": {
+    "ongoing": "{side} to move.",
+    "check": "{side} is in check.",
+    "checkmate": "Checkmate — {side} wins.",
+    "stalemate": "Stalemate — draw.",
+    "draw50": "Draw — 50-move rule.",
+    "drawThreefold": "Draw — threefold repetition.",
+    "drawMaterial": "Draw — insufficient material.",
+    "draw": "Draw.",
+    "resigned": "{side} wins — opponent resigned.",
+    "aborted": "Game aborted."
+  },
+  "moves": {
+    "none": "No moves yet.",
+    "firstLine": "The first line is yours."
+  },
+  "commentary": {
+    "quiet": "The theater is quiet.",
+    "emptyPrefix": "Make a move.",
+    "emptySuffix": "will answer with a plan, a reason, and possibly a lie.",
+    "tokens": "tokens"
+  },
+  "settings": {
+    "gameSetup": "Game setup",
+    "title": "Set the stage",
+    "close": "Close settings",
+    "opponent": "Opponent",
+    "opponentHint": "OpenCode model + persona",
+    "model": "Model",
+    "persona": "Persona",
+    "afterMove": "After your move",
+    "auto": "Auto",
+    "autoHint": "Agent answers immediately",
+    "button": "Button",
+    "buttonHint": "You trigger “Agent move”",
+    "playAs": "Play as",
+    "white": "White",
+    "black": "Black",
+    "boardInterface": "Board & interface",
+    "livePreview": "Live preview",
+    "language": "Language",
+    "languageHint": "Interface and agent commentary",
+    "fontSize": "Font size",
+    "interface": "Interface",
+    "sound": "Sound",
+    "animations": "Animations",
+    "engine": "Engine",
+    "engineHint": "Stockfish candidates for hybrid play",
+    "depth": "Depth",
+    "candidates": "Candidate moves",
+    "engineNote": "Stockfish proposes the candidates; the model chooses one, explains it, and may still bluff about the evaluation. The board stays authoritative.",
+    "cancel": "Cancel",
+    "apply": "Apply & start new game",
+    "modelsDiscovered": "{count} models discovered"
+  },
+  "personas": {
+    "theaterMaster": "Theater Master",
+    "coldCalculator": "Cold Calculator",
+    "trickster": "Trickster",
+    "panicker": "Panicker",
+    "coach": "Coach",
+    "chaotic": "Chaotic"
+  },
+  "themes": {
+    "salon": {
+      "name": "Salon",
+      "description": "Walnut, cream and brass. The default stage."
+    },
+    "tournament": {
+      "name": "Tournament",
+      "description": "Classic green and cream, made for long games."
+    },
+    "midnight": {
+      "name": "Midnight",
+      "description": "Cold steel and blue light. Play after dark."
+    }
+  }
+}

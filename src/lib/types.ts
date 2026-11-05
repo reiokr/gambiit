@@ -58,6 +58,7 @@ export interface Settings {
   model: string;
   persona: string;
   language: string;
+  languageName: string;
   responseMode: "auto" | "button";
   stockfishDepth: number;
   multipv: number;
@@ -73,6 +74,8 @@ export interface GameSnapshot {
   humanColor: ColorKey;
   agentColor: ColorKey;
   statusText: string;
+  statusKey: string;
+  statusSide: ColorKey | null;
   gameOver: boolean;
   winner: ColorKey | null;
   check: boolean;

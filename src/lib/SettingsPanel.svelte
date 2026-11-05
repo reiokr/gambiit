@@ -2,6 +2,12 @@
   import type { ColorKey, Settings } from "./types";
   import { THEMES, applyTheme } from "./themes";
   import { applyFontScale } from "./settings";
+  import {
+    availableLocales,
+    i18n,
+    localeMeta,
+    setLocale,
+  } from "./i18n";
 
   export let settings: Settings;
   export let models: string[] = [];
@@ -15,12 +21,12 @@
   $: applyFontScale(draft.fontScale);
 
   const personas = [
-    "Theater Master",
-    "Cold Calculator",
-    "Trickster",
-    "Panicker",
-    "Coach",
-    "Chaotic",
+    { value: "Theater Master", key: "theaterMaster" },
+    { value: "Cold Calculator", key: "coldCalculator" },
+    { value: "Trickster", key: "trickster" },
+    { value: "Panicker", key: "panicker" },
+    { value: "Coach", key: "coach" },
+    { value: "Chaotic", key: "chaotic" },
   ];
 
   const previews: Record<string, string[]> = {
@@ -32,6 +38,12 @@
   function selectTheme(theme: string) {
     draft.theme = theme;
     applyTheme(theme);
+  }
+
+  function selectLanguage(code: string) {
+    draft.language = code;
+    draft.languageName = localeMeta(code).name;
+    setLocale(code);
   }
 
   function apply() {
@@ -50,15 +62,20 @@
     class="panel"
     role="dialog"
     aria-modal="true"
-    aria-label="Game settings"
+    aria-label={$i18n("settings.title")}
     tabindex="-1"
   >
     <header class="head">
       <div>
-        <p class="eyebrow">Game setup</p>
-        <h2>Set the stage</h2>
+        <p class="eyebrow">{$i18n("settings.gameSetup")}</p>
+        <h2>{$i18n("settings.title")}</h2>
       </div>
-      <button class="close" type="button" aria-label="Close settings" on:click={onClose}>
+      <button
+        class="close"
+        type="button"
+        aria-label={$i18n("settings.close")}
+        on:click={onClose}
+      >
         ✕
       </button>
     </header>
@@ -66,13 +83,13 @@
     <div class="body">
       <section class="section">
         <div class="section-title">
-          <h3>Opponent</h3>
-          <span>OpenCode model + persona</span>
+          <h3>{$i18n("settings.opponent")}</h3>
+          <span>{$i18n("settings.opponentHint")}</span>
         </div>
 
         <div class="grid two">
           <label class="field wide">
-            <span>Model</span>
+            <span>{$i18n("settings.model")}</span>
             <input
               list="gambiit-models"
               bind:value={draft.model}
@@ -85,57 +102,61 @@
                 <option value={model}></option>
               {/each}
             </datalist>
-            <small>{models.length} models discovered</small>
+            <small>
+              {$i18n("settings.modelsDiscovered", { count: models.length })}
+            </small>
           </label>
 
           <label class="field">
-            <span>Persona</span>
+            <span>{$i18n("settings.persona")}</span>
             <select bind:value={draft.persona}>
               {#each personas as persona}
-                <option value={persona}>{persona}</option>
+                <option value={persona.value}>
+                  {$i18n(`personas.${persona.key}`)}
+                </option>
               {/each}
             </select>
           </label>
         </div>
 
         <div class="field">
-          <span>After your move</span>
+          <span>{$i18n("settings.afterMove")}</span>
           <div class="segmented">
             <button
               type="button"
               class:active={draft.responseMode === "auto"}
               on:click={() => (draft.responseMode = "auto")}
             >
-              <strong>Auto</strong>
-              <small>Agent answers immediately</small>
+              <strong>{$i18n("settings.auto")}</strong>
+              <small>{$i18n("settings.autoHint")}</small>
             </button>
             <button
               type="button"
               class:active={draft.responseMode === "button"}
               on:click={() => (draft.responseMode = "button")}
             >
-              <strong>Button</strong>
-              <small>You trigger “Agent move”</small>
+              <strong>{$i18n("settings.button")}</strong>
+              <small>{$i18n("settings.buttonHint")}</small>
             </button>
           </div>
         </div>
 
         <div class="field">
-          <span>Play as</span>
+          <span>{$i18n("settings.playAs")}</span>
           <div class="segmented compact">
             <button
               type="button"
               class:active={humanColor === "white"}
               on:click={() => (humanColor = "white")}
             >
-              White
+              {$i18n("settings.white")}
             </button>
             <button
               type="button"
               class:active={humanColor === "black"}
               on:click={() => (humanColor = "black")}
             >
-              Black
+              {$i18n("settings.black")}
             </button>
           </div>
         </div>
@@ -143,8 +164,8 @@
 
       <section class="section">
         <div class="section-title">
-          <h3>Board & interface</h3>
-          <span>Live preview</span>
+          <h3>{$i18n("settings.boardInterface")}</h3>
+          <span>{$i18n("settings.livePreview")}</span>
         </div>
 
         <div class="themes">
@@ -160,22 +181,30 @@
                   <i style={`background:${color}`}></i>
                 {/each}
               </span>
-              <strong>{theme.name}</strong>
-              <small>{theme.description}</small>
+              <strong>{$i18n(`themes.${theme.id}.name`)}</strong>
+              <small>{$i18n(`themes.${theme.id}.description`)}</small>
             </button>
           {/each}
         </div>
 
         <div class="grid two">
           <label class="field">
-            <span>Agent language</span>
-            <select bind:value={draft.language}>
-              <option value="en">English</option>
-              <option value="et">Estonian</option>
+            <span>{$i18n("settings.language")}</span>
+            <select
+              value={draft.language}
+              on:change={(event) => selectLanguage(event.currentTarget.value)}
+            >
+              {#each availableLocales as language}
+                <option value={language.code}>{language.nativeName}</option>
+              {/each}
             </select>
+            <small>{$i18n("settings.languageHint")}</small>
           </label>
           <label class="field">
-            <span>Font size <b>{Math.round(draft.fontScale * 100)}%</b></span>
+            <span>
+              {$i18n("settings.fontSize")}
+              <b>{Math.round(draft.fontScale * 100)}%</b>
+            </span>
             <input
               type="range"
               min="0.9"
@@ -187,15 +216,15 @@
         </div>
 
         <div class="field interface-field">
-          <span>Interface</span>
+          <span>{$i18n("settings.interface")}</span>
           <div class="checks">
             <label class="check">
               <input type="checkbox" bind:checked={draft.sound} />
-              <span>Sound</span>
+              <span>{$i18n("settings.sound")}</span>
             </label>
             <label class="check">
               <input type="checkbox" bind:checked={draft.animations} />
-              <span>Animations</span>
+              <span>{$i18n("settings.animations")}</span>
             </label>
           </div>
         </div>
@@ -203,13 +232,16 @@
 
       <section class="section">
         <div class="section-title">
-          <h3>Engine</h3>
-          <span>Stockfish candidates for hybrid play</span>
+          <h3>{$i18n("settings.engine")}</h3>
+          <span>{$i18n("settings.engineHint")}</span>
         </div>
 
         <div class="grid two">
           <label class="field">
-            <span>Depth <b>{draft.stockfishDepth}</b></span>
+            <span>
+              {$i18n("settings.depth")}
+              <b>{draft.stockfishDepth}</b>
+            </span>
             <input
               type="range"
               min="6"
@@ -219,7 +251,10 @@
             />
           </label>
           <label class="field">
-            <span>Candidate moves <b>{draft.multipv}</b></span>
+            <span>
+              {$i18n("settings.candidates")}
+              <b>{draft.multipv}</b>
+            </span>
             <input
               type="range"
               min="1"
@@ -229,17 +264,16 @@
             />
           </label>
         </div>
-        <p class="hint">
-          Stockfish proposes the candidates; the model chooses one, explains it,
-          and may still bluff about the evaluation. The board stays authoritative.
-        </p>
+        <p class="hint">{$i18n("settings.engineNote")}</p>
       </section>
     </div>
 
     <footer class="foot">
-      <button class="btn ghost" type="button" on:click={onClose}>Cancel</button>
+      <button class="btn ghost" type="button" on:click={onClose}>
+        {$i18n("settings.cancel")}
+      </button>
       <button class="btn primary" type="button" on:click={apply}>
-        Apply & start new game
+        {$i18n("settings.apply")}
       </button>
     </footer>
   </div>

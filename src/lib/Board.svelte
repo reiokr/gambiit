@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { ColorKey, MoveInfo, MoveRecord, SquareView } from "./types";
   import { isLightSquare, orderedSquares } from "./board";
-  import { pieceAlt, pieceUrl } from "./pieces";
+  import { pieceUrl } from "./pieces";
+  import { i18n } from "./i18n";
 
   export let board: SquareView[] = [];
   export let legalMoves: MoveInfo[] = [];
@@ -55,7 +56,7 @@
 <div
   class="board"
   class:animations
-  aria-label="Chess board"
+  aria-label={$i18n("board.label")}
 >
   {#each cells as cell (cell.square)}
     <button
@@ -69,7 +70,7 @@
       class:legal={!!cell.target}
       class:capture={cell.capture}
       class:inactive={!interactive}
-      aria-label={`${cell.square}${cell.piece ? `, ${pieceAlt(cell.piece.color, cell.piece.role)}` : ", empty"}${cell.target ? ", legal move" : ""}`}
+      aria-label={`${cell.square}, ${cell.piece ? $i18n(`piece.${cell.piece.color}.${cell.piece.role}`) : $i18n("board.empty")}${cell.target ? `, ${$i18n("board.legalMove")}` : ""}`}
       aria-disabled={!interactive}
       on:click={() => handleClick(cell.square)}
     >
@@ -106,14 +107,18 @@
       role="presentation"
       on:click|stopPropagation
     >
-      <div class="promotion-card" role="dialog" aria-label="Choose promotion">
-        <p>Promote to</p>
+      <div
+        class="promotion-card"
+        role="dialog"
+        aria-label={$i18n("board.choosePromotion")}
+      >
+        <p>{$i18n("board.promoteTo")}</p>
         <div class="promotion-options">
           {#each promotionOptions as option}
             <button
               type="button"
               title={option.promotion ?? ""}
-              aria-label={`Promote to ${option.promotion}`}
+              aria-label={`${$i18n("board.promoteTo")} ${option.promotion}`}
               on:click={() => onPromotion(option.uci)}
             >
               <img

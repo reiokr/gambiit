@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ColorKey, PieceView } from "./types";
   import { pieceUrl } from "./pieces";
+  import { i18n } from "./i18n";
 
   export let name: string;
   export let subtitle: string;
@@ -8,7 +9,7 @@
   export let isAgent = false;
   export let thinking = false;
   export let active = false;
-  export let status = "";
+  export let statusKey = "waiting";
   export let captured: PieceView[] = [];
   export let material = 0;
 
@@ -23,12 +24,12 @@
   <div class="identity">
     <div class="name-row">
       <span class="name">{name}</span>
-      {#if isAgent}<span class="tag">AI</span>{/if}
+      {#if isAgent}<span class="tag">{$i18n("player.ai")}</span>{/if}
     </div>
     <div class="subtitle">{subtitle}</div>
   </div>
 
-  <div class="captured" aria-label="Captured pieces">
+  <div class="captured" aria-label={$i18n("player.captured")}>
     {#each captured as piece}
       <img
         src={pieceUrl(piece.color, piece.role)}
@@ -45,9 +46,9 @@
     <span class="status" class:thinking>
       {#if thinking}
         <span class="spinner" aria-hidden="true"></span>
-        thinking
+        {$i18n("player.thinking")}
       {:else}
-        {status}
+        {$i18n(`player.${statusKey}`)}
       {/if}
     </span>
   </div>

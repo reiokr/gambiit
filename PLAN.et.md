@@ -93,6 +93,9 @@ Valmis:
 - Seaded: mudel (avastati 788 mudelit), isiksus, Auto/Button, valge/must, teema,
   fondi suurus (90–150%, vaikimisi 120%), keel, heli, animatsioonid, Stockfishi
   depth ja kandidaatide arv.
+- Lokaliseeritud UI + agendi keel: `src/locales/*.json` automaatne avastamine,
+  inglise ja eesti kataloog, keelevalik ülaribas, UI uueneb kohe ja agent saab
+  sama keele ilma mängu uuesti alustamata.
 - Kommentaaripaneel: hinnang, kandidaadid koos tagasilükkamise põhjustega, plaan,
   mõtlemisaeg ja tokenikulu.
 - Tagasivõtt järgib `AGENTS.md` reeglit: ainult sinu enda viimast käiku saab
@@ -306,7 +309,9 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 
 - Ruudud on päris `<button>`-id ARIA-siltidega (“e4, valge ettur”).
 - Kõrge kontrastsusega teema on plaanis; värvipimedussõbralik laud.
-- Eesti/inglise UI; agent vastab valitud keeles.
+- Eesti/inglise UI ja agendikeel tulevad `src/locales/*.json` kataloogist;
+  uue keele lisamiseks piisab uuest JSON-failist. Ülariba keelevalik mõjutab
+  kohe UI-d ja järgmist agendi käiku; seadete paneel annab eelvaate.
 - Fontide suurus ja paigutus kohanevad.
 
 ---
@@ -371,7 +376,7 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 - pressikonverents (stretch);
 - Director's Cut (stretch);
 - Truth Lens (pärast mängu);
-- agendi keel: inglise/eesti.
+- keel: UI ja agent samast `src/locales/*.json` kataloogist (en/et; uued keeled ilma koodimuudatusteta).
 
 ### Välimus
 
@@ -480,9 +485,13 @@ gambiit/
 │  ├─ lib/Commentary.svelte
 │  ├─ lib/SettingsPanel.svelte
 │  ├─ lib/*.ts
+│  ├─ locales/en.json         # UI + agendi keel
+│  ├─ locales/et.json
 │  └─ assets/pieces/cburnett/
 ├─ docs/
+│  ├─ LOCALES.md              # uue keele lisamise juhend
 │  ├─ ui-preview.png
+│  ├─ ui-preview-et.png
 │  └─ settings-preview.png
 ├─ PLAN.md                    # ingliskeelne/GitHubi plaan
 └─ PLAN.et.md                 # see fail

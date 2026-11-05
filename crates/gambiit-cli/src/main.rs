@@ -112,6 +112,11 @@ fn play(args: PlayArgs) -> Result<()> {
             model: args.model.clone(),
             persona: args.persona.clone(),
             language: args.language.clone(),
+            language_name: if args.language.eq_ignore_ascii_case("et") {
+                "Estonian".to_string()
+            } else {
+                "English".to_string()
+            },
             timeout_secs: args.timeout,
             retries: args.retries,
         };

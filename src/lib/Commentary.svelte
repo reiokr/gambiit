@@ -1,6 +1,7 @@
 <script lang="ts">
   import { afterUpdate } from "svelte";
   import type { CommentaryCard } from "./types";
+  import { i18n } from "./i18n";
 
   export let cards: CommentaryCard[] = [];
   export let persona = "Theater Master";
@@ -32,10 +33,11 @@
   {#if cards.length === 0}
     <div class="empty">
       <div class="mask">♞</div>
-      <h3>The theater is quiet.</h3>
+      <h3>{$i18n("commentary.quiet")}</h3>
       <p>
-        Make a move. <strong>{persona}</strong> will answer with a plan, a
-        reason, and possibly a lie.
+        {$i18n("commentary.emptyPrefix")}
+        <strong>{persona}</strong>
+        {$i18n("commentary.emptySuffix")}
       </p>
       <small>{model}</small>
     </div>
@@ -80,7 +82,10 @@
           <footer class="meta">
             <span>{seconds(card.elapsedMs)}</span>
             {#if card.tokens !== null}
-              <span>{card.tokens.toLocaleString()} tokens</span>
+              <span>
+                {card.tokens.toLocaleString()}
+                {$i18n("commentary.tokens")}
+              </span>
             {/if}
             {#if card.cost !== null && card.cost > 0}
               <span>${card.cost.toFixed(4)}</span>

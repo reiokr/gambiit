@@ -1,6 +1,7 @@
 <script lang="ts">
   import { afterUpdate } from "svelte";
   import type { MoveRecord } from "./types";
+  import { i18n } from "./i18n";
 
   export let history: MoveRecord[] = [];
 
@@ -35,8 +36,8 @@
   {#if pairs.length === 0}
     <div class="empty">
       <span class="empty-icon">✦</span>
-      <p>No moves yet.</p>
-      <small>The first line is yours.</small>
+      <p>{$i18n("moves.none")}</p>
+      <small>{$i18n("moves.firstLine")}</small>
     </div>
   {:else}
     <div class="rows">

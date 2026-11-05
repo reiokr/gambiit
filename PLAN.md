@@ -69,6 +69,9 @@ Completed:
 - Settings: model, persona, response mode (Auto / Button), colour, theme,
   font size (90–150%, default 120%), language, sound, animations, Stockfish
   depth and MultiPV.
+- Localized UI + agent language: `src/locales/*.json` auto-discovery, English
+  and Estonian catalogs, top-bar switch, live UI update and agent prompt
+  language update without restarting the game.
 - Rust commands: `new_game`, `get_state`, `make_move`, `agent_move`, `takeback`,
   `resign`, `list_models`; all moves validated by `gambiit-core`.
 - Takeback policy enforced: only the human's own last move can be undone.
@@ -464,13 +467,13 @@ gambiit/
 │  └─ gambiit-mcp/            # stdio MCP bridge -> local HTTP API
 ├─ src-tauri/                 # Tauri shell, axum API, commands
 ├─ src/                       # Svelte UI
-│  ├─ lib/board/
-│  ├─ lib/panels/
-│  ├─ lib/themes/
-│  ├─ lib/stores/
-│  └─ assets/pieces/ sounds/
+│  ├─ App.svelte
+│  ├─ lib/*.svelte, *.ts
+│  ├─ locales/en.json         # UI + agent language catalogs
+│  ├─ locales/et.json
+│  └─ assets/pieces/cburnett/
 ├─ themes/                    # built-in theme JSON
-├─ docs/                      # ARCHITECTURE, AGENTS, API, THEMES, TESTING
+├─ docs/                      # LOCALES, ARCHITECTURE, AGENTS, API, THEMES, TESTING
 ├─ scripts/                   # dev, fake-agent, agent-workspace
 └─ packaging/                 # PKGBUILD, .desktop
 ```

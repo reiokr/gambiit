@@ -7,6 +7,7 @@ export const DEFAULT_SETTINGS: Settings = {
   model: "opencode-go/deepseek-v4.1-flash",
   persona: "Theater Master",
   language: "en",
+  languageName: "English",
   responseMode: "auto",
   stockfishDepth: 12,
   multipv: 3,

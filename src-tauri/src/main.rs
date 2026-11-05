@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use gambiit_agent::{AgentConfig, AgentSession, AgentTurn, OpenCodeClient};
-use gambiit_core::{Game, MoveInfo, MoveRecord, color_key};
+use gambiit_core::{Game, GameStatus, MoveInfo, MoveRecord, color_key};
 use gambiit_engine::Stockfish;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
@@ -15,6 +15,7 @@ struct Settings {
     model: String,
     persona: String,
     language: String,
+    language_name: String,
     response_mode: String,
     stockfish_depth: u32,
     multipv: usize,
@@ -30,6 +31,7 @@ impl Default for Settings {
             model: "opencode-go/deepseek-v4.1-flash".to_string(),
             persona: "Theater Master".to_string(),
             language: "en".to_string(),
+            language_name: "English".to_string(),
             response_mode: "auto".to_string(),
             stockfish_depth: 12,
             multipv: 3,
@@ -87,6 +89,8 @@ struct GameSnapshot {
     human_color: String,
     agent_color: String,
     status_text: String,
+    status_key: String,
+    status_side: Option<String>,
     game_over: bool,
     winner: Option<String>,
     check: bool,
@@ -112,25 +116,14 @@ struct Session {
 }
 
 impl Session {
-    fn new(mut settings: Settings, human_color: Color) -> Self {
-        if settings.model.trim().is_empty() {
-            settings.model = Settings::default().model;
-        }
-        if settings.persona.trim().is_empty() {
-            settings.persona = Settings::default().persona;
-        }
+    fn new(settings: Settings, human_color: Color) -> Self {
+        let settings = normalize_settings(settings);
 
         let mut game = Game::new();
         game.set_human_color(human_color);
 
         let mut agent_error = None;
-        let agent = match AgentSession::new(AgentConfig {
-            model: settings.model.clone(),
-            persona: settings.persona.clone(),
-            language: settings.language.clone(),
-            timeout_secs: 180,
-            retries: 1,
-        }) {
+        let agent = match AgentSession::new(agent_config(&settings)) {
             Ok(agent) => Some(agent),
             Err(error) => {
                 agent_error = Some(format!("Agent unavailable: {error}"));
@@ -154,6 +147,25 @@ impl Session {
             stockfish,
             commentary: Vec::new(),
             thinking: false,
+        }
+    }
+
+    /// Apply new settings without resetting the current game.
+    fn update_settings(&mut self, settings: Settings) {
+        self.settings = normalize_settings(settings);
+        let config = agent_config(&self.settings);
+        if let Some(agent) = self.agent.as_mut() {
+            agent.update_config(config);
+        } else {
+            match AgentSession::new(config) {
+                Ok(agent) => {
+                    self.agent = Some(agent);
+                    self.agent_error = None;
+                }
+                Err(error) => {
+                    self.agent_error = Some(format!("Agent unavailable: {error}"));
+                }
+            }
         }
     }
 
@@ -185,12 +197,15 @@ impl Session {
         }
 
         let status = self.game.status();
+        let (status_key, status_side) = status_parts(status, turn);
         GameSnapshot {
             fen: self.game.fen(),
             turn: color_key(turn).to_string(),
             human_color: color_key(self.game.human_color()).to_string(),
             agent_color: color_key(!self.game.human_color()).to_string(),
             status_text: self.game.status_text(),
+            status_key,
+            status_side,
             game_over: status.is_over(),
             winner: status.winner().map(|color| color_key(color).to_string()),
             check: self.game.is_check(),
@@ -382,6 +397,21 @@ fn make_move(state: State<'_, AppState>, mv: String) -> Result<GameSnapshot, Str
 }
 
 #[tauri::command]
+async fn update_settings(
+    state: State<'_, AppState>,
+    settings: Settings,
+) -> Result<GameSnapshot, String> {
+    let session = state.session.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut session = session.lock();
+        session.update_settings(settings);
+        session.snapshot()
+    })
+    .await
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 async fn agent_move(state: State<'_, AppState>) -> Result<GameSnapshot, String> {
     let session = state.session.clone();
     tauri::async_runtime::spawn_blocking(move || session.lock().agent_move())
@@ -440,6 +470,61 @@ fn role_key(role: Role) -> &'static str {
     }
 }
 
+fn normalize_settings(mut settings: Settings) -> Settings {
+    let defaults = Settings::default();
+    if settings.model.trim().is_empty() {
+        settings.model = defaults.model;
+    }
+    if settings.persona.trim().is_empty() {
+        settings.persona = defaults.persona;
+    }
+    if settings.language.trim().is_empty() {
+        settings.language = defaults.language;
+    }
+    if settings.language_name.trim().is_empty() {
+        settings.language_name = defaults.language_name;
+    }
+    if !(0.9..=1.5).contains(&settings.font_scale) {
+        settings.font_scale = defaults.font_scale;
+    }
+    settings
+}
+
+fn agent_config(settings: &Settings) -> AgentConfig {
+    AgentConfig {
+        model: settings.model.clone(),
+        persona: settings.persona.clone(),
+        language: settings.language.clone(),
+        language_name: settings.language_name.clone(),
+        timeout_secs: 180,
+        retries: 1,
+    }
+}
+
+fn status_parts(status: GameStatus, turn: Color) -> (String, Option<String>) {
+    match status {
+        GameStatus::Ongoing => ("ongoing".to_string(), Some(color_key(turn).to_string())),
+        GameStatus::Check => ("check".to_string(), Some(color_key(turn).to_string())),
+        GameStatus::Checkmate { winner } => {
+            ("checkmate".to_string(), Some(color_key(winner).to_string()))
+        }
+        GameStatus::Stalemate => ("stalemate".to_string(), None),
+        GameStatus::Draw { reason } => {
+            let key = match reason {
+                "50-move rule" => "draw50",
+                "threefold repetition" => "drawThreefold",
+                "insufficient material" => "drawMaterial",
+                _ => "draw",
+            };
+            (key.to_string(), None)
+        }
+        GameStatus::Resigned { winner } => {
+            ("resigned".to_string(), Some(color_key(winner).to_string()))
+        }
+        GameStatus::Aborted => ("aborted".to_string(), None),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -450,6 +535,7 @@ pub fn run() {
             get_state,
             new_game,
             make_move,
+            update_settings,
             agent_move,
             takeback,
             resign,
@@ -524,6 +610,22 @@ mod tests {
         assert_eq!(snapshot.turn, "white");
     }
 
+    #[test]
+    fn update_settings_keeps_the_current_game() {
+        let mut session = session();
+        session.make_move("d2d4").unwrap();
+        let settings = Settings {
+            language: "et".to_string(),
+            language_name: "Estonian".to_string(),
+            ..Default::default()
+        };
+        session.update_settings(settings);
+        let snapshot = session.snapshot();
+        assert_eq!(snapshot.history.len(), 1);
+        assert_eq!(snapshot.settings.language, "et");
+        assert_eq!(snapshot.settings.language_name, "Estonian");
+    }
+
     /// End-to-end smoke test against the real configured OpenCode model.
     /// Ignored by default because it spends provider tokens and takes seconds.
     /// Run with:
@@ -545,5 +647,24 @@ mod tests {
             snapshot.commentary[0].elapsed_ms,
             snapshot.commentary[0].tokens.unwrap_or(0)
         );
+    }
+
+    /// Estonian conversation smoke test. Ignored by default.
+    /// Run with:
+    ///   cargo test -p gambiit-app -- --ignored agent_smoke_estonian --nocapture
+    #[test]
+    #[ignore]
+    fn agent_smoke_estonian() {
+        let settings = Settings {
+            language: "et".to_string(),
+            language_name: "Estonian".to_string(),
+            ..Default::default()
+        };
+        let mut session = Session::new(settings, Color::White);
+        session.make_move("e2e4").unwrap();
+        let snapshot = session.agent_move().unwrap();
+        assert_eq!(snapshot.history.len(), 2);
+        assert!(!snapshot.commentary[0].comment.is_empty());
+        eprintln!("ET comment: {}", snapshot.commentary[0].comment);
     }
 }
