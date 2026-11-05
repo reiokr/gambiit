@@ -5,4 +5,5 @@ members = [
     "crates/gambiit-engine",
     "crates/gambiit-agent",
     "crates/gambiit-cli",
+    "src-tauri",
 ]

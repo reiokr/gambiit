@@ -53,6 +53,45 @@ Next:
 
 ---
 
+## Desktop UI milestone (2026-11-05)
+
+Completed:
+
+- Tauri 2 + Svelte 5 desktop app in `src-tauri/` and `src/`.
+- Click-to-move board with Cburnett SVG pieces, legal-move dots, capture rings,
+  last-move highlights, check marks and a promotion picker.
+- Player strips, material/captured pieces, status, thinking ribbon and
+  theater-style commentary panel.
+- Three themes: Salon, Tournament, Midnight; live preview in Settings.
+- Settings: model, persona, response mode (Auto / Button), colour, theme,
+  language, sound, animations, Stockfish depth and MultiPV.
+- Rust commands: `new_game`, `get_state`, `make_move`, `agent_move`, `takeback`,
+  `resign`, `list_models`; all moves validated by `gambiit-core`.
+- Takeback policy enforced: only the human's own last move can be undone.
+- Backend tests: 5 fast tests plus an ignored real-model `agent_smoke` test.
+  The smoke test played `e4` → `...c5` in 8.9 s with 522 tokens.
+- A real UI game played `e4` → `...e5`; commentary, candidates, plan and token
+  usage rendered in the Theater panel. Screenshot: `docs/ui-preview.png`.
+
+Not yet:
+
+- local Axum API and MCP bridge;
+- game persistence/resume;
+- PGN import/export, clocks, post-game Stockfish analysis;
+- theme editor and custom piece-set loading;
+- chat, personas beyond the prompt presets, Truth Lens, Director's Cut,
+  leaderboard and broadcast mode.
+
+Next:
+
+- Add persistence (resume the last game after restart).
+- Add PGN export/import and a saved-game library.
+- Add post-game Stockfish analysis and the evaluation graph.
+- Add the theme editor and custom piece-set folders.
+- Then MCP mode, chat and Truth Lens.
+
+---
+
 ## 1. Vision and product principles
 
 Gambiit is a local desktop chess game where the opponent is an OpenCode 2 model with a personality. It should feel like a real game — the board is always live, the opponent reacts immediately, and the theater is part of the experience.

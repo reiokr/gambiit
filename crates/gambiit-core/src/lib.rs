@@ -52,6 +52,7 @@ impl GameStatus {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MoveInfo {
     pub uci: String,
     pub san: String,
@@ -65,12 +66,15 @@ pub struct MoveInfo {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MoveRecord {
     pub ply: u32,
+    pub color: String,
     pub san: String,
     pub uci: String,
     pub from: String,
     pub to: String,
+    pub captured: Option<String>,
     pub fen_after: String,
     pub comment: Option<String>,
     pub eval: Option<String>,
@@ -79,7 +83,9 @@ pub struct MoveRecord {
 #[derive(Debug, Clone)]
 pub struct Game {
     initial_fen: String,
+    initial_position: Chess,
     position: Chess,
+    position_stack: Vec<Chess>,
     history: Vec<MoveRecord>,
     position_keys: Vec<String>,
     human_color: Color,
@@ -96,9 +102,12 @@ impl Game {
     pub fn new() -> Self {
         let position = Chess::default();
         let initial_fen = Fen::from_position(&position, EnPassantMode::Legal).to_string();
+        let initial_position = position.clone();
         let mut game = Self {
             initial_fen,
+            initial_position,
             position,
+            position_stack: Vec::new(),
             history: Vec::new(),
             position_keys: Vec::new(),
             human_color: Color::White,
@@ -114,9 +123,12 @@ impl Game {
             .into_position(CastlingMode::Standard)
             .map_err(|e| GameError::Position(e.to_string()))?;
         let initial_fen = Fen::from_position(&position, EnPassantMode::Legal).to_string();
+        let initial_position = position.clone();
         let mut game = Self {
             initial_fen,
+            initial_position,
             position,
+            position_stack: Vec::new(),
             history: Vec::new(),
             position_keys: Vec::new(),
             human_color: Color::White,
@@ -202,7 +214,9 @@ impl Game {
         if self.status().is_over() {
             return Err(GameError::GameOver);
         }
+        let mover = self.position.turn();
         let info = self.move_info(mv);
+        self.position_stack.push(self.position.clone());
         self.position = self
             .position
             .clone()
@@ -210,10 +224,12 @@ impl Game {
             .map_err(|e| GameError::Illegal(e.to_string()))?;
         self.history.push(MoveRecord {
             ply: self.history.len() as u32 + 1,
+            color: color_key(mover).to_string(),
             san: info.san.clone(),
             uci: info.uci.clone(),
             from: info.from.clone(),
             to: info.to.clone(),
+            captured: info.captured.clone(),
             fen_after: self.fen(),
             comment: None,
             eval: None,
@@ -227,6 +243,22 @@ impl Game {
             last.comment = comment;
             last.eval = eval;
         }
+    }
+
+    /// Remove the last move and restore the position before it.
+    ///
+    /// The UI must enforce the AGENTS.md takeback policy: only the human's own
+    /// last move is undoable from the board controls. The backend exposes the
+    /// primitive; policy lives at the application boundary.
+    pub fn undo_last(&mut self) -> Option<MoveRecord> {
+        let record = self.history.pop()?;
+        self.position = self
+            .position_stack
+            .pop()
+            .unwrap_or_else(|| self.initial_position.clone());
+        self.position_keys.pop();
+        self.manual_status = None;
+        Some(record)
     }
 
     pub fn resign(&mut self, winner: Color) {
@@ -372,6 +404,13 @@ pub fn color_name(color: Color) -> &'static str {
     }
 }
 
+pub fn color_key(color: Color) -> &'static str {
+    match color {
+        Color::White => "white",
+        Color::Black => "black",
+    }
+}
+
 pub fn role_letter(role: Role) -> char {
     match role {
         Role::Pawn => 'P',
@@ -448,6 +487,22 @@ mod tests {
                 reason: "threefold repetition"
             }
         );
+    }
+
+    #[test]
+    fn undo_restores_previous_position() {
+        let mut game = Game::new();
+        game.apply_uci("e2e4").unwrap();
+        game.apply_uci("e7e5").unwrap();
+        game.undo_last().unwrap();
+        assert_eq!(game.turn(), Color::Black);
+        assert_eq!(game.history().len(), 1);
+        assert!(game.piece_at(Square::E7).is_some());
+        game.undo_last().unwrap();
+        assert_eq!(game.turn(), Color::White);
+        assert_eq!(game.history().len(), 0);
+        assert!(game.piece_at(Square::E2).is_some());
+        assert!(game.undo_last().is_none());
     }
 
     #[test]

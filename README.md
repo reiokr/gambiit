@@ -7,26 +7,63 @@ personality, a plan, and a taste for theater.
 > Move legality, checkmate and results are always verified by the game. The agent
 > may bluff about evaluations and plans, but never about the mechanics.
 
+![Gambiit desktop UI](docs/ui-preview.png)
+
 ## Status
 
-**Phase 0 complete** — a playable terminal prototype. The next milestone is the
-Tauri desktop UI. See [`PLAN.md`](PLAN.md) for the full architecture and roadmap.
+**Desktop UI milestone complete** — a playable Tauri app with a real OpenCode
+opponent. The terminal prototype remains as a fast test harness. See
+[`PLAN.md`](PLAN.md) for the full architecture and roadmap.
 
 What works now:
 
 - complete chess rules via `shakmaty` (castling, en passant, promotion, mate,
   stalemate, threefold repetition, 50-move rule, insufficient material);
+- Tauri 2 + Svelte 5 desktop window;
+- click-to-move board with legal-move dots, capture rings, last-move highlights,
+  check marks, promotion picker and three themes;
+- Cburnett SVG piece set and a polished theater-inspired layout;
 - Stockfish 19 hybrid play: the engine proposes candidate moves, the model
   chooses and explains;
 - OpenCode prompt transport with strict JSON validation and retries;
+- automatic agent replies after the human move, or an “Agent move” button;
 - session reuse across moves, so the opponent remembers the game;
-- commentary cards with evaluations, candidate moves and rejection reasons;
-- automatic agent replies after the human move (the terminal prototype; the
-  final UI will make this a button or a setting);
-- terminal board with legal-move hints, last-move highlights and check marks.
+- commentary cards with evaluations, candidate moves, rejection reasons, plan,
+  elapsed time and token usage;
+- takeback policy enforced per `AGENTS.md`: only your own last move is undoable;
+- settings for model, persona, response mode, colour, theme, language, sound,
+  animations, Stockfish depth and candidate count;
+- desktop and terminal builds share the same Rust core, engine and agent layers.
 
-Not yet: Tauri UI, themes/piece sets, MCP mode, PGN library, clocks, post-game
-analysis, personas/chat. Those are the next phases in `PLAN.md`.
+Not yet: game persistence/resume, PGN library, clocks, post-game analysis, theme
+editor, custom piece sets, MCP mode, chat, Truth Lens and broadcast mode. Those
+are the next phases in `PLAN.md`.
+
+## Run the desktop app
+
+```bash
+pnpm install
+pnpm tauri dev
+```
+
+For a release build:
+
+```bash
+pnpm tauri build
+```
+
+`pnpm tauri dev` starts Vite and the Tauri window. The first move may take a few
+seconds while the model thinks; the UI stays responsive and shows a thinking
+indicator.
+
+## Customize
+
+The Settings panel controls the opponent model, persona, Auto/Button response
+mode, playing colour, board theme, language, sound, animations and Stockfish
+candidate depth. Three themes ship now: Salon, Tournament and Midnight. The
+theme editor and custom piece-set folders are the next design milestone.
+
+![Gambiit settings and themes](docs/settings-preview.png)
 
 ## Requirements
 
