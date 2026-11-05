@@ -103,3 +103,43 @@ export interface GameSnapshot {
   agentError: string | null;
   thinking: boolean;
 }
+
+export type AnalysisClass =
+  | "best"
+  | "good"
+  | "inaccuracy"
+  | "mistake"
+  | "blunder";
+
+export interface AnalysisPly {
+  ply: number;
+  san: string;
+  uci: string;
+  color: ColorKey;
+  fenBefore: string;
+  fenAfter: string;
+  evalBeforeCp: number;
+  evalAfterCp: number;
+  bestUci: string | null;
+  bestSan: string | null;
+  lossCp: number;
+  classification: AnalysisClass;
+  claimedEval: string | null;
+  claimGapCp: number | null;
+  claimMismatch: boolean;
+}
+
+export interface AnalysisReport {
+  depth: number;
+  initialEvalCp: number;
+  positions: AnalysisPly[];
+  whiteAccuracy: number;
+  blackAccuracy: number;
+  whiteBlunders: number;
+  blackBlunders: number;
+  whiteMistakes: number;
+  blackMistakes: number;
+  whiteInaccuracies: number;
+  blackInaccuracies: number;
+  truthLensFlags: number;
+}

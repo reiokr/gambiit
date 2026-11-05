@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod analysis;
 mod credentials;
 mod pgn;
 mod storage;
@@ -620,6 +621,20 @@ fn import_pgn(
 }
 
 #[tauri::command]
+async fn analyze_game(
+    state: State<'_, AppState>,
+    depth: u32,
+) -> Result<analysis::AnalysisReport, String> {
+    let game = state.session.lock().game.clone();
+    if game.history().is_empty() {
+        return Err("There are no moves to analyze yet.".to_string());
+    }
+    tauri::async_runtime::spawn_blocking(move || analysis::analyze(&game, depth))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
 fn credential_status(provider: String) -> credentials::CredentialStatus {
     credentials::status(&provider)
 }
@@ -789,6 +804,7 @@ pub fn run() {
             get_pgn,
             export_pgn,
             import_pgn,
+            analyze_game,
             credential_status,
             save_credential,
             delete_credential

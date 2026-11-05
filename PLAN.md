@@ -78,6 +78,8 @@ Completed:
   empty key falls back to OpenCode's own authentication.
 - Automatic game persistence after every move, resume of the latest game,
   saved-game library, PGN export/import with comments and tolerant PGN parsing.
+- Post-game Stockfish analysis with accuracy, move classification, evaluation
+  graph, selected-move detail and the Truth Lens.
 - Five Stockfish difficulty levels — Beginner, Casual, Intermediate, Strong and
   Master — plus Custom. Selecting a level sets the depth/MultiPV sliders; moving
   a slider selects Custom. Stockfish `Skill Level` is part of each preset.
@@ -96,16 +98,16 @@ Completed:
 Not yet:
 
 - local Axum API and MCP bridge;
-- clocks, post-game Stockfish analysis;
+- clocks;
 - theme editor and custom piece-set loading;
-- chat, personas beyond the prompt presets, Truth Lens, Director's Cut,
+- chat, personas beyond the prompt presets, draw offers, Director's Cut,
   leaderboard and broadcast mode.
 
 Next:
 
-- Add post-game Stockfish analysis and the evaluation graph.
 - Add the theme editor and custom piece-set folders.
-- Then MCP mode, chat and Truth Lens.
+- Add clocks and draw offers.
+- Then MCP mode, chat and Director's Cut.
 
 ---
 
@@ -464,7 +466,7 @@ Settings must expose game properties and theater features without code edits.
 | **2. UI shell** | Tauri + Svelte, board, moves, local two-player, save/resume. | Legal game in a native window; flip; restart resumes. |
 | **3. Agent in UI** | Prompt transport, Auto/Button modes, model/persona selection, commentary, error handling. | Full game vs OpenCode model without terminal typing; illegal move recovers. |
 | **4. Design system** | 7 themes, piece sets, theme editor, animations, sounds, accessibility. | Theme switches live and persists; contrast warnings work. |
-| **5. Game completeness** | PGN ✅, persistence ✅; clocks, takebacks, draw/resign, analysis, result screen, tribute lines. | PGN round-trip; takeback rules enforced; analysis works. |
+| **5. Game completeness** | PGN ✅, persistence ✅, analysis ✅; clocks, takebacks, draw/resign, result screen, tribute lines. | PGN round-trip; takeback rules enforced; analysis works. |
 | **6. Theater extras** | Personas, chat, Truth Lens, Director’s Cut, leaderboard, MCP, broadcast. | Toggleable and non-intrusive. |
 | **7. Packaging** | PKGBUILD, `.desktop`, icon, docs, tests, performance. | Installable on CachyOS; starts <2 s; README. |
 

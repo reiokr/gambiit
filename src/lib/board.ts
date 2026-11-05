@@ -39,6 +39,40 @@ export function boardMap(
   return new Map(board.map((square) => [square.square, square.piece]));
 }
 
+const FEN_ROLES = new Set(["p", "n", "b", "r", "q", "k"]);
+
+export function boardFromFen(fen: string): SquareView[] {
+  const placement = fen.trim().split(/\s+/)[0] ?? "";
+  const board: SquareView[] = [];
+  const rows = placement.split("/");
+  for (let row = 0; row < rows.length && row < 8; row += 1) {
+    let file = 0;
+    for (const character of rows[row]) {
+      if (character >= "1" && character <= "8") {
+        const empty = Number.parseInt(character, 10);
+        for (let count = 0; count < empty && file < 8; count += 1) {
+          board.push({ square: `${FILES[file]}${8 - row}`, piece: null });
+          file += 1;
+        }
+        continue;
+      }
+      const role = character.toLowerCase();
+      if (file < 8 && FEN_ROLES.has(role)) {
+        board.push({
+          square: `${FILES[file]}${8 - row}`,
+          piece: {
+            color: character === role ? "black" : "white",
+            role,
+            glyph: "",
+          },
+        });
+        file += 1;
+      }
+    }
+  }
+  return board;
+}
+
 export function isLightSquare(square: string): boolean {
   const file = FILES.indexOf(square[0]);
   const rank = Number.parseInt(square[1], 10) - 1;

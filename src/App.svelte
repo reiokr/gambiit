@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import Board from "./lib/Board.svelte";
+  import Analysis from "./lib/Analysis.svelte";
   import Commentary from "./lib/Commentary.svelte";
   import GameLibrary from "./lib/GameLibrary.svelte";
   import MoveList from "./lib/MoveList.svelte";
@@ -679,13 +680,14 @@
               avatar={agentPersona.avatar}
               accent={agentPersona.accent}
             />
-          {:else}
-            <div class="placeholder">
-              <div class="placeholder-mark">⌕</div>
-              <h3>{$i18n("app.analysisTitle")}</h3>
-              <p>{$i18n("app.analysisBody")}</p>
-            </div>
           {/if}
+          <div class="analysis-pane" class:active={activeTab === "analysis"}>
+            <Analysis
+              gameId={snapshot.gameId}
+              historyLength={snapshot.history.length}
+              humanColor={snapshot.humanColor}
+            />
+          </div>
         </div>
 
         <footer class="sidebar-footer">
@@ -1027,6 +1029,15 @@
     overflow: hidden;
   }
 
+  .analysis-pane {
+    display: none;
+    height: 100%;
+  }
+
+  .analysis-pane.active {
+    display: block;
+  }
+
   .sidebar-footer {
     flex: 0 0 auto;
     padding: 10px 13px;
@@ -1088,46 +1099,6 @@
   .agent-error .btn {
     align-self: flex-start;
     margin-top: 3px;
-  }
-
-  .placeholder {
-    display: flex;
-    height: 100%;
-    min-height: 300px;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 28px;
-    color: var(--muted);
-    text-align: center;
-  }
-
-  .placeholder-mark {
-    display: grid;
-    width: 46px;
-    height: 46px;
-    margin-bottom: 4px;
-    place-items: center;
-    border: 1px solid var(--border);
-    border-radius: 50%;
-    color: var(--accent);
-    font-size: calc(22px * var(--font-scale));
-  }
-
-  .placeholder h3 {
-    margin: 0;
-    color: var(--text);
-    font-family: var(--font-display);
-    font-size: calc(20px * var(--font-scale));
-    font-weight: 500;
-  }
-
-  .placeholder p {
-    max-width: 280px;
-    margin: 0;
-    font-size: calc(11px * var(--font-scale));
-    line-height: 1.6;
   }
 
   .result-overlay {

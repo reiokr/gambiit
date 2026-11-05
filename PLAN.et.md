@@ -102,6 +102,8 @@ Valmis:
   tühi võti kasutab OpenCode'i enda autentimist.
 - Automaatne salvestus iga käigu järel, viimase mängu jätkamine, mängude
   raamatukogu, PGN eksport/import kommentaaridega ja tolerantne PGN-parser.
+- Pärastmängu Stockfishi analüüs: täpsus, käikude klassifikatsioon, eval-graaf,
+  valitud käigu detailid ja Tõeobjektiiv.
 - Viis Stockfishi raskusastet — Algaja, Harrastaja, Edasijõudnu, Tugev ja
   Meister — pluss Kohandatud. Taseme valik seab depth/MultiPV liugurid; liuguri
   liigutamine valib Kohandatud. Igal preseedil on ka Stockfishi `Skill Level`.
@@ -121,7 +123,8 @@ Valmis:
 
 Testid:
 
-- **19 Rust testi** rohelised (core 8, engine 2, agent 4, Tauri app 5).
+- **31 Rust testi** rohelised (core 8, engine 2, agent 5, Tauri app 16) +
+  4 ignored testi (kaks päris-mudeli smoke-testi ja kaks Stockfishi analüüsi testi).
 - 1 ignored **agent_smoke** test: `e4` → `...c5` 8,9 sekundiga, 522 tokenit.
 - `cargo clippy --all-targets -- -D warnings` puhas.
 - `pnpm check` — 0 viga, 0 hoiatust.
@@ -130,11 +133,10 @@ Testid:
 ### 3.3 Mis veel puudub
 
 - kellad;
-- pärastmängu Stockfishi analüüs, accuracy, eval-graaf;
 - teemaredaktor ja kohandatud malendikomplektide laadimine;
 - MCP-režiim ja lokaalne Axum API;
 - vestlus (chat) agendiga;
-- Truth Lens, Director's Cut, mudelite edetabel, broadcast-režiim.
+- Director's Cut, mudelite edetabel, broadcast-režiim.
 
 ---
 
@@ -465,17 +467,17 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 | **2. UI shell** | Tauri + Svelte, laud, kohalik mäng | ✅ valmis |
 | **3. Agent UI-s** | Auto/Button, mudel, isiksus, kommentaarid | ✅ valmis |
 | **4. Disainisüsteem** | 3 teemat, malendikomplekt, seaded | ✅ valmis; editor järgmine |
-| **5. Mängu täiuslikkus** | PGN ✅, salvestus ✅; kellad, analüüs, tulemus | osaliselt |
-| **6. Teater ja ekstra** | MCP, chat, Truth Lens, Director's Cut, edetabel | järgmine |
+| **5. Mängu täiuslikkus** | PGN ✅, salvestus ✅, analüüs ✅; kellad, tulemus | osaliselt |
+| **6. Teater ja ekstra** | MCP, chat, Director's Cut, edetabel | järgmine |
 | **7. Pakend** | PKGBUILD, `.desktop`, release, docs | hiljem |
 
 Soovitatud järjekord:
 
 1. **Teemaredaktor + kohandatud malendikomplektid** — sinu algne disainisoov.
-2. **Pärastmängu analüüs** — Stockfishi accuracy ja eval-graaf.
-3. **Chat + MCP** — agentchessi-kogemus ja psühholoogiline sõda.
-4. **Truth Lens / Director's Cut / edetabel / broadcast** — teatriekstra.
-5. **Kellad ja pakend** — ajakontroll, release, PKGBUILD.
+2. **Chat + MCP** — agentchessi-kogemus ja psühholoogiline sõda.
+3. **Kellad ja viigipakkumised** — mängu täielikkus.
+4. **Director's Cut / edetabel / broadcast** — teatriekstra.
+5. **Pakend** — release, PKGBUILD.
 
 ---
 
@@ -594,10 +596,11 @@ broadcast-režiim.
 ## 16. Järgmised sammud
 
 1. **Teemaredaktor + malendikomplektide valik** (soovitus nr 1).
-2. **Pärastmängu analüüs**.
-3. **Chat + MCP**.
-4. **Truth Lens / Director's Cut / edetabel / broadcast**.
-5. **Kellad + pakend** (PKGBUILD, `.desktop`, release).
+2. **Chat + MCP**.
+3. **Kellad + viigipakkumised**.
+4. **Director's Cut / edetabel / broadcast**.
+5. **Pakend** (PKGBUILD, `.desktop`, release).
 
-Salvestamine, jätkamine, mängude raamatukogu ja PGN eksport/import on nüüd
-valmis. Teemaredaktor ja analüüs on järgmised suuremad tükid.
+Salvestamine, jätkamine, mängude raamatukogu, PGN eksport/import ja
+pärastmängu analüüs on nüüd valmis. Teemaredaktor ja malendikomplektid on
+järgmine suurem tükk.

@@ -36,6 +36,9 @@ What works now:
 - automatic save after every move, resume of the latest game and a saved-game
   library (open, rename, delete);
 - PGN export with tags/comments and tolerant PGN import;
+- post-game Stockfish analysis: accuracy for both sides, move classification,
+  an evaluation graph, selected-move detail with a board, and the Truth Lens
+  comparing the agent's claimed evaluations with the engine;
 - settings for model, persona, response mode, colour, theme, font size
   (90–150%, default 120%), language, sound, animations, Stockfish depth and
   candidate count;
@@ -52,8 +55,9 @@ What works now:
   Estonian included, new languages are added by dropping in a JSON catalog;
 - desktop and terminal builds share the same Rust core, engine and agent layers.
 
-Not yet: clocks, post-game analysis, theme editor, custom piece sets, MCP mode,
-chat, Truth Lens and broadcast mode. Those are the next phases in `PLAN.md`.
+Not yet: clocks, theme editor, custom piece sets, MCP mode, chat, draw offers,
+Director's Cut, leaderboards and broadcast mode. Those are the next phases in
+`PLAN.md`.
 
 ## Run the desktop app
 
@@ -115,6 +119,23 @@ standard PGN text. “Save .pgn” writes a copy to:
 
 PGN import accepts standard SAN, comments in braces, `FEN`/`HumanColor` tags and
 ignores variations. OpenCode settings are stored with each saved game.
+
+## Post-game analysis
+
+Open the **Analysis** tab in the game sidebar. Choose a depth (12 by default) and
+press **Analyze game**. Stockfish re-reads every position once and reports:
+
+- accuracy for White and Black;
+- inaccuracies, mistakes and blunders;
+- an evaluation graph from White's point of view;
+- the best move and centipawn loss for each move, with a small board;
+- the **Truth Lens**: the agent's claimed evaluation is compared with the
+  engine, and claims that differ by 1.50 pawns or more are flagged.
+
+The analysis runs on a separate Stockfish process, so it does not disturb the
+opponent engine. A short game takes a few seconds; a long game at depth 16 can
+take a minute. The board remains the source of truth: a flag says the agent's
+claim did not match the engine, not that the move was illegal.
 
 ## Models and API keys
 
@@ -228,8 +249,8 @@ the rules, Stockfish integration and OpenCode contract before the UI is built.
   selection, commentary panel, error recovery.
 - **Phase 4:** themes, piece sets, theme editor, animations, sounds,
   accessibility, English/Estonian UI.
-- **Phase 5:** clocks, takeback rules, draw/resign, analysis, result screen.
-  (PGN export/import and the saved-game library are done.)
+- **Phase 5:** clocks, takeback rules, draw/resign, result screen.
+  (PGN export/import, the saved-game library and post-game analysis are done.)
 - **Phase 6:** MCP mode, personas/chat, Truth Lens, Director's Cut, leaderboard,
   broadcast mode.
 - **Phase 7:** packaging (PKGBUILD, `.desktop`), docs, performance.
