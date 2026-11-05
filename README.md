@@ -46,11 +46,15 @@ pnpm install
 pnpm tauri dev
 ```
 
-For a release build:
+For a standalone release binary:
 
 ```bash
-pnpm tauri build
+pnpm tauri build --no-bundle
+# binary: target/release/gambiit-app
 ```
+
+`pnpm tauri build` additionally produces a Debian package (the configured bundle
+target is `deb`). A PKGBUILD/AppImage is planned for the packaging phase.
 
 `pnpm tauri dev` starts Vite and the Tauri window. The first move may take a few
 seconds while the model thinks; the UI stays responsive and shows a thinking
@@ -68,6 +72,7 @@ theme editor and custom piece-set folders are the next design milestone.
 ## Requirements
 
 - Rust (stable, 1.85+; tested on 1.99)
+- Node.js 20+ and pnpm 10+ for the Svelte frontend
 - [OpenCode](https://opencode.ai) for AI opponents:
   - **OpenCode Desktop 2.x is recommended.** Gambiit auto-discovers its
     `opencode-cli` and uses the running desktop service, so it shares the same
