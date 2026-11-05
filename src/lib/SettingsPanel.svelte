@@ -1053,28 +1053,29 @@
 
   .settings-tabs {
     display: flex;
-    gap: 5px;
-    overflow-x: auto;
-    padding: 9px 20px;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 20px;
     border-bottom: 1px solid var(--border);
     background: var(--panel-2);
-    scrollbar-width: none;
-  }
-
-  .settings-tabs::-webkit-scrollbar {
-    display: none;
   }
 
   .settings-tabs button {
+    display: inline-flex;
+    min-height: 32px;
     flex: 0 0 auto;
-    padding: 7px 12px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 13px;
     border: 1px solid transparent;
-    border-radius: 7px;
+    border-radius: 8px;
     background: transparent;
     color: var(--muted);
     font-family: var(--font-ui);
     font-size: calc(11px * var(--font-scale));
     font-weight: 600;
+    line-height: 1;
     white-space: nowrap;
     cursor: pointer;
     transition:
@@ -1091,6 +1092,7 @@
   .settings-tabs button.active {
     border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
     background: var(--accent-soft);
+    box-shadow: inset 0 0 0 1px var(--accent-soft);
     color: var(--text);
   }
 
