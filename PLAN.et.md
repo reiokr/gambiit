@@ -90,12 +90,17 @@ Valmis:
   reaktiivsed, seega malendid uuenevad kohe nii inimese kui agendi käigu järel.
 - Mängijaribad: agent ülal, sina all; võetud malendid ja materjaliede.
 - Kolm teemat: **Salon**, **Tournament**, **Midnight**, vahetatavad seadetes.
-- Seaded: mudel (avastati 788 mudelit), isiksus, Auto/Button, valge/must, teema,
-  fondi suurus (90–150%, vaikimisi 120%), keel, heli, animatsioonid, Stockfishi
-  depth ja kandidaatide arv.
+- Seaded: mudel (avastati 788 mudelit), illustreeritud isiksus, Auto/Button,
+  valge/must, teema, fondi suurus (90–150%, vaikimisi 120%), eraldi UI- ja
+  agendikeel, heli, animatsioonid ja Stockfishi raskusaste.
 - Lokaliseeritud UI + agendi keel: `src/locales/*.json` automaatne avastamine,
-  inglise ja eesti kataloog, keelevalik ülaribas, UI uueneb kohe ja agent saab
-  sama keele ilma mängu uuesti alustamata.
+  inglise ja eesti kataloog; keelevaik ainult seadetes; UI- ja agendikeel on
+  teineteisest sõltumatud.
+- Stockfishi raskusastmed: Teater (kandidaate pole), Vabaajamäng, Standard,
+  Tugev, Treener ja Kohandatud (depth/MultiPV liugurid).
+- Illustreeritud isiksusekaardid: Teatrimeister, Külm kalkulaator, Pettur,
+  Hirmunud, Treener ja Kaootiline; avatar kuvatakse ka mängijaribas ja
+  kommentaarikaartidel.
 - Kommentaaripaneel: hinnang, kandidaadid koos tagasilükkamise põhjustega, plaan,
   mõtlemisaeg ja tokenikulu.
 - Tagasivõtt järgib `AGENTS.md` reeglit: ainult sinu enda viimast käiku saab
@@ -310,8 +315,8 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 - Ruudud on päris `<button>`-id ARIA-siltidega (“e4, valge ettur”).
 - Kõrge kontrastsusega teema on plaanis; värvipimedussõbralik laud.
 - Eesti/inglise UI ja agendikeel tulevad `src/locales/*.json` kataloogist;
-  uue keele lisamiseks piisab uuest JSON-failist. Ülariba keelevalik mõjutab
-  kohe UI-d ja järgmist agendi käiku; seadete paneel annab eelvaate.
+  uue keele lisamiseks piisab uuest JSON-failist. UI- ja agendikeel valitakse
+  eraldi seadetes; UI eelvaade on kohe, agent kasutab valitud keelt uues mängus.
 - Fontide suurus ja paigutus kohanevad.
 
 ---

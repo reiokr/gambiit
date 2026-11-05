@@ -12,13 +12,25 @@
   export let statusKey = "waiting";
   export let captured: PieceView[] = [];
   export let material = 0;
+  export let avatar = "";
+  export let accent = "";
 
   $: advantage = material > 0 ? `+${material}` : `${material}`;
 </script>
 
-<div class="player" class:active class:agent={isAgent} data-side={color}>
+<div
+  class="player"
+  class:active
+  class:agent={isAgent}
+  data-side={color}
+  style={accent ? `--player-accent:${accent}` : undefined}
+>
   <div class="avatar" class:agent-avatar={isAgent}>
-    <span>{isAgent ? "♞" : "♙"}</span>
+    {#if isAgent && avatar}
+      <img src={avatar} alt="" draggable="false" />
+    {:else}
+      <span>{isAgent ? "♞" : "♙"}</span>
+    {/if}
   </div>
 
   <div class="identity">
@@ -93,11 +105,31 @@
   }
 
   .avatar.agent-avatar {
-    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    overflow: hidden;
+    border-color: color-mix(
+      in srgb,
+      var(--player-accent, var(--accent)) 55%,
+      var(--border)
+    );
     background:
-      radial-gradient(circle at 30% 20%, var(--accent-soft), transparent 65%),
+      radial-gradient(
+        circle at 30% 20%,
+        color-mix(
+          in srgb,
+          var(--player-accent, var(--accent)) 18%,
+          transparent
+        ),
+        transparent 65%
+      ),
       var(--panel-2);
     color: var(--accent-strong);
+  }
+
+  .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
   }
 
   .identity {

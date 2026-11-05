@@ -66,12 +66,17 @@ Completed:
 - Player strips, material/captured pieces, status, thinking ribbon and
   theater-style commentary panel.
 - Three themes: Salon, Tournament, Midnight; live preview in Settings.
-- Settings: model, persona, response mode (Auto / Button), colour, theme,
-  font size (90–150%, default 120%), language, sound, animations, Stockfish
-  depth and MultiPV.
+- Settings: model, illustrated persona, response mode (Auto / Button), colour,
+  theme, font size (90–150%, default 120%), separate UI and agent languages,
+  sound, animations and Stockfish difficulty.
 - Localized UI + agent language: `src/locales/*.json` auto-discovery, English
-  and Estonian catalogs, top-bar switch, live UI update and agent prompt
-  language update without restarting the game.
+  and Estonian catalogs, language selection only in Settings, independent UI
+  and agent languages.
+- Stockfish difficulty presets: Theater (no candidates), Casual, Standard,
+  Strong, Coach and Custom (depth/MultiPV sliders).
+- Illustrated persona cards: Theater Master, Cold Calculator, Trickster,
+  Panicker, Coach and Chaotic; the avatar is also used in the player strip and
+  commentary cards.
 - Rust commands: `new_game`, `get_state`, `make_move`, `agent_move`, `takeback`,
   `resign`, `list_models`; all moves validated by `gambiit-core`.
 - Takeback policy enforced: only the human's own last move can be undone.

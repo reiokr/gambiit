@@ -6,11 +6,13 @@ const COLOR_KEY = "gambiit.humanColor.v1";
 export const DEFAULT_SETTINGS: Settings = {
   model: "opencode-go/deepseek-v4.1-flash",
   persona: "Theater Master",
-  language: "en",
-  languageName: "English",
+  uiLanguage: "en",
+  agentLanguage: "en",
+  agentLanguageName: "English",
   responseMode: "auto",
   stockfishDepth: 12,
   multipv: 3,
+  difficulty: "standard",
   theme: "salon",
   sound: true,
   animations: true,
@@ -21,7 +23,22 @@ export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_SETTINGS };
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    const stored = JSON.parse(raw) as Partial<Settings> & {
+      language?: string;
+      languageName?: string;
+    };
+    const merged: Settings = { ...DEFAULT_SETTINGS, ...stored };
+    // Migrate the pre-split single-language setting.
+    if (!stored.uiLanguage && stored.language) {
+      merged.uiLanguage = stored.language;
+    }
+    if (!stored.agentLanguage && stored.language) {
+      merged.agentLanguage = stored.language;
+    }
+    if (!stored.agentLanguageName && stored.languageName) {
+      merged.agentLanguageName = stored.languageName;
+    }
+    return merged;
   } catch {
     return { ...DEFAULT_SETTINGS };
   }

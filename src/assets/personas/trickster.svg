@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <defs>
+    <radialGradient id="tricksterBg" cx="30%" cy="20%" r="90%">
+      <stop offset="0" stop-color="#1d3a27"/>
+      <stop offset="1" stop-color="#0d1410"/>
+    </radialGradient>
+  </defs>
+  <circle cx="48" cy="48" r="46" fill="url(#tricksterBg)" stroke="#7bc47f" stroke-width="2"/>
+  <path d="M31 34 L25 17 L42 26 Z" fill="#7bc47f"/>
+  <path d="M65 34 L71 17 L54 26 Z" fill="#7bc47f"/>
+  <path d="M28 35 Q48 23 68 35 Q66 55 48 69 Q30 55 28 35Z" fill="#274d33" stroke="#7bc47f" stroke-width="2"/>
+  <path d="M35 43 L45 47" fill="none" stroke="#d9f2d9" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M61 43 L51 47" fill="none" stroke="#d9f2d9" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M48 51 L43 56 H53 Z" fill="#e3bd45"/>
+  <path d="M42 59 Q48 64 54 58" fill="none" stroke="#d9f2d9" stroke-width="2" stroke-linecap="round"/>
+</svg>

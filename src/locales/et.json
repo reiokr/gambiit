@@ -113,14 +113,21 @@
     "livePreview": "Reaalajas eelvaade",
     "language": "Keel",
     "languageHint": "Liides ja agendi kommentaarid",
+    "uiLanguage": "Liidese keel",
+    "uiLanguageHint": "Muudab ainult rakenduse UI-d.",
+    "agentLanguage": "Agendi vastuste keel",
+    "agentLanguageHint": "AI võib mõnes muus keeles kirjutada paremini kui UI keeles.",
     "fontSize": "Fondi suurus",
     "interface": "Liides",
     "sound": "Heli",
     "animations": "Animatsioonid",
     "engine": "Mootor",
-    "engineHint": "Stockfishi kandidaadid hübriidmänguks",
+    "engineHint": "Stockfishi kandidaadid ja raskusaste",
+    "difficulty": "Raskusaste",
     "depth": "Sügavus",
     "candidates": "Kandidaatkäigud",
+    "engineMeta": "top {count} · sügavus {depth}",
+    "noEngine": "Stockfishi kandidaate pole",
     "engineNote": "Stockfish pakub kandidaadid; mudel valib ühe, selgitab ja võib hinnangu osas ikkagi bluffida. Laud jääb autoriteetseks.",
     "cancel": "Tühista",
     "apply": "Rakenda ja alusta uut mängu",
@@ -128,11 +135,43 @@
   },
   "personas": {
     "theaterMaster": "Teatrimeister",
+    "theaterMasterDescription": "Dramaatiline, enesekindel ja psühholoogilist survet armastav.",
     "coldCalculator": "Külm kalkulaator",
+    "coldCalculatorDescription": "Lühike, täpne ja vaikselt üleolev.",
     "trickster": "Pettur",
+    "tricksterDescription": "Võluv, tabamatu ja alati eksitav.",
     "panicker": "Hirmunud",
+    "panickerDescription": "Hirmunud ja emotsionaalne, aga analüüs jääb teravaks.",
     "coach": "Treener",
-    "chaotic": "Kaootiline"
+    "coachDescription": "Aus, õpetlik ja pettuseta.",
+    "chaotic": "Kaootiline",
+    "chaoticDescription": "Ettearvamatu ja naljakas, aga ikka seaduslik."
+  },
+  "difficulty": {
+    "theater": {
+      "name": "Teater",
+      "description": "Puhas mudel. Stockfishi kandidaate pole; maksimaalne isiksus ja risk."
+    },
+    "casual": {
+      "name": "Vabaajamäng",
+      "description": "5 kandidaati, sügavus 8. Rohkem varieeruvust ja vigu."
+    },
+    "standard": {
+      "name": "Standard",
+      "description": "3 kandidaati, sügavus 12. Tasakaalustatud mäng."
+    },
+    "strong": {
+      "name": "Tugev",
+      "description": "2 kandidaati, sügavus 16. Vähem võimalusi pääseda."
+    },
+    "coach": {
+      "name": "Treener",
+      "description": "Mootori parim käik, sügavus 18. Aus ja õpetlik."
+    },
+    "custom": {
+      "name": "Kohandatud",
+      "description": "Vali sügavus ja kandidaatide arv ise."
+    }
   },
   "themes": {
     "salon": {

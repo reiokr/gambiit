@@ -14,11 +14,13 @@ use tauri::State;
 struct Settings {
     model: String,
     persona: String,
-    language: String,
-    language_name: String,
+    ui_language: String,
+    agent_language: String,
+    agent_language_name: String,
     response_mode: String,
     stockfish_depth: u32,
     multipv: usize,
+    difficulty: String,
     theme: String,
     sound: bool,
     animations: bool,
@@ -30,11 +32,13 @@ impl Default for Settings {
         Self {
             model: "opencode-go/deepseek-v4.1-flash".to_string(),
             persona: "Theater Master".to_string(),
-            language: "en".to_string(),
-            language_name: "English".to_string(),
+            ui_language: "en".to_string(),
+            agent_language: "en".to_string(),
+            agent_language_name: "English".to_string(),
             response_mode: "auto".to_string(),
             stockfish_depth: 12,
             multipv: 3,
+            difficulty: "standard".to_string(),
             theme: "salon".to_string(),
             sound: true,
             animations: true,
@@ -150,25 +154,6 @@ impl Session {
         }
     }
 
-    /// Apply new settings without resetting the current game.
-    fn update_settings(&mut self, settings: Settings) {
-        self.settings = normalize_settings(settings);
-        let config = agent_config(&self.settings);
-        if let Some(agent) = self.agent.as_mut() {
-            agent.update_config(config);
-        } else {
-            match AgentSession::new(config) {
-                Ok(agent) => {
-                    self.agent = Some(agent);
-                    self.agent_error = None;
-                }
-                Err(error) => {
-                    self.agent_error = Some(format!("Agent unavailable: {error}"));
-                }
-            }
-        }
-    }
-
     fn snapshot(&self) -> GameSnapshot {
         let turn = self.game.turn();
         let mut board = Vec::with_capacity(64);
@@ -253,19 +238,20 @@ impl Session {
             return Err("It is the human's turn.".into());
         }
 
-        let candidates = match self.stockfish.as_mut() {
-            Some(engine) => match engine.candidates(
-                &self.game.fen(),
-                self.settings.multipv.max(1),
-                self.settings.stockfish_depth.max(1),
-            ) {
-                Ok(candidates) => candidates,
-                Err(error) => {
-                    eprintln!("Stockfish warning: {error}");
-                    Vec::new()
-                }
-            },
-            None => Vec::new(),
+        let (multipv, depth) = engine_params(&self.settings);
+        let candidates = if multipv == 0 {
+            Vec::new()
+        } else {
+            match self.stockfish.as_mut() {
+                Some(engine) => match engine.candidates(&self.game.fen(), multipv, depth) {
+                    Ok(candidates) => candidates,
+                    Err(error) => {
+                        eprintln!("Stockfish warning: {error}");
+                        Vec::new()
+                    }
+                },
+                None => Vec::new(),
+            }
         };
 
         let prompt_game = self.game.clone();
@@ -397,21 +383,6 @@ fn make_move(state: State<'_, AppState>, mv: String) -> Result<GameSnapshot, Str
 }
 
 #[tauri::command]
-async fn update_settings(
-    state: State<'_, AppState>,
-    settings: Settings,
-) -> Result<GameSnapshot, String> {
-    let session = state.session.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        let mut session = session.lock();
-        session.update_settings(settings);
-        session.snapshot()
-    })
-    .await
-    .map_err(|error| error.to_string())
-}
-
-#[tauri::command]
 async fn agent_move(state: State<'_, AppState>) -> Result<GameSnapshot, String> {
     let session = state.session.clone();
     tauri::async_runtime::spawn_blocking(move || session.lock().agent_move())
@@ -478,24 +449,50 @@ fn normalize_settings(mut settings: Settings) -> Settings {
     if settings.persona.trim().is_empty() {
         settings.persona = defaults.persona;
     }
-    if settings.language.trim().is_empty() {
-        settings.language = defaults.language;
+    if settings.ui_language.trim().is_empty() {
+        settings.ui_language = defaults.ui_language;
     }
-    if settings.language_name.trim().is_empty() {
-        settings.language_name = defaults.language_name;
+    if settings.agent_language.trim().is_empty() {
+        settings.agent_language = defaults.agent_language;
     }
+    if settings.agent_language_name.trim().is_empty() {
+        settings.agent_language_name = match settings.agent_language.as_str() {
+            "et" => "Estonian".to_string(),
+            _ => defaults.agent_language_name,
+        };
+    }
+    if !matches!(
+        settings.difficulty.as_str(),
+        "theater" | "casual" | "standard" | "strong" | "coach" | "custom"
+    ) {
+        settings.difficulty = defaults.difficulty;
+    }
+    settings.stockfish_depth = settings.stockfish_depth.clamp(6, 20);
+    settings.multipv = settings.multipv.clamp(1, 6);
     if !(0.9..=1.5).contains(&settings.font_scale) {
         settings.font_scale = defaults.font_scale;
     }
     settings
 }
 
+fn engine_params(settings: &Settings) -> (usize, u32) {
+    match settings.difficulty.as_str() {
+        "theater" => (0, 0),
+        "casual" => (5, 8),
+        "standard" => (3, 12),
+        "strong" => (2, 16),
+        "coach" => (1, 18),
+        "custom" => (settings.multipv.max(1), settings.stockfish_depth.max(1)),
+        _ => (3, 12),
+    }
+}
+
 fn agent_config(settings: &Settings) -> AgentConfig {
     AgentConfig {
         model: settings.model.clone(),
         persona: settings.persona.clone(),
-        language: settings.language.clone(),
-        language_name: settings.language_name.clone(),
+        language: settings.agent_language.clone(),
+        language_name: settings.agent_language_name.clone(),
         timeout_secs: 180,
         retries: 1,
     }
@@ -535,7 +532,6 @@ pub fn run() {
             get_state,
             new_game,
             make_move,
-            update_settings,
             agent_move,
             takeback,
             resign,
@@ -611,19 +607,39 @@ mod tests {
     }
 
     #[test]
-    fn update_settings_keeps_the_current_game() {
-        let mut session = session();
-        session.make_move("d2d4").unwrap();
+    fn session_keeps_ui_and_agent_languages_separate() {
         let settings = Settings {
-            language: "et".to_string(),
-            language_name: "Estonian".to_string(),
+            ui_language: "et".to_string(),
+            agent_language: "en".to_string(),
+            agent_language_name: "English".to_string(),
             ..Default::default()
         };
-        session.update_settings(settings);
+        let session = Session::new(settings, Color::White);
         let snapshot = session.snapshot();
-        assert_eq!(snapshot.history.len(), 1);
-        assert_eq!(snapshot.settings.language, "et");
-        assert_eq!(snapshot.settings.language_name, "Estonian");
+        assert_eq!(snapshot.settings.ui_language, "et");
+        assert_eq!(snapshot.settings.agent_language, "en");
+        assert_eq!(snapshot.settings.agent_language_name, "English");
+    }
+
+    #[test]
+    fn difficulty_presets_map_to_engine_parameters() {
+        let mut settings = Settings {
+            difficulty: "theater".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(engine_params(&settings), (0, 0));
+        settings.difficulty = "casual".to_string();
+        assert_eq!(engine_params(&settings), (5, 8));
+        settings.difficulty = "standard".to_string();
+        assert_eq!(engine_params(&settings), (3, 12));
+        settings.difficulty = "strong".to_string();
+        assert_eq!(engine_params(&settings), (2, 16));
+        settings.difficulty = "coach".to_string();
+        assert_eq!(engine_params(&settings), (1, 18));
+        settings.difficulty = "custom".to_string();
+        settings.multipv = 4;
+        settings.stockfish_depth = 10;
+        assert_eq!(engine_params(&settings), (4, 10));
     }
 
     /// End-to-end smoke test against the real configured OpenCode model.
@@ -656,8 +672,9 @@ mod tests {
     #[ignore]
     fn agent_smoke_estonian() {
         let settings = Settings {
-            language: "et".to_string(),
-            language_name: "Estonian".to_string(),
+            ui_language: "en".to_string(),
+            agent_language: "et".to_string(),
+            agent_language_name: "Estonian".to_string(),
             ..Default::default()
         };
         let mut session = Session::new(settings, Color::White);

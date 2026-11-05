@@ -8,6 +8,8 @@
     localeMeta,
     setLocale,
   } from "./i18n";
+  import { PERSONAS } from "./personas";
+  import { DIFFICULTIES } from "./difficulty";
 
   export let settings: Settings;
   export let models: string[] = [];
@@ -20,15 +22,6 @@
 
   $: applyFontScale(draft.fontScale);
 
-  const personas = [
-    { value: "Theater Master", key: "theaterMaster" },
-    { value: "Cold Calculator", key: "coldCalculator" },
-    { value: "Trickster", key: "trickster" },
-    { value: "Panicker", key: "panicker" },
-    { value: "Coach", key: "coach" },
-    { value: "Chaotic", key: "chaotic" },
-  ];
-
   const previews: Record<string, string[]> = {
     salon: ["#e8d3b0", "#8b5a2b", "#c9a227"],
     tournament: ["#eeeed2", "#769656", "#b9d48b"],
@@ -40,10 +33,14 @@
     applyTheme(theme);
   }
 
-  function selectLanguage(code: string) {
-    draft.language = code;
-    draft.languageName = localeMeta(code).name;
+  function selectUiLanguage(code: string) {
+    draft.uiLanguage = code;
     setLocale(code);
+  }
+
+  function selectAgentLanguage(code: string) {
+    draft.agentLanguage = code;
+    draft.agentLanguageName = localeMeta(code).name;
   }
 
   function apply() {
@@ -87,36 +84,46 @@
           <span>{$i18n("settings.opponentHint")}</span>
         </div>
 
-        <div class="grid two">
-          <label class="field wide">
-            <span>{$i18n("settings.model")}</span>
-            <input
-              list="gambiit-models"
-              bind:value={draft.model}
-              spellcheck="false"
-              autocomplete="off"
-              placeholder="provider/model"
-            />
-            <datalist id="gambiit-models">
-              {#each models as model}
-                <option value={model}></option>
-              {/each}
-            </datalist>
-            <small>
-              {$i18n("settings.modelsDiscovered", { count: models.length })}
-            </small>
-          </label>
+        <label class="field">
+          <span>{$i18n("settings.model")}</span>
+          <input
+            list="gambiit-models"
+            bind:value={draft.model}
+            spellcheck="false"
+            autocomplete="off"
+            placeholder="provider/model"
+          />
+          <datalist id="gambiit-models">
+            {#each models as model}
+              <option value={model}></option>
+            {/each}
+          </datalist>
+          <small>
+            {$i18n("settings.modelsDiscovered", { count: models.length })}
+          </small>
+        </label>
 
-          <label class="field">
-            <span>{$i18n("settings.persona")}</span>
-            <select bind:value={draft.persona}>
-              {#each personas as persona}
-                <option value={persona.value}>
-                  {$i18n(`personas.${persona.key}`)}
-                </option>
-              {/each}
-            </select>
-          </label>
+        <div class="field persona-field">
+          <span>{$i18n("settings.persona")}</span>
+          <div class="persona-grid">
+            {#each PERSONAS as persona}
+              <button
+                type="button"
+                class="persona-card"
+                class:active={draft.persona === persona.value}
+                style={`--persona-accent:${persona.accent}`}
+                on:click={() => (draft.persona = persona.value)}
+              >
+                <img src={persona.avatar} alt="" draggable="false" />
+                <span class="persona-copy">
+                  <strong>{$i18n(`personas.${persona.key}`)}</strong>
+                  <small>
+                    {$i18n(`personas.${persona.key}Description`)}
+                  </small>
+                </span>
+              </button>
+            {/each}
+          </div>
         </div>
 
         <div class="field">
@@ -189,17 +196,32 @@
 
         <div class="grid two">
           <label class="field">
-            <span>{$i18n("settings.language")}</span>
+            <span>{$i18n("settings.uiLanguage")}</span>
             <select
-              value={draft.language}
-              on:change={(event) => selectLanguage(event.currentTarget.value)}
+              value={draft.uiLanguage}
+              on:change={(event) => selectUiLanguage(event.currentTarget.value)}
             >
               {#each availableLocales as language}
                 <option value={language.code}>{language.nativeName}</option>
               {/each}
             </select>
-            <small>{$i18n("settings.languageHint")}</small>
+            <small>{$i18n("settings.uiLanguageHint")}</small>
           </label>
+          <label class="field">
+            <span>{$i18n("settings.agentLanguage")}</span>
+            <select
+              value={draft.agentLanguage}
+              on:change={(event) => selectAgentLanguage(event.currentTarget.value)}
+            >
+              {#each availableLocales as language}
+                <option value={language.code}>{language.nativeName}</option>
+              {/each}
+            </select>
+            <small>{$i18n("settings.agentLanguageHint")}</small>
+          </label>
+        </div>
+
+        <div class="grid two">
           <label class="field">
             <span>
               {$i18n("settings.fontSize")}
@@ -213,19 +235,18 @@
               bind:value={draft.fontScale}
             />
           </label>
-        </div>
-
-        <div class="field interface-field">
-          <span>{$i18n("settings.interface")}</span>
-          <div class="checks">
-            <label class="check">
-              <input type="checkbox" bind:checked={draft.sound} />
-              <span>{$i18n("settings.sound")}</span>
-            </label>
-            <label class="check">
-              <input type="checkbox" bind:checked={draft.animations} />
-              <span>{$i18n("settings.animations")}</span>
-            </label>
+          <div class="field">
+            <span>{$i18n("settings.interface")}</span>
+            <div class="checks">
+              <label class="check">
+                <input type="checkbox" bind:checked={draft.sound} />
+                <span>{$i18n("settings.sound")}</span>
+              </label>
+              <label class="check">
+                <input type="checkbox" bind:checked={draft.animations} />
+                <span>{$i18n("settings.animations")}</span>
+              </label>
+            </div>
           </div>
         </div>
       </section>
@@ -236,34 +257,65 @@
           <span>{$i18n("settings.engineHint")}</span>
         </div>
 
-        <div class="grid two">
-          <label class="field">
-            <span>
-              {$i18n("settings.depth")}
-              <b>{draft.stockfishDepth}</b>
-            </span>
-            <input
-              type="range"
-              min="6"
-              max="18"
-              step="1"
-              bind:value={draft.stockfishDepth}
-            />
-          </label>
-          <label class="field">
-            <span>
-              {$i18n("settings.candidates")}
-              <b>{draft.multipv}</b>
-            </span>
-            <input
-              type="range"
-              min="1"
-              max="5"
-              step="1"
-              bind:value={draft.multipv}
-            />
-          </label>
+        <div class="field">
+          <span>{$i18n("settings.difficulty")}</span>
+          <div class="difficulty-grid">
+            {#each DIFFICULTIES as level}
+              <button
+                type="button"
+                class="difficulty-card"
+                class:active={draft.difficulty === level.id}
+                on:click={() => (draft.difficulty = level.id)}
+              >
+                <strong>{$i18n(`difficulty.${level.key}.name`)}</strong>
+                <small>{$i18n(`difficulty.${level.key}.description`)}</small>
+                {#if level.id !== "custom"}
+                  <span class="difficulty-meta">
+                    {#if level.multipv === 0}
+                      {$i18n("settings.noEngine")}
+                    {:else}
+                      {$i18n("settings.engineMeta", {
+                        count: level.multipv,
+                        depth: level.depth,
+                      })}
+                    {/if}
+                  </span>
+                {/if}
+              </button>
+            {/each}
+          </div>
         </div>
+
+        {#if draft.difficulty === "custom"}
+          <div class="grid two custom-engine">
+            <label class="field">
+              <span>
+                {$i18n("settings.depth")}
+                <b>{draft.stockfishDepth}</b>
+              </span>
+              <input
+                type="range"
+                min="6"
+                max="20"
+                step="1"
+                bind:value={draft.stockfishDepth}
+              />
+            </label>
+            <label class="field">
+              <span>
+                {$i18n("settings.candidates")}
+                <b>{draft.multipv}</b>
+              </span>
+              <input
+                type="range"
+                min="1"
+                max="6"
+                step="1"
+                bind:value={draft.multipv}
+              />
+            </label>
+          </div>
+        {/if}
         <p class="hint">{$i18n("settings.engineNote")}</p>
       </section>
     </div>
@@ -400,10 +452,6 @@
     font-size: calc(11px * var(--font-scale));
   }
 
-  .field.wide {
-    grid-column: 1 / -1;
-  }
-
   .field > span {
     font-weight: 600;
   }
@@ -525,7 +573,124 @@
     flex: 1;
   }
 
-  .interface-field {
+  .persona-field {
+    margin-top: 14px;
+  }
+
+  .persona-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .persona-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--panel-2);
+    text-align: left;
+    cursor: pointer;
+    transition:
+      border-color 140ms ease,
+      background 140ms ease,
+      transform 140ms ease;
+  }
+
+  .persona-card:hover {
+    border-color: var(--persona-accent, var(--accent));
+    transform: translateY(-1px);
+  }
+
+  .persona-card.active {
+    border-color: var(--persona-accent, var(--accent));
+    background: color-mix(
+      in srgb,
+      var(--persona-accent, var(--accent)) 10%,
+      var(--panel-2)
+    );
+    box-shadow: 0 0 0 1px
+      color-mix(in srgb, var(--persona-accent, var(--accent)) 35%, transparent);
+  }
+
+  .persona-card img {
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
+    border-radius: 50%;
+    background: var(--panel);
+  }
+
+  .persona-copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .persona-copy strong {
+    color: var(--text);
+    font-size: calc(12px * var(--font-scale));
+    line-height: 1.25;
+  }
+
+  .persona-copy small {
+    color: var(--muted);
+    font-size: calc(10px * var(--font-scale));
+    line-height: 1.4;
+  }
+
+  .difficulty-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .difficulty-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 11px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--panel-2);
+    text-align: left;
+    cursor: pointer;
+    transition:
+      border-color 140ms ease,
+      background 140ms ease;
+  }
+
+  .difficulty-card:hover {
+    border-color: var(--accent);
+  }
+
+  .difficulty-card.active {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 1px var(--accent-soft);
+  }
+
+  .difficulty-card strong {
+    color: var(--text);
+    font-size: calc(12px * var(--font-scale));
+  }
+
+  .difficulty-card small {
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .difficulty-meta {
+    margin-top: 2px;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: calc(9px * var(--font-scale));
+  }
+
+  .custom-engine {
     margin-top: 12px;
   }
 
@@ -589,7 +754,9 @@
 
   @media (max-width: 700px) {
     .grid.two,
-    .themes {
+    .themes,
+    .persona-grid,
+    .difficulty-grid {
       grid-template-columns: 1fr;
     }
     .backdrop {

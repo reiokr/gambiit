@@ -6,6 +6,8 @@
   export let cards: CommentaryCard[] = [];
   export let persona = "Theater Master";
   export let model = "";
+  export let avatar = "";
+  export let accent = "";
 
   let scrollEl: HTMLDivElement | null = null;
   let lastCard: HTMLElement | null = null;
@@ -32,7 +34,13 @@
 <div class="theater" bind:this={scrollEl}>
   {#if cards.length === 0}
     <div class="empty">
-      <div class="mask">♞</div>
+      <div class="mask" style={accent ? `--card-accent:${accent}` : undefined}>
+        {#if avatar}
+          <img src={avatar} alt="" draggable="false" />
+        {:else}
+          ♞
+        {/if}
+      </div>
       <h3>{$i18n("commentary.quiet")}</h3>
       <p>
         {$i18n("commentary.emptyPrefix")}
@@ -44,9 +52,19 @@
   {:else}
     <div class="cards">
       {#each cards as card, index (index)}
-        <article class="card" bind:this={lastCard}>
+        <article
+          class="card"
+          bind:this={lastCard}
+          style={accent ? `--card-accent:${accent}` : undefined}
+        >
           <header class="card-head">
-            <span class="avatar">♞</span>
+            <span class="avatar">
+              {#if avatar}
+                <img src={avatar} alt="" draggable="false" />
+              {:else}
+                ♞
+              {/if}
+            </span>
             <div class="title">
               <span class="move">{card.san}</span>
               <span class="byline">{persona}</span>
@@ -113,7 +131,7 @@
   .card {
     padding: 13px 14px;
     border: 1px solid var(--border);
-    border-left: 3px solid var(--accent);
+    border-left: 3px solid var(--card-accent, var(--accent));
     border-radius: 0 10px 10px 0;
     background: linear-gradient(
       90deg,
@@ -134,12 +152,22 @@
     width: 27px;
     height: 27px;
     flex: 0 0 27px;
+    overflow: hidden;
     place-items: center;
-    border: 1px solid var(--border);
+    border: 1px solid
+      color-mix(in srgb, var(--card-accent, var(--accent)) 45%, var(--border));
     border-radius: 50%;
     background: var(--panel);
     color: var(--accent);
     font-size: calc(15px * var(--font-scale));
+  }
+
+  .avatar img,
+  .mask img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
   }
 
   .title {
@@ -256,8 +284,10 @@
     width: 54px;
     height: 54px;
     margin-bottom: 4px;
+    overflow: hidden;
     place-items: center;
-    border: 1px solid var(--border);
+    border: 1px solid
+      color-mix(in srgb, var(--card-accent, var(--accent)) 45%, var(--border));
     border-radius: 50%;
     background: var(--panel-2);
     color: var(--accent);

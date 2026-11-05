@@ -36,6 +36,12 @@ What works now:
 - settings for model, persona, response mode, colour, theme, font size
   (90–150%, default 120%), language, sound, animations, Stockfish depth and
   candidate count;
+- separate UI and agent languages, both selected in Settings; the agent can
+  answer in English while the UI is Estonian;
+- illustrated personas: Theater Master, Cold Calculator, Trickster, Panicker,
+  Coach and Chaotic;
+- Stockfish difficulty presets: Theater, Casual, Standard, Strong, Coach and
+  Custom;
 - localized UI and agent commentary from `src/locales/*.json`; English and
   Estonian included, new languages are added by dropping in a JSON catalog;
 - desktop and terminal builds share the same Rust core, engine and agent layers.
@@ -72,19 +78,16 @@ mode, playing colour, board theme, language, sound, animations and Stockfish
 candidate depth. Three themes ship now: Salon, Tournament and Midnight. The
 theme editor and custom piece-set folders are the next design milestone.
 
-![Gambiit settings and themes](docs/settings-preview.png)
-
 ## Languages
 
-The interface and the agent’s commentary share the selected language. The
-top-bar selector changes the UI immediately and tells the agent to use the same
-language on its next move. Locale catalogs live in `src/locales/*.json`; adding a
-new JSON file adds a new language without touching code.
+The interface language and the agent’s response language are independent and
+are selected in **Settings → Board & interface**. This is useful when a model
+writes better in English than in the UI language. Locale catalogs live in
+`src/locales/*.json`; adding a new JSON file adds a new language without touching
+code.
 
 See [`docs/LOCALES.md`](docs/LOCALES.md) for the format and translation workflow.
 English and Estonian are included.
-
-![Estonian UI and agent commentary](docs/ui-preview-et.png)
 
 ## Requirements
 

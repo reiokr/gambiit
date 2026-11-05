@@ -33,12 +33,18 @@ function initialLocale(): string {
     if (typeof localStorage === "undefined") return fallbackCode;
     const raw = localStorage.getItem("gambiit.settings.v1");
     if (raw) {
-      const value = JSON.parse(raw) as { language?: unknown };
-      if (
-        typeof value.language === "string" &&
-        catalogs[value.language]
-      ) {
-        return value.language;
+      const value = JSON.parse(raw) as {
+        uiLanguage?: unknown;
+        language?: unknown;
+      };
+      const code =
+        typeof value.uiLanguage === "string"
+          ? value.uiLanguage
+          : typeof value.language === "string"
+            ? value.language
+            : undefined;
+      if (code && catalogs[code]) {
+        return code;
       }
     }
   } catch {

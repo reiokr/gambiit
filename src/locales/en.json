@@ -113,14 +113,21 @@
     "livePreview": "Live preview",
     "language": "Language",
     "languageHint": "Interface and agent commentary",
+    "uiLanguage": "Interface language",
+    "uiLanguageHint": "Changes the app UI only.",
+    "agentLanguage": "Agent response language",
+    "agentLanguageHint": "The AI may write better in a different language than the UI.",
     "fontSize": "Font size",
     "interface": "Interface",
     "sound": "Sound",
     "animations": "Animations",
     "engine": "Engine",
-    "engineHint": "Stockfish candidates for hybrid play",
+    "engineHint": "Stockfish candidates and difficulty",
+    "difficulty": "Difficulty",
     "depth": "Depth",
     "candidates": "Candidate moves",
+    "engineMeta": "top {count} · depth {depth}",
+    "noEngine": "No Stockfish candidates",
     "engineNote": "Stockfish proposes the candidates; the model chooses one, explains it, and may still bluff about the evaluation. The board stays authoritative.",
     "cancel": "Cancel",
     "apply": "Apply & start new game",
@@ -128,11 +135,43 @@
   },
   "personas": {
     "theaterMaster": "Theater Master",
+    "theaterMasterDescription": "Dramatic, confident, fond of psychological pressure.",
     "coldCalculator": "Cold Calculator",
+    "coldCalculatorDescription": "Terse, precise, quietly superior.",
     "trickster": "Trickster",
+    "tricksterDescription": "Charming, elusive, always misdirecting.",
     "panicker": "Panicker",
+    "panickerDescription": "Anxious and emotional, but the analysis stays sharp.",
     "coach": "Coach",
-    "chaotic": "Chaotic"
+    "coachDescription": "Honest, instructive, no deception.",
+    "chaotic": "Chaotic",
+    "chaoticDescription": "Unpredictable and funny, but still legal."
+  },
+  "difficulty": {
+    "theater": {
+      "name": "Theater",
+      "description": "Pure model. No Stockfish candidates; maximum personality and risk."
+    },
+    "casual": {
+      "name": "Casual",
+      "description": "Top 5 candidates, depth 8. More variety and more mistakes."
+    },
+    "standard": {
+      "name": "Standard",
+      "description": "Top 3 candidates, depth 12. A balanced game."
+    },
+    "strong": {
+      "name": "Strong",
+      "description": "Top 2 candidates, depth 16. Fewer escapes."
+    },
+    "coach": {
+      "name": "Coach",
+      "description": "Engine best move, depth 18. Honest and instructive."
+    },
+    "custom": {
+      "name": "Custom",
+      "description": "Choose depth and candidate count yourself."
+    }
   },
   "themes": {
     "salon": {

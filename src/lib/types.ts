@@ -57,11 +57,13 @@ export interface CommentaryCard {
 export interface Settings {
   model: string;
   persona: string;
-  language: string;
-  languageName: string;
+  uiLanguage: string;
+  agentLanguage: string;
+  agentLanguageName: string;
   responseMode: "auto" | "button";
   stockfishDepth: number;
   multipv: number;
+  difficulty: string;
   theme: string;
   sound: boolean;
   animations: boolean;

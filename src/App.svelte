@@ -22,12 +22,8 @@
   } from "./lib/settings";
   import { applyTheme } from "./lib/themes";
   import { playSound } from "./lib/sound";
-  import {
-    availableLocales,
-    i18n,
-    localeMeta,
-    setLocale,
-  } from "./lib/i18n";
+  import { i18n, localeMeta, setLocale } from "./lib/i18n";
+  import { personaFor } from "./lib/personas";
 
   type Tab = "moves" | "theater" | "analysis";
 
@@ -88,6 +84,7 @@
   $: promotionColor = snapshot?.humanColor ?? humanColor;
   $: agentName = snapshot?.settings.persona ?? settings.persona;
   $: agentModel = snapshot?.settings.model ?? settings.model;
+  $: agentPersona = personaFor(agentName);
   $: agentError = snapshot?.agentError ?? "";
   $: localizedStatus = snapshot
     ? $i18n(
@@ -98,17 +95,8 @@
       )
     : "";
 
-  const PERSONA_KEYS: Record<string, string> = {
-    "Theater Master": "theaterMaster",
-    "Cold Calculator": "coldCalculator",
-    Trickster: "trickster",
-    Panicker: "panicker",
-    Coach: "coach",
-    Chaotic: "chaotic",
-  };
-
   function personaLabel(persona: string): string {
-    return $i18n(`personas.${PERSONA_KEYS[persona] ?? "theaterMaster"}`);
+    return $i18n(`personas.${personaFor(persona).key}`);
   }
 
   function errorMessage(value: unknown): string {
@@ -142,7 +130,7 @@
     saveHumanColor(next.humanColor);
     applyTheme(next.settings.theme);
     applyFontScale(next.settings.fontScale);
-    setLocale(next.settings.language);
+    setLocale(next.settings.uiLanguage);
     thinking = next.thinking;
 
     if (next.lastMove && next.lastMove.ply !== lastSoundPly) {
@@ -174,9 +162,9 @@
     flipped = color === "black";
     saveHumanColor(color);
 
-    const languageName = localeMeta(settings.language).name;
-    if (settings.languageName !== languageName) {
-      settings = { ...settings, languageName };
+    const agentLanguageName = localeMeta(settings.agentLanguage).name;
+    if (settings.agentLanguageName !== agentLanguageName) {
+      settings = { ...settings, agentLanguageName };
       saveSettings(settings);
     }
 
@@ -320,23 +308,6 @@
     void startGame(humanColor);
   }
 
-  async function changeLanguage(code: string) {
-    const previous = settings;
-    const meta = localeMeta(code);
-    settings = { ...settings, language: code, languageName: meta.name };
-    setLocale(code);
-    saveSettings(settings);
-    try {
-      const next = await invoke<GameSnapshot>("update_settings", { settings });
-      applySnapshot(next);
-    } catch (value) {
-      error = errorMessage(value);
-      settings = previous;
-      setLocale(previous.language);
-      saveSettings(previous);
-    }
-  }
-
   function openSettings() {
     showSettings = true;
   }
@@ -344,7 +315,7 @@
   function cancelSettings() {
     applyTheme(settings.theme);
     applyFontScale(settings.fontScale);
-    setLocale(settings.language);
+    setLocale(settings.uiLanguage);
     showSettings = false;
   }
 
@@ -352,7 +323,7 @@
     settings = next;
     saveSettings(next);
     applyTheme(next.theme);
-    setLocale(next.language);
+    setLocale(next.uiLanguage);
     showSettings = false;
     void startGame(color);
   }
@@ -360,7 +331,7 @@
   onMount(() => {
     applyTheme(settings.theme);
     applyFontScale(settings.fontScale);
-    setLocale(settings.language);
+    setLocale(settings.uiLanguage);
     void (async () => {
       await startGame(humanColor);
       try {
@@ -394,16 +365,6 @@
           <i></i>
           {localizedStatus}
         </span>
-        <select
-          class="language-select"
-          aria-label={$i18n("settings.language")}
-          value={settings.language}
-          on:change={(event) => changeLanguage(event.currentTarget.value)}
-        >
-          {#each availableLocales as language}
-            <option value={language.code}>{language.nativeName}</option>
-          {/each}
-        </select>
         <button
           class="icon-btn"
           type="button"
@@ -437,6 +398,8 @@
           statusKey={playerStatus(snapshot.agentColor)}
           captured={agentCaptured}
           material={agentMaterial}
+          avatar={agentPersona.avatar}
+          accent={agentPersona.accent}
         />
 
         <div class="board-shell">
@@ -580,6 +543,8 @@
               cards={snapshot.commentary}
               persona={personaLabel(agentName)}
               model={agentModel}
+              avatar={agentPersona.avatar}
+              accent={agentPersona.accent}
             />
           {:else}
             <div class="placeholder">
@@ -699,21 +664,6 @@
     display: flex;
     align-items: center;
     gap: 9px;
-  }
-
-  .language-select {
-    height: 36px;
-    padding: 0 10px;
-    border: 1px solid var(--border);
-    border-radius: 9px;
-    background: var(--panel);
-    color: var(--text);
-    font-size: calc(11px * var(--font-scale));
-    cursor: pointer;
-  }
-
-  .language-select:hover {
-    border-color: var(--accent);
   }
 
   .status-pill {
