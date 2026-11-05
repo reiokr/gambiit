@@ -15,9 +15,10 @@ nine colours:
 | Board | light square, dark square, board border |
 
 Changes preview immediately across the app. **Save changes** saves the palette in
-the current profile and in the game settings without restarting the game.
-**Reset palette** restores the Salon palette. **Cancel** restores the palette that
-was active before the settings panel opened.
+the current profile and in the game settings without restarting the game or
+closing the settings panel. **Reset palette** restores the Salon palette.
+**Cancel** restores the palette that was active before the settings panel
+opened.
 
 Appearance and interface settings (theme, colours, piece set, UI language, sound,
 animations, font size) are always saved without a restart. Model, persona,
