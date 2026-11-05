@@ -19,12 +19,8 @@ pub fn result(game: &Game) -> &'static str {
                 "0-1"
             }
         }
-        GameStatus::Resigned { winner } => {
-            if winner == Color::White {
-                "1-0"
-            } else {
-                "0-1"
-            }
+        GameStatus::Resigned { winner } | GameStatus::Timeout { winner } => {
+            if winner == Color::White { "1-0" } else { "0-1" }
         }
         status if status.is_over() => "1/2-1/2",
         _ => "*",
@@ -57,7 +53,16 @@ pub fn export(game: &Game, settings: &Settings) -> String {
         "[HumanColor \"{}\"]\n",
         color_key(game.human_color())
     ));
-    out.push_str("[TimeControl \"-\"]\n\n");
+    let time_control = if settings.clock_enabled {
+        format!(
+            "{}+{}",
+            settings.clock_initial_ms / 1000,
+            settings.clock_increment_ms / 1000
+        )
+    } else {
+        "-".to_string()
+    };
+    out.push_str(&format!("[TimeControl \"{time_control}\"]\n\n"));
 
     for (index, record) in game.history().iter().enumerate() {
         if index % 2 == 0 {
@@ -260,6 +265,23 @@ mod tests {
             Some("A fine reply.")
         );
         assert_eq!(imported.commentary.len(), 1);
+    }
+
+    #[test]
+    fn exports_time_control_and_timeout_result() {
+        let mut game = Game::new();
+        game.apply_san("e4").unwrap();
+        game.timeout(Color::Black);
+        let settings = Settings {
+            clock_enabled: true,
+            clock_initial_ms: 180_000,
+            clock_increment_ms: 2_000,
+            ..Default::default()
+        };
+        let pgn = export(&game, &settings);
+        assert!(pgn.contains("[TimeControl \"180+2\"]"));
+        assert!(pgn.contains("[Result \"1-0\"]"));
+        assert!(pgn.trim_end().ends_with("1-0"));
     }
 
     #[test]

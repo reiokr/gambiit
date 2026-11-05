@@ -35,6 +35,7 @@ pub enum GameStatus {
     Stalemate,
     Draw { reason: &'static str },
     Resigned { winner: Color },
+    Timeout { winner: Color },
     Aborted,
 }
 
@@ -45,7 +46,9 @@ impl GameStatus {
 
     pub fn winner(self) -> Option<Color> {
         match self {
-            GameStatus::Checkmate { winner } | GameStatus::Resigned { winner } => Some(winner),
+            GameStatus::Checkmate { winner }
+            | GameStatus::Resigned { winner }
+            | GameStatus::Timeout { winner } => Some(winner),
             _ => None,
         }
     }
@@ -269,6 +272,10 @@ impl Game {
         self.manual_status = Some(GameStatus::Aborted);
     }
 
+    pub fn timeout(&mut self, loser: Color) {
+        self.manual_status = Some(GameStatus::Timeout { winner: !loser });
+    }
+
     pub fn draw_agreed(&mut self) {
         self.manual_status = Some(GameStatus::Draw {
             reason: "agreement",
@@ -331,6 +338,13 @@ impl Game {
             GameStatus::Draw { reason } => format!("Draw — {reason}."),
             GameStatus::Resigned { winner } => {
                 format!("{} wins — opponent resigned.", color_name(winner))
+            }
+            GameStatus::Timeout { winner } => {
+                format!(
+                    "{} wins — {} ran out of time.",
+                    color_name(winner),
+                    color_name(!winner)
+                )
             }
             GameStatus::Aborted => "Game aborted.".to_string(),
         }
@@ -493,6 +507,20 @@ mod tests {
                 reason: "threefold repetition"
             }
         );
+    }
+
+    #[test]
+    fn timeout_ends_the_game() {
+        let mut game = Game::new();
+        game.timeout(Color::Black);
+        assert_eq!(
+            game.status(),
+            GameStatus::Timeout {
+                winner: Color::White
+            }
+        );
+        assert_eq!(game.status().winner(), Some(Color::White));
+        assert!(game.status_text().contains("Black ran out of time"));
     }
 
     #[test]

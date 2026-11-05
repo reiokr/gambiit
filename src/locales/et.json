@@ -86,6 +86,7 @@
     "drawMaterial": "Viik — ebapiisav materjal.",
     "draw": "Viik.",
     "drawAgreed": "Viik — kokkuleppel.",
+    "timeout": "{side} võidab — vastasel sai aeg otsa.",
     "resigned": "{side} võidab — vastane alistus.",
     "aborted": "Mäng katkestati."
   },
@@ -170,7 +171,22 @@
     "features": "Funktsioonid",
     "opponentChat": "Vastase vestlus",
     "drawOffers": "Viigipakkumised",
-    "featuresHint": "Mõlemad saab igal ajal välja lülitada. Olemasolev vestlus säilib."
+    "featuresHint": "Mõlemad saab igal ajal välja lülitada. Olemasolev vestlus säilib.",
+    "clock": "Kell",
+    "clockHint": "Ajakontroll",
+    "clockEnable": "Kasuta malekella",
+    "clockMinutes": "Minutid poole kohta",
+    "clockIncrement": "Lisaaeg (sekundit)",
+    "clockNote": "Kell käivitub esimese käiguga. Vastase mõtlemisaeg kulub tema enda kellast. Kella muudatused rakenduvad uuele mängule.",
+    "clockWarning": "Kella seaded rakenduvad uuele mängule."
+  },
+  "clock": {
+    "label": "Malekell",
+    "bullet": { "name": "Bullet" },
+    "blitz": { "name": "Blitz" },
+    "rapid": { "name": "Rapid" },
+    "classical": { "name": "Klassikaline" },
+    "custom": { "name": "Kohandatud" }
   },
   "chat": {
     "eyebrow": "Lauajutt",

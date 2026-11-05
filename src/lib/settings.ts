@@ -24,6 +24,10 @@ export const DEFAULT_SETTINGS: Settings = {
   pieceSet: "cburnett",
   chatEnabled: true,
   drawOffersEnabled: true,
+  clockEnabled: false,
+  timeControl: "rapid",
+  clockInitialMs: 600_000,
+  clockIncrementMs: 5_000,
   sound: true,
   animations: true,
   fontScale: 1.2,
@@ -69,6 +73,26 @@ export function loadSettings(): Settings {
       !/^[a-zA-Z0-9_-]{1,64}$/.test(merged.pieceSet)
     ) {
       merged.pieceSet = "cburnett";
+    }
+    const clocks: Record<string, [number, number]> = {
+      bullet: [60_000, 0],
+      blitz: [180_000, 2_000],
+      rapid: [600_000, 5_000],
+      classical: [1_800_000, 0],
+    };
+    if (clocks[merged.timeControl]) {
+      merged.clockInitialMs = clocks[merged.timeControl][0];
+      merged.clockIncrementMs = clocks[merged.timeControl][1];
+    } else {
+      merged.timeControl = "custom";
+      merged.clockInitialMs = Math.min(
+        10_800_000,
+        Math.max(10_000, Number(merged.clockInitialMs) || 600_000),
+      );
+      merged.clockIncrementMs = Math.min(
+        60_000,
+        Math.max(0, Number(merged.clockIncrementMs) || 0),
+      );
     }
     return merged;
   } catch {

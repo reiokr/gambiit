@@ -112,6 +112,8 @@ Valmis:
   mängu mõjutavad muudatused näitavad hoiatust ja valikut.
 - Vastase vestlus ja ametlikud viigipakkumised, mõlemad seadetes sisse/välja
   lülitatavad.
+- Valikuline malekell bullet/blitz/rapid/klassikaline/kohandatud ajakontrolliga,
+  lisaaeg, lipu langemine ja PGN-i `TimeControl` väli.
 - Viis Stockfishi raskusastet — Algaja, Harrastaja, Edasijõudnu, Tugev ja
   Meister — pluss Kohandatud. Taseme valik seab depth/MultiPV liugurid; liuguri
   liigutamine valib Kohandatud. Igal preseedil on ka Stockfishi `Skill Level`.
@@ -131,7 +133,7 @@ Valmis:
 
 Testid:
 
-- **44 Rust testi** rohelised (core 9, engine 2, agent 8, Tauri app 25) +
+- **49 Rust testi** rohelised (core 10, engine 2, agent 8, Tauri app 29) +
   5 ignored testi (päris-mudeli käigu-, vestluse/viigi- ja eestikeelne smoke-test
   ning kaks Stockfishi analüüsi testi).
 - 1 ignored **agent_smoke** test: `e4` → `...c5` 8,9 sekundiga, 522 tokenit.
@@ -141,7 +143,6 @@ Testid:
 
 ### 3.3 Mis veel puudub
 
-- kellad;
 - rohkem sisseehitatud teemasid ja kureeritud malendikomplekte;
 - kontrasti hoiatused ja ülejäänud ligipääsetavus;
 - MCP-režiim ja lokaalne Axum API;
@@ -451,9 +452,6 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 
 ### Järgmine
 
-- mängu salvestus/jätkamine;
-- PGN eksport/import + mängude raamatukogu;
-- kellad;
 - pärastmängu analüüs (accuracy, blunderid, eval-graaf);
 - teemaredaktor + kohandatud malendikomplektid;
 - MCP + lokaalne Axum API;
@@ -477,17 +475,16 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 | **2. UI shell** | Tauri + Svelte, laud, kohalik mäng | ✅ valmis |
 | **3. Agent UI-s** | Auto/Button, mudel, isiksus, kommentaarid | ✅ valmis |
 | **4. Disainisüsteem** | 4 teemat ✅, teemaredaktor ✅, 5 sisseehitatud malendikomplekti ✅, kohandatud komplektid ✅, animatsioonid, helid | ✅ valmis; rohkem teemasid hiljem |
-| **5. Mängu täiuslikkus** | PGN ✅, salvestus ✅, analüüs ✅; kellad, tulemus | osaliselt |
+| **5. Mängu täiuslikkus** | PGN ✅, salvestus ✅, analüüs ✅, kellad ✅, viik/alistumine ✅; tulemus | osaliselt |
 | **6. Teater ja ekstra** | Vestlus ✅ ja viigipakkumised ✅; MCP, Director's Cut, edetabel | osaliselt |
 | **7. Pakend** | PKGBUILD, `.desktop`, release, docs | hiljem |
 
 Soovitatud järjekord:
 
-1. **Kellad ja ajakontroll** — mängu täielikkus.
-2. **MCP-režiim** — agent saab ise tööriistu kutsuda.
-3. **Rohkem teemasid ja malendikomplekte** — disainipolish.
-4. **Director's Cut / edetabel / broadcast** — teatriekstra.
-5. **Pakend** — release, PKGBUILD.
+1. **MCP-režiim** — agent saab ise tööriistu kutsuda.
+2. **Rohkem teemasid ja malendikomplekte** — disainipolish.
+3. **Director's Cut / edetabel / broadcast** — teatriekstra.
+4. **Pakend** — release, PKGBUILD.
 
 ---
 
@@ -562,7 +559,7 @@ $XDG_RUNTIME_DIR/gambiit/session.json   # port + token, 0600
 | Stockfish puudub | analüüs/hübriid ei tööta | tuvastus + paigaldusjuhis; legal-only fallback |
 | Malendite/teemade litsentsid | juriidiline risk | CC0/CC BY eelistus; `ATTRIBUTION.md` |
 | Lokaalne API kuritarvitamine | turvarisk | localhost + token + CORS + CSP |
-| Kellad LLM-i vastu | ebaõiglane | vaikimisi kelladeta; agendile mõtlemise eelarve |
+| Kellad LLM-i vastu | ebaõiglane | vaikimisi kelladeta; mudeli mõtlemisaeg kulub agendi enda kellast |
 | Skope paisub | projekt venib | MVP enne ekstra; väikesed vertikaalsed viilud |
 
 ### Turvalisus
@@ -605,12 +602,11 @@ broadcast-režiim.
 
 ## 16. Järgmised sammud
 
-1. **Kellad ja ajakontroll**.
-2. **MCP-režiim**.
-3. **Rohkem teemasid ja malendikomplekte**.
-4. **Director's Cut / edetabel / broadcast**.
-5. **Pakend** (PKGBUILD, `.desktop`, release).
+1. **MCP-režiim**.
+2. **Rohkem teemasid ja malendikomplekte**.
+3. **Director's Cut / edetabel / broadcast**.
+4. **Pakend** (PKGBUILD, `.desktop`, release).
 
 Salvestamine, jätkamine, mängude raamatukogu, PGN eksport/import, pärastmängu
-analüüs, teemaredaktor, kohandatud malendikomplektid, vestlus ja
-viigipakkumised on nüüd valmis.
+analüüs, teemaredaktor, kohandatud malendikomplektid, vestlus, viigipakkumised
+ja malekellad on nüüd valmis.

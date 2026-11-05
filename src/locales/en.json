@@ -86,6 +86,7 @@
     "drawMaterial": "Draw — insufficient material.",
     "draw": "Draw.",
     "drawAgreed": "Draw — by agreement.",
+    "timeout": "{side} wins — opponent ran out of time.",
     "resigned": "{side} wins — opponent resigned.",
     "aborted": "Game aborted."
   },
@@ -170,7 +171,22 @@
     "features": "Features",
     "opponentChat": "Opponent chat",
     "drawOffers": "Draw offers",
-    "featuresHint": "Both can be turned off at any time. Existing chat is kept."
+    "featuresHint": "Both can be turned off at any time. Existing chat is kept.",
+    "clock": "Clock",
+    "clockHint": "Time control",
+    "clockEnable": "Use a chess clock",
+    "clockMinutes": "Minutes per side",
+    "clockIncrement": "Increment (seconds)",
+    "clockNote": "Clocks start with the first move. The opponent's thinking time counts against its own clock. Clock changes apply to a new game.",
+    "clockWarning": "Clock settings apply to a new game."
+  },
+  "clock": {
+    "label": "Chess clock",
+    "bullet": { "name": "Bullet" },
+    "blitz": { "name": "Blitz" },
+    "rapid": { "name": "Rapid" },
+    "classical": { "name": "Classical" },
+    "custom": { "name": "Custom" }
   },
   "chat": {
     "eyebrow": "Table talk",

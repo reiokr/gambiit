@@ -35,6 +35,8 @@ What works now:
   elapsed time and token usage;
 - chat with the opponent between moves, in character and in the agent language;
 - draw offers decided by the opponent, with the result shown on the board;
+- an optional chess clock with bullet, blitz, rapid, classical and custom time
+  controls, increments, flag fall and PGN `TimeControl` tags;
 - takeback policy enforced per `AGENTS.md`: only your own last move is undoable;
 - automatic save after every move, resume of the latest game and a saved-game
   library (open, rename, delete);
@@ -58,8 +60,8 @@ What works now:
   Estonian included, new languages are added by dropping in a JSON catalog;
 - desktop and terminal builds share the same Rust core, engine and agent layers.
 
-Not yet: clocks, MCP mode, Director's Cut, leaderboards and broadcast mode.
-Those are the next phases in `PLAN.md`.
+Not yet: MCP mode, Director's Cut, leaderboards and broadcast mode. Those are
+the next phases in `PLAN.md`.
 
 ## Run the desktop app
 
@@ -102,6 +104,8 @@ without restarting the current game.
 - Appearance and interface changes (theme, colours, piece set, UI language,
   sound, animations, font size, chat and draw-offer toggles) are saved
   immediately and never restart the game.
+- Clock changes apply to a new game, because they change the time both sides
+  start with.
 - Model, persona, difficulty or agent-language changes show a warning because
   they affect the current opponent from the next move. Choose **Save changes**
   to keep playing, or **Save & start new game**.
@@ -198,6 +202,22 @@ declines based on the position and its persona. An accepted offer ends the game
 as a draw; a declined offer leaves a dismissible note and, when chat is enabled,
 the opponent's reply appears in the chat. Draw offers work even when chat is
 disabled.
+
+## Clocks
+
+Open **Settings → Clock** and enable **Use a chess clock**. Choose Bullet,
+Blitz, Rapid, Classical or Custom, then set minutes and increment. The clock
+starts when the game starts and runs for the side to move. The opponent's model
+thinking time counts against its own clock, so long time controls are kinder to
+slow models.
+
+The clocks appear in both player bars. Under 20 seconds the display switches to
+tenths and turns red. A flag ends the game immediately with a time-out result.
+Clock values are saved with the game and restored on resume; time spent with
+the app closed is not counted. PGN exports include a standard
+`TimeControl "600+5"` tag when a clock is enabled.
+
+Changing clock settings while a game is in progress asks for a new game.
 
 ## Models and API keys
 
@@ -312,8 +332,9 @@ the rules, Stockfish integration and OpenCode contract before the UI is built.
 - **Phase 4:** themes, piece sets, theme editor, animations, sounds,
   accessibility, English/Estonian UI. (Theme editor, five built-in piece sets
   and custom piece-set folders are done.)
-- **Phase 5:** clocks, takeback rules, draw/resign, result screen.
-  (PGN export/import, the saved-game library and post-game analysis are done.)
+- **Phase 5:** takeback rules, draw/resign, result screen.
+  (PGN export/import, the saved-game library, post-game analysis and clocks are
+  done.)
 - **Phase 6:** MCP mode, personas/chat, Truth Lens, Director's Cut, leaderboard,
   broadcast mode.
 - **Phase 7:** packaging (PKGBUILD, `.desktop`), docs, performance.

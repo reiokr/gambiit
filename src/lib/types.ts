@@ -60,6 +60,19 @@ export interface ChatMessage {
   at: number;
 }
 
+export interface ClockView {
+  whiteMs: number;
+  blackMs: number;
+  incrementMs: number;
+  running: ColorKey | null;
+}
+
+export interface ClockUpdate {
+  gameId: string;
+  clock: ClockView | null;
+  gameOver: boolean;
+}
+
 export interface CustomTheme {
   bg: string;
   panel: string;
@@ -87,6 +100,10 @@ export interface Settings {
   pieceSet: string;
   chatEnabled: boolean;
   drawOffersEnabled: boolean;
+  clockEnabled: boolean;
+  timeControl: string;
+  clockInitialMs: number;
+  clockIncrementMs: number;
   sound: boolean;
   animations: boolean;
   fontScale: number;
@@ -130,6 +147,7 @@ export interface GameSnapshot {
   board: SquareView[];
   commentary: CommentaryCard[];
   chat: ChatMessage[];
+  clock: ClockView | null;
   settings: Settings;
   agentError: string | null;
   thinking: boolean;

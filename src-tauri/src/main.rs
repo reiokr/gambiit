@@ -53,6 +53,18 @@ fn default_true() -> bool {
     true
 }
 
+fn default_time_control() -> String {
+    "rapid".to_string()
+}
+
+fn default_clock_initial() -> u64 {
+    600_000
+}
+
+fn default_clock_increment() -> u64 {
+    5_000
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Settings {
@@ -74,6 +86,14 @@ pub(crate) struct Settings {
     chat_enabled: bool,
     #[serde(default = "default_true")]
     draw_offers_enabled: bool,
+    #[serde(default)]
+    clock_enabled: bool,
+    #[serde(default = "default_time_control")]
+    time_control: String,
+    #[serde(default = "default_clock_initial")]
+    clock_initial_ms: u64,
+    #[serde(default = "default_clock_increment")]
+    clock_increment_ms: u64,
     sound: bool,
     animations: bool,
     font_scale: f64,
@@ -96,6 +116,10 @@ impl Default for Settings {
             piece_set: default_piece_set(),
             chat_enabled: true,
             draw_offers_enabled: true,
+            clock_enabled: false,
+            time_control: default_time_control(),
+            clock_initial_ms: default_clock_initial(),
+            clock_increment_ms: default_clock_increment(),
             sound: true,
             animations: true,
             font_scale: 1.2,
@@ -151,6 +175,92 @@ pub(crate) struct ChatMessage {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+struct ClockView {
+    white_ms: u64,
+    black_ms: u64,
+    increment_ms: u64,
+    running: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct SavedClock {
+    pub white_ms: u64,
+    pub black_ms: u64,
+    pub increment_ms: u64,
+}
+
+struct GameClock {
+    white_ms: u64,
+    black_ms: u64,
+    increment_ms: u64,
+    last_update: Instant,
+}
+
+impl GameClock {
+    fn from_settings(settings: &Settings) -> Option<Self> {
+        settings.clock_enabled.then(|| Self {
+            white_ms: settings.clock_initial_ms,
+            black_ms: settings.clock_initial_ms,
+            increment_ms: settings.clock_increment_ms,
+            last_update: Instant::now(),
+        })
+    }
+
+    fn from_saved(saved: SavedClock) -> Self {
+        Self {
+            white_ms: saved.white_ms,
+            black_ms: saved.black_ms,
+            increment_ms: saved.increment_ms,
+            last_update: Instant::now(),
+        }
+    }
+
+    fn view(&self, running: Option<Color>) -> ClockView {
+        ClockView {
+            white_ms: self.white_ms,
+            black_ms: self.black_ms,
+            increment_ms: self.increment_ms,
+            running: running.map(|color| color_key(color).to_string()),
+        }
+    }
+
+    fn tick(&mut self, turn: Color, elapsed_ms: u64) -> bool {
+        if elapsed_ms == 0 {
+            return false;
+        }
+        let remaining = match turn {
+            Color::White => &mut self.white_ms,
+            Color::Black => &mut self.black_ms,
+        };
+        if *remaining <= elapsed_ms {
+            *remaining = 0;
+            true
+        } else {
+            *remaining -= elapsed_ms;
+            false
+        }
+    }
+
+    fn add_increment(&mut self, color: Color) {
+        let remaining = match color {
+            Color::White => &mut self.white_ms,
+            Color::Black => &mut self.black_ms,
+        };
+        *remaining = remaining.saturating_add(self.increment_ms);
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ClockUpdate {
+    game_id: String,
+    clock: Option<ClockView>,
+    game_over: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct DrawOfferOutcome {
     accepted: bool,
     comment: String,
@@ -179,6 +289,7 @@ struct GameSnapshot {
     board: Vec<SquareView>,
     commentary: Vec<CommentaryCard>,
     chat: Vec<ChatMessage>,
+    clock: Option<ClockView>,
     settings: Settings,
     agent_error: Option<String>,
     thinking: bool,
@@ -192,6 +303,7 @@ struct Session {
     stockfish: Option<Stockfish>,
     commentary: Vec<CommentaryCard>,
     chat: Vec<ChatMessage>,
+    clock: Option<GameClock>,
     thinking: bool,
     game_id: String,
     game_name: String,
@@ -210,11 +322,13 @@ impl Session {
         game.set_human_color(human_color);
         let game_id = storage::new_id();
         let game_name = format!("Game vs {}", settings.persona);
+        let clock = GameClock::from_settings(&settings);
         let mut session = Self::assemble(
             game,
             settings,
             Vec::new(),
             Vec::new(),
+            clock,
             game_id,
             game_name,
             storage::now(),
@@ -244,15 +358,26 @@ impl Session {
         match saved.termination.as_str() {
             "resigned_white" => game.resign(Color::Black),
             "resigned_black" => game.resign(Color::White),
+            "timeout_white" => game.timeout(Color::White),
+            "timeout_black" => game.timeout(Color::Black),
             "draw_agreed" => game.draw_agreed(),
             "aborted" => game.abort(),
             _ => {}
         }
+        let clock = if settings.clock_enabled {
+            saved
+                .clock
+                .map(GameClock::from_saved)
+                .or_else(|| GameClock::from_settings(&settings))
+        } else {
+            None
+        };
         Ok(Self::assemble(
             game,
             settings,
             saved.commentary,
             saved.chat,
+            clock,
             saved.id,
             saved.name,
             saved.created_at,
@@ -266,11 +391,13 @@ impl Session {
         name: String,
     ) -> Self {
         let settings = normalize_settings(settings);
+        let clock = GameClock::from_settings(&settings);
         let session = Self::assemble(
             game,
             settings,
             commentary,
             Vec::new(),
+            clock,
             storage::new_id(),
             name,
             storage::now(),
@@ -279,11 +406,13 @@ impl Session {
         session
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn assemble(
         game: Game,
         settings: Settings,
         commentary: Vec<CommentaryCard>,
         chat: Vec<ChatMessage>,
+        clock: Option<GameClock>,
         game_id: String,
         game_name: String,
         created_at: u64,
@@ -314,6 +443,7 @@ impl Session {
             stockfish,
             commentary,
             chat,
+            clock,
             thinking: false,
             game_id,
             game_name,
@@ -328,6 +458,10 @@ impl Session {
                 winner: Color::White,
             } => "resigned_black",
             GameStatus::Resigned { .. } => "resigned_white",
+            GameStatus::Timeout {
+                winner: Color::White,
+            } => "timeout_black",
+            GameStatus::Timeout { .. } => "timeout_white",
             GameStatus::Draw {
                 reason: "agreement",
             } => "draw_agreed",
@@ -344,6 +478,11 @@ impl Session {
             moves: self.game.history().to_vec(),
             commentary: self.commentary.clone(),
             chat: self.chat.clone(),
+            clock: self.clock.as_ref().map(|clock| SavedClock {
+                white_ms: clock.white_ms,
+                black_ms: clock.black_ms,
+                increment_ms: clock.increment_ms,
+            }),
             settings: self.settings.clone(),
             result: pgn::result(&self.game).to_string(),
             termination: termination.to_string(),
@@ -443,6 +582,7 @@ impl Session {
     }
 
     fn offer_draw(&mut self) -> Result<DrawOfferOutcome, String> {
+        self.tick_clock();
         if !self.settings.draw_offers_enabled {
             return Err("Draw offers are disabled in settings.".to_string());
         }
@@ -489,7 +629,51 @@ impl Session {
         })
     }
 
-    fn snapshot(&self) -> GameSnapshot {
+    fn tick_clock(&mut self) {
+        let turn = self.game.turn();
+        if self.game.status().is_over() {
+            if let Some(clock) = self.clock.as_mut() {
+                clock.last_update = Instant::now();
+            }
+            return;
+        }
+        let flagged = {
+            let Some(clock) = self.clock.as_mut() else {
+                return;
+            };
+            let now = Instant::now();
+            let elapsed = now
+                .duration_since(clock.last_update)
+                .as_millis()
+                .min(u64::MAX as u128) as u64;
+            clock.last_update = now;
+            clock.tick(turn, elapsed)
+        };
+        if flagged {
+            self.game.timeout(turn);
+            self.persist();
+        }
+    }
+
+    fn add_increment(&mut self, color: Color) {
+        if let Some(clock) = self.clock.as_mut() {
+            clock.add_increment(color);
+            clock.last_update = Instant::now();
+        }
+    }
+
+    fn clock_view(&self) -> Option<ClockView> {
+        let clock = self.clock.as_ref()?;
+        let running = if self.game.status().is_over() {
+            None
+        } else {
+            Some(self.game.turn())
+        };
+        Some(clock.view(running))
+    }
+
+    fn snapshot(&mut self) -> GameSnapshot {
+        self.tick_clock();
         let turn = self.game.turn();
         let mut board = Vec::with_capacity(64);
         let mut check_square = None;
@@ -538,6 +722,7 @@ impl Session {
             board,
             commentary: self.commentary.clone(),
             chat: self.chat.clone(),
+            clock: self.clock_view(),
             settings: self.settings.clone(),
             agent_error: self.agent_error.clone(),
             thinking: self.thinking,
@@ -545,16 +730,19 @@ impl Session {
     }
 
     fn make_move(&mut self, mv: &str) -> Result<GameSnapshot, String> {
+        self.tick_clock();
         if self.game.status().is_over() {
             return Err("The game is over.".into());
         }
         if self.game.turn() != self.game.human_color() {
             return Err("It is the agent's turn.".into());
         }
+        let mover = self.game.turn();
         self.game
             .apply_uci(mv)
             .or_else(|_| self.game.apply_san(mv))
             .map_err(|error| error.to_string())?;
+        self.add_increment(mover);
         self.persist();
         Ok(self.snapshot())
     }
@@ -570,6 +758,7 @@ impl Session {
     }
 
     fn agent_move_inner(&mut self) -> Result<GameSnapshot, String> {
+        self.tick_clock();
         if self.game.status().is_over() {
             return Err("The game is over.".into());
         }
@@ -641,6 +830,11 @@ impl Session {
             }
         };
 
+        self.tick_clock();
+        if self.game.status().is_over() {
+            return Err("Time ran out while the agent was thinking.".into());
+        }
+        let mover = self.game.turn();
         let info = match self
             .game
             .apply_uci(&turn.mv)
@@ -677,11 +871,13 @@ impl Session {
             elapsed_ms: started.elapsed().as_millis() as u64,
         });
         self.agent_error = None;
+        self.add_increment(mover);
         self.persist();
         Ok(self.snapshot())
     }
 
     fn takeback(&mut self) -> Result<GameSnapshot, String> {
+        self.tick_clock();
         if self.game.status().is_over() {
             return Err("The game is over.".into());
         }
@@ -699,6 +895,7 @@ impl Session {
     }
 
     fn resign(&mut self) -> Result<GameSnapshot, String> {
+        self.tick_clock();
         if self.game.status().is_over() {
             return Err("The game is over.".into());
         }
@@ -715,6 +912,17 @@ struct AppState {
 #[tauri::command]
 fn get_state(state: State<'_, AppState>) -> Result<GameSnapshot, String> {
     Ok(state.session.lock().snapshot())
+}
+
+#[tauri::command]
+fn clock_tick(state: State<'_, AppState>) -> Result<ClockUpdate, String> {
+    let mut session = state.session.lock();
+    session.tick_clock();
+    Ok(ClockUpdate {
+        game_id: session.game_id.clone(),
+        clock: session.clock_view(),
+        game_over: session.game.status().is_over(),
+    })
 }
 
 #[tauri::command]
@@ -809,7 +1017,7 @@ fn list_games() -> Result<Vec<storage::GameSummary>, String> {
 #[tauri::command]
 fn load_game(state: State<'_, AppState>, id: String) -> Result<GameSnapshot, String> {
     let saved = storage::load(&id)?;
-    let session = Session::from_saved(saved)?;
+    let mut session = Session::from_saved(saved)?;
     let snapshot = session.snapshot();
     *state.session.lock() = session;
     Ok(snapshot)
@@ -850,7 +1058,8 @@ fn import_pgn(
     settings: Settings,
 ) -> Result<GameSnapshot, String> {
     let imported = pgn::parse(&pgn)?;
-    let session = Session::from_import(imported.game, settings, imported.commentary, imported.name);
+    let mut session =
+        Session::from_import(imported.game, settings, imported.commentary, imported.name);
     let snapshot = session.snapshot();
     *state.session.lock() = session;
     Ok(snapshot)
@@ -974,7 +1183,25 @@ fn normalize_settings(mut settings: Settings) -> Settings {
     if settings.piece_set.trim().is_empty() {
         settings.piece_set = default_piece_set();
     }
+    if let Some((initial, increment)) = clock_preset(&settings.time_control) {
+        settings.clock_initial_ms = initial;
+        settings.clock_increment_ms = increment;
+    } else {
+        settings.time_control = "custom".to_string();
+        settings.clock_initial_ms = settings.clock_initial_ms.clamp(10_000, 10_800_000);
+        settings.clock_increment_ms = settings.clock_increment_ms.clamp(0, 60_000);
+    }
     settings
+}
+
+fn clock_preset(id: &str) -> Option<(u64, u64)> {
+    match id {
+        "bullet" => Some((60_000, 0)),
+        "blitz" => Some((180_000, 2_000)),
+        "rapid" => Some((600_000, 5_000)),
+        "classical" => Some((1_800_000, 0)),
+        _ => None,
+    }
 }
 
 fn preset_params(difficulty: &str) -> Option<(usize, u32, u8)> {
@@ -1036,6 +1263,9 @@ fn status_parts(status: GameStatus, turn: Color) -> (String, Option<String>) {
         GameStatus::Resigned { winner } => {
             ("resigned".to_string(), Some(color_key(winner).to_string()))
         }
+        GameStatus::Timeout { winner } => {
+            ("timeout".to_string(), Some(color_key(winner).to_string()))
+        }
         GameStatus::Aborted => ("aborted".to_string(), None),
     }
 }
@@ -1052,6 +1282,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_state,
+            clock_tick,
             new_game,
             update_settings,
             make_move,
@@ -1095,7 +1326,7 @@ mod tests {
 
     #[test]
     fn snapshot_starts_from_the_initial_position() {
-        let session = session();
+        let mut session = session();
         let snapshot = session.snapshot();
         assert_eq!(snapshot.turn, "white");
         assert_eq!(snapshot.human_color, "white");
@@ -1138,8 +1369,87 @@ mod tests {
     }
 
     #[test]
+    fn clock_presets_and_ticks_work() {
+        let settings = normalize_settings(Settings {
+            clock_enabled: true,
+            time_control: "blitz".to_string(),
+            ..Default::default()
+        });
+        assert_eq!(settings.clock_initial_ms, 180_000);
+        assert_eq!(settings.clock_increment_ms, 2_000);
+        let mut clock = GameClock::from_settings(&settings).unwrap();
+        assert!(!clock.tick(Color::White, 1_000));
+        assert_eq!(clock.white_ms, 179_000);
+        assert_eq!(clock.black_ms, 180_000);
+        clock.add_increment(Color::White);
+        assert_eq!(clock.white_ms, 181_000);
+        assert!(clock.tick(Color::White, 181_000));
+        assert_eq!(clock.white_ms, 0);
+    }
+
+    #[test]
+    fn clock_timeout_ends_the_game_and_persists() {
+        let settings = Settings {
+            clock_enabled: true,
+            clock_initial_ms: 60_000,
+            clock_increment_ms: 0,
+            ..Default::default()
+        };
+        let mut session = Session::new_with_persist(settings, Color::White, false);
+        if let Some(clock) = session.clock.as_mut() {
+            clock.white_ms = 200;
+            clock.last_update = Instant::now() - std::time::Duration::from_millis(500);
+        }
+        session.tick_clock();
+        assert_eq!(
+            session.game.status(),
+            GameStatus::Timeout {
+                winner: Color::Black
+            }
+        );
+        let snapshot = session.snapshot();
+        assert_eq!(snapshot.status_key, "timeout");
+        assert_eq!(snapshot.winner.as_deref(), Some("black"));
+        assert_eq!(snapshot.clock.as_ref().map(|clock| clock.white_ms), Some(0));
+    }
+
+    #[test]
+    fn saved_clock_survives_a_reload() {
+        let settings = Settings {
+            clock_enabled: true,
+            clock_initial_ms: 600_000,
+            clock_increment_ms: 5_000,
+            ..Default::default()
+        };
+        let saved = storage::SavedGame {
+            id: "clock-game".to_string(),
+            name: "Clock game".to_string(),
+            created_at: 1,
+            updated_at: 1,
+            human_color: "white".to_string(),
+            initial_fen: Game::new().initial_fen().to_string(),
+            moves: Vec::new(),
+            commentary: Vec::new(),
+            chat: Vec::new(),
+            clock: Some(SavedClock {
+                white_ms: 599_000,
+                black_ms: 600_000,
+                increment_ms: 5_000,
+            }),
+            settings,
+            result: "*".to_string(),
+            termination: "ongoing".to_string(),
+        };
+        let restored = Session::from_saved(saved).unwrap();
+        let clock = restored.clock.as_ref().unwrap();
+        assert_eq!(clock.white_ms, 599_000);
+        assert_eq!(clock.black_ms, 600_000);
+        assert_eq!(clock.increment_ms, 5_000);
+    }
+
+    #[test]
     fn playing_as_black_starts_with_the_agent_to_move() {
-        let session = Session::new_with_persist(Settings::default(), Color::Black, false);
+        let mut session = Session::new_with_persist(Settings::default(), Color::Black, false);
         let snapshot = session.snapshot();
         assert_eq!(snapshot.human_color, "black");
         assert_eq!(snapshot.agent_color, "white");
@@ -1154,7 +1464,7 @@ mod tests {
             agent_language_name: "English".to_string(),
             ..Default::default()
         };
-        let session = Session::new_with_persist(settings, Color::White, false);
+        let mut session = Session::new_with_persist(settings, Color::White, false);
         let snapshot = session.snapshot();
         assert_eq!(snapshot.settings.ui_language, "et");
         assert_eq!(snapshot.settings.agent_language, "en");
@@ -1169,12 +1479,20 @@ mod tests {
         object.remove("pieceSet");
         object.remove("chatEnabled");
         object.remove("drawOffersEnabled");
+        object.remove("clockEnabled");
+        object.remove("timeControl");
+        object.remove("clockInitialMs");
+        object.remove("clockIncrementMs");
         let restored: Settings = serde_json::from_value(value).unwrap();
         assert_eq!(restored.piece_set, "cburnett");
         assert_eq!(restored.custom_theme.accent, "#c9a227");
         assert_eq!(restored.theme, "salon");
         assert!(restored.chat_enabled);
         assert!(restored.draw_offers_enabled);
+        assert!(!restored.clock_enabled);
+        assert_eq!(restored.time_control, "rapid");
+        assert_eq!(restored.clock_initial_ms, 600_000);
+        assert_eq!(restored.clock_increment_ms, 5_000);
     }
 
     #[test]
@@ -1230,11 +1548,12 @@ mod tests {
                 text: "A draw, then.".to_string(),
                 at: 2,
             }],
+            clock: None,
             settings: Settings::default(),
             result: "1/2-1/2".to_string(),
             termination: "draw_agreed".to_string(),
         };
-        let restored = Session::from_saved(saved).unwrap();
+        let mut restored = Session::from_saved(saved).unwrap();
         assert_eq!(
             restored.game.status(),
             GameStatus::Draw {
@@ -1314,6 +1633,7 @@ mod tests {
             moves: game.history().to_vec(),
             commentary: Vec::new(),
             chat: Vec::new(),
+            clock: None,
             settings: Settings::default(),
             result: "*".to_string(),
             termination: "ongoing".to_string(),

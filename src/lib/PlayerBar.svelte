@@ -2,6 +2,7 @@
   import type { ColorKey, PieceView } from "./types";
   import { pieceUrl, pieceUrls } from "./pieces";
   import { i18n } from "./i18n";
+  import { formatClock } from "./clock";
 
   export let name: string;
   export let subtitle: string;
@@ -14,8 +15,15 @@
   export let material = 0;
   export let avatar = "";
   export let accent = "";
+  export let clockMs: number | null = null;
+  export let clockActive = false;
+  export let clockStopped = false;
 
   $: advantage = material > 0 ? `+${material}` : `${material}`;
+  $: clockLow =
+    clockMs !== null &&
+    clockMs <= 20_000 &&
+    (!clockStopped || clockMs === 0);
 </script>
 
 <div
@@ -50,6 +58,17 @@
       />
     {/each}
   </div>
+
+  {#if clockMs !== null}
+    <span
+      class="clock"
+      class:running={clockActive}
+      class:low={clockLow}
+      title={$i18n("clock.label")}
+    >
+      {formatClock(clockMs)}
+    </span>
+  {/if}
 
   <div class="meta">
     {#if material !== 0}
@@ -189,6 +208,51 @@
     margin-left: -3px;
     object-fit: contain;
     opacity: 0.82;
+  }
+
+  .clock {
+    min-width: 62px;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--panel-2);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: calc(15px * var(--font-scale));
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 0.02em;
+    transition:
+      border-color 150ms ease,
+      background 150ms ease,
+      color 150ms ease;
+  }
+
+  .clock.running {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+  }
+
+  .clock.low {
+    border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
+    background: color-mix(in srgb, var(--panel-2) 82%, var(--danger));
+    color: var(--danger);
+  }
+
+  .clock.low.running {
+    animation: clock-pulse 1s ease-in-out infinite;
+  }
+
+  @keyframes clock-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 0%, transparent);
+    }
+    50% {
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 20%, transparent);
+    }
   }
 
   .meta {

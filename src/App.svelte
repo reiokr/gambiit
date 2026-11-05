@@ -10,6 +10,7 @@
   import PlayerBar from "./lib/PlayerBar.svelte";
   import SettingsPanel from "./lib/SettingsPanel.svelte";
   import type {
+    ClockUpdate,
     ColorKey,
     DrawOfferOutcome,
     GameSnapshot,
@@ -54,6 +55,7 @@
   let chatBusy = false;
   let drawBusy = false;
   let drawNotice: { accepted: boolean; comment: string } | null = null;
+  let clockPolling = false;
 
   $: if (snapshot && !snapshot.settings.chatEnabled && activeTab === "chat") {
     activeTab = "theater";
@@ -103,6 +105,18 @@
     snapshot.turn === snapshot.humanColor &&
     !promotion;
   $: promotionColor = snapshot?.humanColor ?? humanColor;
+  $: agentClock = snapshot?.clock
+    ? snapshot.agentColor === "white"
+      ? snapshot.clock.whiteMs
+      : snapshot.clock.blackMs
+    : null;
+  $: humanClock = snapshot?.clock
+    ? snapshot.humanColor === "white"
+      ? snapshot.clock.whiteMs
+      : snapshot.clock.blackMs
+    : null;
+  $: agentClockRunning = snapshot?.clock?.running === snapshot?.agentColor;
+  $: humanClockRunning = snapshot?.clock?.running === snapshot?.humanColor;
   $: agentName = snapshot?.settings.persona ?? settings.persona;
   $: agentModel = snapshot?.settings.model ?? settings.model;
   $: agentPersona = personaFor(agentName);
@@ -344,6 +358,34 @@
     }
   }
 
+  async function refreshClock() {
+    if (
+      clockPolling ||
+      !snapshot?.clock ||
+      snapshot.gameOver ||
+      thinking ||
+      chatBusy ||
+      drawBusy
+    ) {
+      return;
+    }
+    clockPolling = true;
+    try {
+      const update = await invoke<ClockUpdate>("clock_tick");
+      if (!snapshot || update.gameId !== snapshot.gameId) return;
+      if (update.gameOver) {
+        const state = await invoke<GameSnapshot>("get_state");
+        applySnapshot(state);
+      } else if (update.clock) {
+        snapshot = { ...snapshot, clock: update.clock };
+      }
+    } catch {
+      // Clock polling is best-effort; the next state refresh will catch up.
+    } finally {
+      clockPolling = false;
+    }
+  }
+
   async function sendChat(message: string): Promise<string | null> {
     if (!snapshot || chatBusy || thinking) {
       return "Wait for the opponent to finish before sending a message.";
@@ -570,6 +612,7 @@
     void applyPieceSet(settings.pieceSet);
     applyFontScale(settings.fontScale);
     setLocale(settings.uiLanguage);
+    const timer = window.setInterval(() => void refreshClock(), 250);
     void (async () => {
       await refreshGames();
       if (games.length > 0) {
@@ -580,6 +623,7 @@
       }
       await refreshModels();
     })();
+    return () => window.clearInterval(timer);
   });
 </script>
 
@@ -649,6 +693,9 @@
           material={agentMaterial}
           avatar={agentPersona.avatar}
           accent={agentPersona.accent}
+          clockMs={agentClock}
+          clockActive={agentClockRunning}
+          clockStopped={snapshot.gameOver}
         />
 
         <div class="board-shell">
@@ -721,6 +768,9 @@
           statusKey={playerStatus(snapshot.humanColor)}
           captured={humanCaptured}
           material={humanMaterial}
+          clockMs={humanClock}
+          clockActive={humanClockRunning}
+          clockStopped={snapshot.gameOver}
         />
 
         <div class="board-actions">

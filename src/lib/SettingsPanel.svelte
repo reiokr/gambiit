@@ -13,6 +13,7 @@
     setLocale,
   } from "./i18n";
   import { PERSONAS } from "./personas";
+  import { TIME_CONTROLS, clockLabel } from "./clock";
   import { DIFFICULTIES, type DifficultyOption } from "./difficulty";
 
   export let settings: Settings;
@@ -93,7 +94,13 @@
     draft.chatEnabled !== settings.chatEnabled ||
     draft.drawOffersEnabled !== settings.drawOffersEnabled ||
     Math.abs(draft.fontScale - settings.fontScale) > 0.001;
-  $: hasChanges = opponentChanged || colorChanged || appearanceChanged;
+  $: clockChanged =
+    draft.clockEnabled !== settings.clockEnabled ||
+    (draft.clockEnabled &&
+      (draft.timeControl !== settings.timeControl ||
+        draft.clockInitialMs !== settings.clockInitialMs ||
+        draft.clockIncrementMs !== settings.clockIncrementMs));
+  $: hasChanges = opponentChanged || colorChanged || appearanceChanged || clockChanged;
   $: provider = draft.model.includes("/")
     ? draft.model.split("/")[0].trim()
     : "";
@@ -286,6 +293,29 @@
       draft.stockfishDepth = level.depth;
       draft.multipv = level.multipv;
     }
+  }
+
+  function selectTimeControl(id: string) {
+    draft.timeControl = id;
+    const control = TIME_CONTROLS.find((option) => option.id === id);
+    if (control && id !== "custom") {
+      draft.clockInitialMs = control.initialMs;
+      draft.clockIncrementMs = control.incrementMs;
+    }
+  }
+
+  function setClockMinutes(event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    const minutes = Math.min(180, Math.max(0.5, Number(input.value) || 10));
+    draft.clockInitialMs = Math.round(minutes * 60_000);
+    draft.timeControl = "custom";
+  }
+
+  function setClockIncrement(event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    const seconds = Math.min(60, Math.max(0, Number(input.value) || 0));
+    draft.clockIncrementMs = Math.round(seconds * 1000);
+    draft.timeControl = "custom";
   }
 
   async function submit(startNew: boolean) {
@@ -696,6 +726,70 @@
 
       <section class="section">
         <div class="section-title">
+          <h3>{$i18n("settings.clock")}</h3>
+          <span>{$i18n("settings.clockHint")}</span>
+        </div>
+
+        <label class="check clock-toggle">
+          <input type="checkbox" bind:checked={draft.clockEnabled} />
+          <span>{$i18n("settings.clockEnable")}</span>
+        </label>
+
+        {#if draft.clockEnabled}
+          <div class="clock-presets">
+            {#each TIME_CONTROLS as control}
+              <button
+                type="button"
+                class="clock-card"
+                class:active={draft.timeControl === control.id}
+                on:click={() => selectTimeControl(control.id)}
+              >
+                <strong>{$i18n(`clock.${control.key}.name`)}</strong>
+                <small>
+                  {control.id === "custom"
+                    ? clockLabel(
+                        draft.clockInitialMs,
+                        draft.clockIncrementMs,
+                      )
+                    : clockLabel(control.initialMs, control.incrementMs)}
+                </small>
+              </button>
+            {/each}
+          </div>
+
+          {#if draft.timeControl === "custom"}
+            <div class="grid two clock-custom">
+              <label class="field">
+                <span>{$i18n("settings.clockMinutes")}</span>
+                <input
+                  type="number"
+                  min="0.5"
+                  max="180"
+                  step="0.5"
+                  value={draft.clockInitialMs / 60_000}
+                  on:change={setClockMinutes}
+                />
+              </label>
+              <label class="field">
+                <span>{$i18n("settings.clockIncrement")}</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="60"
+                  step="1"
+                  value={draft.clockIncrementMs / 1000}
+                  on:change={setClockIncrement}
+                />
+              </label>
+            </div>
+          {/if}
+
+          <small class="clock-note">{$i18n("settings.clockNote")}</small>
+        {/if}
+      </section>
+
+      <section class="section">
+        <div class="section-title">
           <h3>{$i18n("settings.engine")}</h3>
           <span>{$i18n("settings.engineHint")}</span>
         </div>
@@ -762,6 +856,8 @@
     <footer class="foot">
       {#if colorChanged}
         <p class="foot-warning">{$i18n("settings.colorWarning")}</p>
+      {:else if clockChanged}
+        <p class="foot-warning">{$i18n("settings.clockWarning")}</p>
       {:else if opponentChanged}
         <p class="foot-warning">{$i18n("settings.gameWarning")}</p>
       {/if}
@@ -772,7 +868,7 @@
         <button class="btn ghost" type="button" on:click={onClose}>
           {$i18n("settings.cancel")}
         </button>
-        {#if opponentChanged && !colorChanged}
+        {#if opponentChanged && !colorChanged && !clockChanged}
           <button
             class="btn"
             type="button"
@@ -782,7 +878,7 @@
             {$i18n("settings.saveAndNew")}
           </button>
         {/if}
-        {#if colorChanged}
+        {#if colorChanged || clockChanged}
           <button
             class="btn primary"
             type="button"
@@ -1386,6 +1482,60 @@
     color: var(--faint);
     font-size: calc(10px * var(--font-scale));
     line-height: 1.4;
+  }
+
+  .clock-toggle {
+    margin-bottom: 10px;
+  }
+
+  .clock-presets {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+    gap: 8px;
+  }
+
+  .clock-card {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--panel-2);
+    color: var(--muted);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .clock-card:hover {
+    border-color: var(--accent);
+  }
+
+  .clock-card.active {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 1px var(--accent-soft);
+  }
+
+  .clock-card strong {
+    color: var(--text);
+    font-size: calc(11px * var(--font-scale));
+  }
+
+  .clock-card small {
+    color: var(--faint);
+    font-family: var(--font-mono);
+    font-size: calc(9px * var(--font-scale));
+  }
+
+  .clock-custom {
+    margin-top: 9px;
+  }
+
+  .clock-note {
+    display: block;
+    margin-top: 8px;
+    line-height: 1.5;
   }
 
   .difficulty-grid {
