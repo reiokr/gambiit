@@ -1,0 +1,14 @@
+[package]
+name = "gambiit-agent"
+version = "0.1.0"
+edition = "2024"
+description = "OpenCode prompt transport and agent orchestration for Gambiit"
+
+[dependencies]
+gambiit-core = { path = "../gambiit-core" }
+gambiit-engine = { path = "../gambiit-engine" }
+shakmaty = "0.30.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+thiserror = "2"

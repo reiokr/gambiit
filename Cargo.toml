@@ -1,0 +1,8 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/gambiit-core",
+    "crates/gambiit-engine",
+    "crates/gambiit-agent",
+    "crates/gambiit-cli",
+]

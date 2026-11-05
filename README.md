@@ -1,0 +1,128 @@
+# Gambiit
+
+A Rust-based desktop chess game where your opponent is an OpenCode model — with a
+personality, a plan, and a taste for theater.
+
+> **The board is truth; the voice is free.**
+> Move legality, checkmate and results are always verified by the game. The agent
+> may bluff about evaluations and plans, but never about the mechanics.
+
+## Status
+
+**Phase 0 complete** — a playable terminal prototype. The next milestone is the
+Tauri desktop UI. See [`PLAN.md`](PLAN.md) for the full architecture and roadmap.
+
+What works now:
+
+- complete chess rules via `shakmaty` (castling, en passant, promotion, mate,
+  stalemate, threefold repetition, 50-move rule, insufficient material);
+- Stockfish 19 hybrid play: the engine proposes candidate moves, the model
+  chooses and explains;
+- OpenCode prompt transport with strict JSON validation and retries;
+- session reuse across moves, so the opponent remembers the game;
+- commentary cards with evaluations, candidate moves and rejection reasons;
+- automatic agent replies after the human move (the terminal prototype; the
+  final UI will make this a button or a setting);
+- terminal board with legal-move hints, last-move highlights and check marks.
+
+Not yet: Tauri UI, themes/piece sets, MCP mode, PGN library, clocks, post-game
+analysis, personas/chat. Those are the next phases in `PLAN.md`.
+
+## Requirements
+
+- Rust (stable, 1.85+; tested on 1.99)
+- [OpenCode](https://opencode.ai) CLI for AI opponents
+- **Stockfish** for hybrid play and analysis — strongly recommended
+  - Arch/CachyOS: `sudo pacman -S --needed stockfish`
+- A model provider. A local Ollama model works offline:
+  - `ollama/gemma4`
+  - `ollama/qwen3.8:27b`
+  - `localai/qwen3.8-9b-q8`
+
+## Quick start
+
+```bash
+cargo build --release
+
+# Check OpenCode and Stockfish
+cargo run -p gambiit-cli -- probe
+
+# Prove the OpenCode transport works (small prompt, no game)
+cargo run -p gambiit-cli -- probe --prompt --model ollama/gemma4
+
+# Play as White against a local model
+cargo run -p gambiit-cli -- play --agent opencode --model ollama/gemma4 --color w
+
+# Play against Stockfish only, or against a mock opponent
+cargo run -p gambiit-cli -- play --agent stockfish --color w
+cargo run -p gambiit-cli -- play --agent mock --color w
+
+# Perft sanity check
+cargo run -p gambiit-cli -- perft 4
+```
+
+Useful options:
+
+```bash
+cargo run -p gambiit-cli -- play --help
+# --depth 12 --multipv 3      Stockfish search settings
+# --no-stockfish              legal-moves-only mode
+# --max-plies 20              stop after N plies
+# --persona "Trickster"       persona for the prompt
+# --language en|et            agent commentary language
+# --timeout 180               OpenCode request timeout
+```
+
+In the terminal, type a move as SAN (`e4`, `Nf3`, `O-O`) or UCI (`e2e4`,
+`g1f3`). Type `moves` to list legal moves, `fen`, `pgn`, `resign`, or `q`.
+
+If a provider key has expired (`api_key_expired`), re-authenticate with
+`opencode auth login`, choose another provider, or use a local Ollama model.
+Gambiit never stores provider keys; OpenCode owns authentication.
+
+## How it works
+
+```
+human move
+   ↓
+GameService (shakmaty) ── legal moves + FEN + history
+   ↓
+Stockfish (MultiPV 3) ── candidate moves + evaluations
+   ↓
+OpenCode prompt ── strict JSON: move, comment, candidates, plan
+   ↓
+validation (shakmaty) ── illegal/malformed → retry once → pause
+   ↓
+board + commentary
+```
+
+The agent is allowed to be theatrical. The game is not: every move returned by
+the model is validated against the legal move list before it reaches the board.
+
+## Development
+
+```bash
+cargo fmt --all
+cargo test
+cargo clippy --all-targets -- -D warnings
+```
+
+The terminal prototype is deliberately small. It is the risk spike that proves
+the rules, Stockfish integration and OpenCode contract before the UI is built.
+
+## Roadmap
+
+- **Phase 1–2:** Tauri 2 + Svelte 5 shell, local two-player board, save/resume.
+- **Phase 3:** agent in the UI: Auto / Button / Manual modes, model and persona
+  selection, commentary panel, error recovery.
+- **Phase 4:** themes, piece sets, theme editor, animations, sounds,
+  accessibility, English/Estonian UI.
+- **Phase 5:** PGN, clocks, takeback rules, draw/resign, analysis, result screen.
+- **Phase 6:** MCP mode, personas/chat, Truth Lens, Director's Cut, leaderboard,
+  broadcast mode.
+- **Phase 7:** packaging (PKGBUILD, `.desktop`), docs, performance.
+
+## License
+
+TBD. Code and bundled assets will be licensed separately; chess piece sets and
+sounds must carry their own license files.

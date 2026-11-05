@@ -1,0 +1,9 @@
+[package]
+name = "gambiit-engine"
+version = "0.1.0"
+edition = "2024"
+description = "Stockfish UCI integration for Gambiit"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"

@@ -1,0 +1,10 @@
+[package]
+name = "gambiit-core"
+version = "0.1.0"
+edition = "2024"
+description = "Chess rules, game state and PGN helpers for Gambiit"
+
+[dependencies]
+shakmaty = "0.30.2"
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
