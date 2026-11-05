@@ -24,7 +24,8 @@ What works now:
 - Tauri 2 + Svelte 5 desktop window;
 - click-to-move board with legal-move dots, capture rings, last-move highlights,
   check marks, promotion picker and a theme editor;
-- Cburnett SVG piece set plus custom piece-set folders;
+- five built-in SVG piece sets — Cburnett, Livius, Meridian, Meridian Shaded
+  and Letter — plus custom piece-set folders;
 - Stockfish 19 hybrid play: the engine proposes candidate moves, the model
   chooses and explains;
 - OpenCode prompt transport with strict JSON validation and retries;
@@ -105,9 +106,15 @@ without restarting the current game.
 - Changing colour always requires a new game, so the panel says so and starts it
   when you save.
 
-### Custom piece sets
+### Piece sets
 
-Drop a folder into:
+Five sets are built in: **Cburnett** (the default), **Livius**, **Meridian**,
+**Meridian Shaded** and **Letter**. Choose one under **Settings → Board &
+interface → Piece set**. Livius, Meridian and Meridian Shaded are CC0 sets by
+Martin Sedlák; Letter is a CC0 typographic set made for Gambiit. Cburnett is
+CC BY-SA 3.0.
+
+To add your own set, drop a folder into:
 
 ```
 ~/.local/share/gambiit/pieces/
@@ -286,8 +293,8 @@ the rules, Stockfish integration and OpenCode contract before the UI is built.
 - **Phase 3:** agent in the UI: Auto / Button / Manual modes, model and persona
   selection, commentary panel, error recovery.
 - **Phase 4:** themes, piece sets, theme editor, animations, sounds,
-  accessibility, English/Estonian UI. (Theme editor and custom piece sets are
-  done.)
+  accessibility, English/Estonian UI. (Theme editor, five built-in piece sets
+  and custom piece-set folders are done.)
 - **Phase 5:** clocks, takeback rules, draw/resign, result screen.
   (PGN export/import, the saved-game library and post-game analysis are done.)
 - **Phase 6:** MCP mode, personas/chat, Truth Lens, Director's Cut, leaderboard,
@@ -296,5 +303,7 @@ the rules, Stockfish integration and OpenCode contract before the UI is built.
 
 ## License
 
-TBD. Code and bundled assets will be licensed separately; chess piece sets and
-sounds must carry their own license files.
+TBD. Code and bundled assets are licensed separately. Chess piece sets carry
+their own license files under `src/assets/pieces/`: Cburnett is CC BY-SA 3.0;
+Livius, Meridian, Meridian Shaded and Letter are CC0 1.0. Sounds must carry
+their own license files.

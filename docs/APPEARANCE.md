@@ -28,6 +28,22 @@ current opponent from the next move; **Save & start new game** is offered next t
 The custom palette lives in `Settings.customTheme` (camelCase in JSON) and is
 used only when `Settings.theme` is `"custom"`.
 
+## Built-in piece sets
+
+Gambiit ships five vector sets:
+
+| Set | Style | License |
+| --- | --- | --- |
+| Cburnett | detailed classic, the default | CC BY-SA 3.0 |
+| Livius | bold flat design | CC0 1.0 |
+| Meridian | clean 1952 newspaper-inspired design | CC0 1.0 |
+| Meridian Shaded | Meridian with soft gradients | CC0 1.0 |
+| Letter | typographic tokens with piece letters | CC0 1.0 |
+
+Livius, Meridian and Meridian Shaded are by Martin Sedlák
+(<https://github.com/kmar/chess_svg_piece_sets>). Letter was created for
+Gambiit. Attribution files sit next to the assets under `src/assets/pieces/`.
+
 ## Custom piece sets
 
 A piece set is a folder under:

@@ -81,7 +81,8 @@ Completed:
 - Post-game Stockfish analysis with accuracy, move classification, evaluation
   graph, selected-move detail and the Truth Lens.
 - Custom theme editor with live preview and a locally saved palette.
-- Custom piece-set folders under `~/.local/share/gambiit/pieces/` with
+- Five built-in piece sets (Cburnett, Livius, Meridian, Meridian Shaded and
+  Letter) plus custom folders under `~/.local/share/gambiit/pieces/` with
   per-piece fallback to the built-in Cburnett set.
 - Settings save appearance and interface changes without restarting the game;
   game-affecting changes are warned about and can continue or start a new game.
@@ -471,7 +472,7 @@ Settings must expose game properties and theater features without code edits.
 | **1. Core + API** | `gambiit-core`, `GameService`, axum API, discovery file, fake agent, perft tests. | All rules/API tests green; fake agent plays 100 games. |
 | **2. UI shell** | Tauri + Svelte, board, moves, local two-player, save/resume. | Legal game in a native window; flip; restart resumes. |
 | **3. Agent in UI** | Prompt transport, Auto/Button modes, model/persona selection, commentary, error handling. | Full game vs OpenCode model without terminal typing; illegal move recovers. |
-| **4. Design system** | 4 themes ✅, theme editor ✅, custom piece sets ✅, animations, sounds, accessibility; more themes and curated piece sets planned. | Theme switches live and persists; palette and pieces load from disk. |
+| **4. Design system** | 4 themes ✅, theme editor ✅, 5 built-in piece sets ✅, custom sets ✅, animations, sounds, accessibility; more themes planned. | Theme switches live and persists; palette and pieces load from disk. |
 | **5. Game completeness** | PGN ✅, persistence ✅, analysis ✅; clocks, takebacks, draw/resign, result screen, tribute lines. | PGN round-trip; takeback rules enforced; analysis works. |
 | **6. Theater extras** | Personas, chat, Truth Lens, Director’s Cut, leaderboard, MCP, broadcast. | Toggleable and non-intrusive. |
 | **7. Packaging** | PKGBUILD, `.desktop`, icon, docs, tests, performance. | Installable on CachyOS; starts <2 s; README. |

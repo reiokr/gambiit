@@ -4,7 +4,7 @@
   import type { ColorKey, PieceSetSummary, Settings } from "./types";
   import { DEFAULT_CUSTOM_THEME, THEMES, applyTheme } from "./themes";
   import ThemeEditor from "./ThemeEditor.svelte";
-  import { DEFAULT_PIECE_PREVIEW, applyPieceSet } from "./pieces";
+  import { applyPieceSet, piecePreview } from "./pieces";
   import { applyFontScale } from "./settings";
   import {
     availableLocales,
@@ -582,7 +582,7 @@
               >
                 <span class="piece-image">
                   <img
-                    src={set.preview ?? DEFAULT_PIECE_PREVIEW}
+                    src={set.preview ?? piecePreview(set.id)}
                     alt=""
                     draggable="false"
                   />

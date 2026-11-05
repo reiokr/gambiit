@@ -105,8 +105,9 @@ Valmis:
 - Pärastmängu Stockfishi analüüs: täpsus, käikude klassifikatsioon, eval-graaf,
   valitud käigu detailid ja Tõeobjektiiv.
 - Kohandatud teemaredaktor live-eelvaatega ja lokaalselt salvestatud paletiga.
-- Kohandatud malendikomplektide kaustad `~/.local/share/gambiit/pieces/` all,
-  puuduvate malendite varundusega sisseehitatud Cburnetti komplektist.
+- Viis sisseehitatud malendikomplekti (Cburnett, Livius, Meridian, Meridian
+  Shaded ja Letter) ning kohandatud kaustad `~/.local/share/gambiit/pieces/`
+  all, puuduvate malendite varundusega Cburnetti komplektist.
 - Seadete salvestus ei alusta uut mängu välimuse/liidese muudatuste puhul;
   mängu mõjutavad muudatused näitavad hoiatust ja valikut.
 - Viis Stockfishi raskusastet — Algaja, Harrastaja, Edasijõudnu, Tugev ja
@@ -472,7 +473,7 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 | **1. Core + API** | core, engine, agent; lokaalne API veel puudub | osaliselt |
 | **2. UI shell** | Tauri + Svelte, laud, kohalik mäng | ✅ valmis |
 | **3. Agent UI-s** | Auto/Button, mudel, isiksus, kommentaarid | ✅ valmis |
-| **4. Disainisüsteem** | 4 teemat ✅, teemaredaktor ✅, kohandatud malendikomplektid ✅, animatsioonid, helid | ✅ valmis; rohkem komplekte hiljem |
+| **4. Disainisüsteem** | 4 teemat ✅, teemaredaktor ✅, 5 sisseehitatud malendikomplekti ✅, kohandatud komplektid ✅, animatsioonid, helid | ✅ valmis; rohkem teemasid hiljem |
 | **5. Mängu täiuslikkus** | PGN ✅, salvestus ✅, analüüs ✅; kellad, tulemus | osaliselt |
 | **6. Teater ja ekstra** | MCP, chat, Director's Cut, edetabel | järgmine |
 | **7. Pakend** | PKGBUILD, `.desktop`, release, docs | hiljem |

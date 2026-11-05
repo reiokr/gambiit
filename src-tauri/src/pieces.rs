@@ -8,7 +8,13 @@
 use serde::Serialize;
 use std::{fs, path::Path};
 
-const BUILT_IN_ID: &str = "cburnett";
+const BUILT_IN_SETS: [(&str, &str); 5] = [
+    ("cburnett", "Cburnett"),
+    ("livius", "Livius"),
+    ("meridian", "Meridian"),
+    ("meridian-shaded", "Meridian Shaded"),
+    ("letter", "Letter"),
+];
 const CODES: [&str; 12] = [
     "wK", "wQ", "wR", "wB", "wN", "wP", "bK", "bQ", "bR", "bB", "bN", "bP",
 ];
@@ -115,18 +121,25 @@ fn preview_for(directory: &Path) -> Option<String> {
     None
 }
 
+fn is_built_in(id: &str) -> bool {
+    BUILT_IN_SETS.iter().any(|(set_id, _)| *set_id == id)
+}
+
 pub fn list() -> Result<Vec<PieceSetSummary>, String> {
     list_at(&crate::storage::pieces_dir())
 }
 
 fn list_at(root: &Path) -> Result<Vec<PieceSetSummary>, String> {
-    let mut sets = vec![PieceSetSummary {
-        id: BUILT_IN_ID.to_string(),
-        name: "Cburnett".to_string(),
-        built_in: true,
-        pieces: 12,
-        preview: None,
-    }];
+    let mut sets: Vec<PieceSetSummary> = BUILT_IN_SETS
+        .iter()
+        .map(|(id, name)| PieceSetSummary {
+            id: (*id).to_string(),
+            name: (*name).to_string(),
+            built_in: true,
+            pieces: 12,
+            preview: None,
+        })
+        .collect();
     if !root.exists() {
         return Ok(sets);
     }
@@ -154,7 +167,8 @@ fn list_at(root: &Path) -> Result<Vec<PieceSetSummary>, String> {
             preview: preview_for(&path),
         });
     }
-    sets[1..].sort_by(|left, right| left.name.cmp(&right.name));
+    let built_in_count = BUILT_IN_SETS.len();
+    sets[built_in_count..].sort_by(|left, right| left.name.cmp(&right.name));
     Ok(sets)
 }
 
@@ -164,7 +178,7 @@ pub fn load(id: &str) -> Result<std::collections::BTreeMap<String, String>, Stri
 
 fn load_at(root: &Path, id: &str) -> Result<std::collections::BTreeMap<String, String>, String> {
     let mut urls = std::collections::BTreeMap::new();
-    if id == BUILT_IN_ID {
+    if is_built_in(id) {
         return Ok(urls);
     }
     if !valid_id(id) {
@@ -250,14 +264,15 @@ mod tests {
         fs::write(set.join("wK.png"), b"png").unwrap();
 
         let sets = list_at(&root).unwrap();
-        assert_eq!(sets.len(), 2);
+        assert_eq!(sets.len(), 6);
         assert_eq!(sets[0].id, "cburnett");
         assert!(sets[0].built_in);
-        assert_eq!(sets[1].id, "my-set");
-        assert_eq!(sets[1].name, "My Set");
-        assert_eq!(sets[1].pieces, 2);
+        assert!(sets.iter().any(|set| set.id == "livius" && set.built_in));
+        let custom = sets.iter().find(|set| set.id == "my-set").unwrap();
+        assert_eq!(custom.name, "My Set");
+        assert_eq!(custom.pieces, 2);
         assert!(
-            sets[1]
+            custom
                 .preview
                 .as_deref()
                 .is_some_and(|url| url.starts_with("data:image/svg+xml;base64,"))

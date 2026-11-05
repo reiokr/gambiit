@@ -1,56 +1,55 @@
 import { invoke } from "@tauri-apps/api/core";
 import { writable } from "svelte/store";
-import wK from "../assets/pieces/cburnett/wK.svg";
-import wQ from "../assets/pieces/cburnett/wQ.svg";
-import wR from "../assets/pieces/cburnett/wR.svg";
-import wB from "../assets/pieces/cburnett/wB.svg";
-import wN from "../assets/pieces/cburnett/wN.svg";
-import wP from "../assets/pieces/cburnett/wP.svg";
-import bK from "../assets/pieces/cburnett/bK.svg";
-import bQ from "../assets/pieces/cburnett/bQ.svg";
-import bR from "../assets/pieces/cburnett/bR.svg";
-import bB from "../assets/pieces/cburnett/bB.svg";
-import bN from "../assets/pieces/cburnett/bN.svg";
-import bP from "../assets/pieces/cburnett/bP.svg";
 
-const URLS: Record<string, string> = {
-  wK,
-  wQ,
-  wR,
-  wB,
-  wN,
-  wP,
-  bK,
-  bQ,
-  bR,
-  bB,
-  bN,
-  bP,
-};
+type PieceUrls = Record<string, string>;
 
-/** Data URLs for the selected custom piece set; empty means built-in. */
-export const pieceUrls = writable<Record<string, string>>({});
+const modules = import.meta.glob("../assets/pieces/*/*.svg", {
+  eager: true,
+  import: "default",
+}) as Record<string, string>;
 
-export const DEFAULT_PIECE_PREVIEW = wN;
+const BUILT_IN_SETS: Record<string, PieceUrls> = {};
+
+for (const [path, url] of Object.entries(modules)) {
+  const match = path.match(/\/pieces\/([^/]+)\/([wb])([KQRBNP])\.svg$/);
+  if (!match) continue;
+  const [, set, color, role] = match;
+  BUILT_IN_SETS[set] ??= {};
+  BUILT_IN_SETS[set][color + role] = url;
+}
+
+const FALLBACK = BUILT_IN_SETS.cburnett ?? {};
+
+/** Resolved URLs for the selected piece set; empty means the built-in fallback. */
+export const pieceUrls = writable<PieceUrls>({});
+
+const FALLBACK_PREVIEW = FALLBACK.wN ?? "";
 
 let pieceSetToken = 0;
 
+export function piecePreview(id: string, code = "wN"): string {
+  return BUILT_IN_SETS[id]?.[code] ?? FALLBACK_PREVIEW;
+}
+
 export async function applyPieceSet(id: string): Promise<void> {
   const token = ++pieceSetToken;
-  if (!id || id === "cburnett") {
-    pieceUrls.set({});
+  const builtIn = BUILT_IN_SETS[id];
+  if (builtIn) {
+    pieceUrls.set({ ...builtIn });
+    return;
+  }
+  if (!id) {
+    pieceUrls.set({ ...FALLBACK });
     return;
   }
   try {
-    const urls = await invoke<Record<string, string>>("load_piece_set", {
-      id,
-    });
+    const urls = await invoke<PieceUrls>("load_piece_set", { id });
     if (token === pieceSetToken) {
-      pieceUrls.set(urls ?? {});
+      pieceUrls.set({ ...FALLBACK, ...(urls ?? {}) });
     }
   } catch {
     if (token === pieceSetToken) {
-      pieceUrls.set({});
+      pieceUrls.set({ ...FALLBACK });
     }
   }
 }
@@ -58,11 +57,11 @@ export async function applyPieceSet(id: string): Promise<void> {
 export function pieceUrl(
   color: string,
   role: string,
-  overrides: Record<string, string> = {},
+  overrides: PieceUrls = {},
 ): string {
   const side = color === "white" || color === "w" ? "w" : "b";
   const code = side + role.toUpperCase();
-  return overrides[code] ?? URLS[code] ?? "";
+  return overrides[code] ?? FALLBACK[code] ?? "";
 }
 
 export function pieceAlt(color: string, role: string): string {
