@@ -88,7 +88,7 @@ indicator.
 
 Settings are grouped into four tabs: **Game** (opponent, engine, clock,
 features), **Appearance** (themes, colours, pieces, interface), **Language**
-(UI and agent language) and **Connection** (provider credentials). The Game tab
+(UI and agent language) and **Connection** (model and provider credentials). The Game tab
 holds the settings that shape the match; the other tabs stay out of the way.
 
 The Settings panel controls the opponent model, persona, Auto/Button response
@@ -225,8 +225,10 @@ Changing clock settings while a game is in progress asks for a new game.
 
 ## Models and API keys
 
-The model selector is searchable and grouped by provider. If a provider needs
-an API key, open **Settings → Connection**. Keys are kept in
+The model selector lives in **Settings → Connection** and is searchable and
+grouped by provider. In the Game tab the opponent card shows the selected model;
+click it to jump straight to the picker. If a provider needs an API key, manage
+it in the same tab. Keys are kept in
 `~/.config/gambiit/credentials.json` with `0600` permissions and are never sent
 back to the UI. Leaving the key empty uses OpenCode’s existing authentication.
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import type { ColorKey, PieceSetSummary, Settings } from "./types";
   import { DEFAULT_CUSTOM_THEME, THEMES, applyTheme } from "./themes";
@@ -14,6 +14,7 @@
   } from "./i18n";
   import { PERSONAS } from "./personas";
   import { TIME_CONTROLS, clockLabel } from "./clock";
+  import ModelBadge from "./ModelBadge.svelte";
   import { DIFFICULTIES, type DifficultyOption } from "./difficulty";
 
   export let settings: Settings;
@@ -52,6 +53,7 @@
   let humanColor: ColorKey = initialColor;
   let modelOpen = false;
   let modelFilter = "";
+  let modelInput: HTMLInputElement | null = null;
   let provider = "";
   let envVar = "";
   let credential: CredentialStatus | null = null;
@@ -329,6 +331,23 @@
     }
   }
 
+  function modelName(model: string): string {
+    return model.includes("/") ? model.split("/").pop() || model : model || "—";
+  }
+
+  function providerName(model: string): string {
+    return model.includes("/") ? model.split("/")[0] : "";
+  }
+
+  async function openModelPicker() {
+    selectTab("connection");
+    modelFilter = "";
+    await tick();
+    modelOpen = true;
+    modelInput?.focus();
+    modelInput?.select();
+  }
+
   async function submit(startNew: boolean) {
     if (!hasChanges || applying) return;
     applying = true;
@@ -420,70 +439,16 @@
             <h3>{$i18n("settings.opponent")}</h3>
             <span>{$i18n("settings.opponentHint")}</span>
           </div>
-<div class="field model-field">
-          <span>{$i18n("settings.model")}</span>
-          <div class="model-picker">
-            <input
-              bind:value={draft.model}
-              spellcheck="false"
-              autocomplete="off"
-              placeholder="provider/model"
-              on:focus={(event) => {
-                modelOpen = true;
-                modelFilter = "";
-                event.currentTarget.select();
-              }}
-              on:input={(event) => {
-                modelOpen = true;
-                modelFilter = event.currentTarget.value;
-              }}
-              on:keydown={(event) => {
-                if (event.key === "Escape") modelOpen = false;
-              }}
-              on:blur={handleModelBlur}
-            />
-            <span class="model-caret" aria-hidden="true">▾</span>
-            {#if modelOpen}
-              <div class="model-menu">
-                <div class="model-menu-head">
-                  <span>
-                    {$i18n("settings.modelsShown", {
-                      shown: filteredModels.length,
-                      total: models.length,
-                    })}
-                  </span>
-                  <button
-                    type="button"
-                    on:click={() => void onRefreshModels()}
-                  >
-                    {$i18n("settings.refreshModels")}
-                  </button>
-                </div>
-                <div class="model-options">
-                  {#each groupedModels as group}
-                    <div class="model-provider">{group.provider}</div>
-                    {#each group.models as model}
-                      <button
-                        type="button"
-                        class="model-option"
-                        class:active={draft.model === model}
-                        on:mousedown|preventDefault
-                        on:click={() => chooseModel(model)}
-                      >
-                        {model}
-                      </button>
-                    {/each}
-                  {/each}
-                </div>
-              </div>
-            {/if}
-          </div>
-          <small>
-            {$i18n("settings.modelsDiscovered", { count: models.length })}
-          </small>
-        </div>
-
-        <div class="field persona-field">
+        <button class="opponent-model" type="button" on:click={openModelPicker}>
+          <ModelBadge model={draft.model} size="md" />
+          <span class="opponent-model-copy">
+            <span class="opponent-model-label">{$i18n("settings.model")}</span>
+            <strong>{modelName(draft.model)}</strong>
+            <small>{providerName(draft.model)}</small>
+          </span>
+          <span class="opponent-model-action">{$i18n("settings.changeModel")} →</span>
+        </button>
+<div class="field persona-field">
           <span>{$i18n("settings.persona")}</span>
           <div class="persona-grid">
             {#each PERSONAS as persona}
@@ -855,12 +820,74 @@
             <h3>{$i18n("settings.connections")}</h3>
             <span>{$i18n("settings.connectionsHint")}</span>
           </div>
-          <div class="connection-model">
-            <span>{$i18n("settings.model")}</span>
-            <strong>{draft.model || "—"}</strong>
-            <small>{$i18n("settings.connectionModelHint")}</small>
+<div class="field model-field">
+          <span>{$i18n("settings.model")}</span>
+          <div class="model-row">
+            <ModelBadge model={draft.model} size="md" />
+            <div class="model-picker">
+            <input
+              bind:this={modelInput}
+              bind:value={draft.model}
+              spellcheck="false"
+              autocomplete="off"
+              placeholder="provider/model"
+              on:focus={(event) => {
+                modelOpen = true;
+                modelFilter = "";
+                event.currentTarget.select();
+              }}
+              on:input={(event) => {
+                modelOpen = true;
+                modelFilter = event.currentTarget.value;
+              }}
+              on:keydown={(event) => {
+                if (event.key === "Escape") modelOpen = false;
+              }}
+              on:blur={handleModelBlur}
+            />
+            <span class="model-caret" aria-hidden="true">▾</span>
+            {#if modelOpen}
+              <div class="model-menu">
+                <div class="model-menu-head">
+                  <span>
+                    {$i18n("settings.modelsShown", {
+                      shown: filteredModels.length,
+                      total: models.length,
+                    })}
+                  </span>
+                  <button
+                    type="button"
+                    on:click={() => void onRefreshModels()}
+                  >
+                    {$i18n("settings.refreshModels")}
+                  </button>
+                </div>
+                <div class="model-options">
+                  {#each groupedModels as group}
+                    <div class="model-provider">{group.provider}</div>
+                    {#each group.models as model}
+                      <button
+                        type="button"
+                        class="model-option"
+                        class:active={draft.model === model}
+                        on:mousedown|preventDefault
+                        on:click={() => chooseModel(model)}
+                      >
+                        {model}
+                      </button>
+                    {/each}
+                  {/each}
+                </div>
+              </div>
+            {/if}
+            </div>
           </div>
-<div class="credentials">
+          <small>
+            {$i18n("settings.modelsDiscovered", { count: models.length })}
+          </small>
+        </div>
+
+        <div class="credentials">
           {#if provider}
             <div class="credentials-head">
               <span>
@@ -1101,35 +1128,78 @@
     padding: 22px 26px;
   }
 
-  .connection-model {
+  .model-row {
     display: flex;
-    flex-direction: column;
-    gap: 3px;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .model-row .model-picker {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .opponent-model {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 11px;
     padding: 10px 12px;
-    margin-bottom: 2px;
     border: 1px solid var(--border);
-    border-radius: 9px;
+    border-radius: 10px;
     background: var(--panel-2);
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+    transition:
+      border-color 140ms ease,
+      background 140ms ease;
   }
 
-  .connection-model span {
+  .opponent-model:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .opponent-model-copy {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .opponent-model-label {
+    color: var(--faint);
+    font-family: var(--font-mono);
+    font-size: calc(8px * var(--font-scale));
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .opponent-model-copy strong {
+    overflow: hidden;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: calc(12px * var(--font-scale));
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .opponent-model-copy small {
     color: var(--muted);
-    font-size: calc(10px * var(--font-scale));
-    font-weight: 600;
+    font-family: var(--font-mono);
+    font-size: calc(9px * var(--font-scale));
   }
 
-  .connection-model strong {
+  .opponent-model-action {
+    flex: 0 0 auto;
     color: var(--accent);
     font-family: var(--font-mono);
-    font-size: calc(11px * var(--font-scale));
-    overflow-wrap: anywhere;
-  }
-
-  .connection-model small {
-    margin-top: 3px;
-    color: var(--faint);
     font-size: calc(9px * var(--font-scale));
-    line-height: 1.5;
+    white-space: nowrap;
   }
 
   .feature-checks {

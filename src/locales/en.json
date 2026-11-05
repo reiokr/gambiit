@@ -145,9 +145,8 @@
     "interfaceHint": "Text size, sound and motion",
     "soundMotion": "Sound & motion",
     "connections": "Connections",
-    "connectionsHint": "Provider credentials",
-    "connectionModelHint": "The model is selected in the Game tab. Credentials are applied when you start a game.",
-    "chooseModelFirst": "Choose a model in the Game tab first.",
+    "connectionsHint": "Model and provider credentials",
+    "chooseModelFirst": "Choose or type a model above to load provider credentials.",
     "sound": "Sound",
     "animations": "Animations",
     "engine": "Engine",
@@ -189,15 +188,26 @@
     "clockMinutes": "Minutes per side",
     "clockIncrement": "Increment (seconds)",
     "clockNote": "Clocks start with the first move. The opponent's thinking time counts against its own clock. Clock changes apply to a new game.",
-    "clockWarning": "Clock settings apply to a new game."
+    "clockWarning": "Clock settings apply to a new game.",
+    "changeModel": "Change"
   },
   "clock": {
     "label": "Chess clock",
-    "bullet": { "name": "Bullet" },
-    "blitz": { "name": "Blitz" },
-    "rapid": { "name": "Rapid" },
-    "classical": { "name": "Classical" },
-    "custom": { "name": "Custom" }
+    "bullet": {
+      "name": "Bullet"
+    },
+    "blitz": {
+      "name": "Blitz"
+    },
+    "rapid": {
+      "name": "Rapid"
+    },
+    "classical": {
+      "name": "Classical"
+    },
+    "custom": {
+      "name": "Custom"
+    }
   },
   "chat": {
     "eyebrow": "Table talk",

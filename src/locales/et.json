@@ -145,9 +145,8 @@
     "interfaceHint": "Teksti suurus, heli ja liikumine",
     "soundMotion": "Heli ja liikumine",
     "connections": "Ühendused",
-    "connectionsHint": "Pakkuja volitused",
-    "connectionModelHint": "Mudel valitakse mängu vahekaardil. Volitused rakenduvad mängu alustamisel.",
-    "chooseModelFirst": "Vali esmalt mängu vahekaardil mudel.",
+    "connectionsHint": "Mudel ja pakkuja volitused",
+    "chooseModelFirst": "Vali või sisesta mudel ülal, et pakkuja volitused laadida.",
     "sound": "Heli",
     "animations": "Animatsioonid",
     "engine": "Mootor",
@@ -166,7 +165,7 @@
     "modelsDiscovered": "{count} mudelit avastatud",
     "modelsShown": "{shown}/{total} mudelit — kirjuta otsimiseks",
     "refreshModels": "Värskenda",
-    "credentials": "Pakkuja mandaadid",
+    "credentials": "Pakkuja volitused",
     "keySaved": "Võti salvestatud",
     "localProvider": "Kohalik pakkuja — API-võtit pole vaja.",
     "envVar": "Keskkonnamuutuja",
@@ -189,15 +188,26 @@
     "clockMinutes": "Minutid poole kohta",
     "clockIncrement": "Lisaaeg (sekundit)",
     "clockNote": "Kell käivitub esimese käiguga. Vastase mõtlemisaeg kulub tema enda kellast. Kella muudatused rakenduvad uuele mängule.",
-    "clockWarning": "Kella seaded rakenduvad uuele mängule."
+    "clockWarning": "Kella seaded rakenduvad uuele mängule.",
+    "changeModel": "Muuda"
   },
   "clock": {
     "label": "Malekell",
-    "bullet": { "name": "Bullet" },
-    "blitz": { "name": "Blitz" },
-    "rapid": { "name": "Rapid" },
-    "classical": { "name": "Klassikaline" },
-    "custom": { "name": "Kohandatud" }
+    "bullet": {
+      "name": "Bullet"
+    },
+    "blitz": {
+      "name": "Blitz"
+    },
+    "rapid": {
+      "name": "Rapid"
+    },
+    "classical": {
+      "name": "Klassikaline"
+    },
+    "custom": {
+      "name": "Kohandatud"
+    }
   },
   "chat": {
     "eyebrow": "Lauajutt",
