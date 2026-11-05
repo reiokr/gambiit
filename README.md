@@ -31,10 +31,16 @@ analysis, personas/chat. Those are the next phases in `PLAN.md`.
 ## Requirements
 
 - Rust (stable, 1.85+; tested on 1.99)
-- [OpenCode](https://opencode.ai) CLI for AI opponents
+- [OpenCode](https://opencode.ai) for AI opponents:
+  - **OpenCode Desktop 2.x is recommended.** Gambiit auto-discovers its
+    `opencode-cli` and uses the running desktop service, so it shares the same
+    working authentication as the app.
+  - A standalone `opencode` CLI also works; set `OPENCODE_BIN` if discovery
+    picks the wrong binary.
 - **Stockfish** for hybrid play and analysis — strongly recommended
   - Arch/CachyOS: `sudo pacman -S --needed stockfish`
-- A model provider. A local Ollama model works offline:
+- A model provider. The default is `opencode-go/deepseek-v4.1-flash`. A local
+  Ollama model works offline:
   - `ollama/gemma4`
   - `ollama/qwen3.8:27b`
   - `localai/qwen3.8-9b-q8`
@@ -48,9 +54,12 @@ cargo build --release
 cargo run -p gambiit-cli -- probe
 
 # Prove the OpenCode transport works (small prompt, no game)
-cargo run -p gambiit-cli -- probe --prompt --model ollama/gemma4
+cargo run -p gambiit-cli -- probe --prompt
 
-# Play as White against a local model
+# Play as White against the default OpenCode model
+cargo run -p gambiit-cli -- play --agent opencode --color w
+
+# Or use a local model
 cargo run -p gambiit-cli -- play --agent opencode --model ollama/gemma4 --color w
 
 # Play against Stockfish only, or against a mock opponent
@@ -76,9 +85,12 @@ cargo run -p gambiit-cli -- play --help
 In the terminal, type a move as SAN (`e4`, `Nf3`, `O-O`) or UCI (`e2e4`,
 `g1f3`). Type `moves` to list legal moves, `fen`, `pgn`, `resign`, or `q`.
 
-If a provider key has expired (`api_key_expired`), re-authenticate with
-`opencode auth login`, choose another provider, or use a local Ollama model.
-Gambiit never stores provider keys; OpenCode owns authentication.
+`probe` prints which OpenCode binary Gambiit chose. The desktop `opencode-cli`
+is preferred because it talks to the running OpenCode Desktop service and uses
+the app's working authentication. If only the standalone `opencode` CLI is
+available and its provider key has expired (`api_key_expired`), re-authenticate
+with `opencode auth login`, choose another provider, or use a local Ollama
+model. Gambiit never stores provider keys; OpenCode owns authentication.
 
 ## How it works
 

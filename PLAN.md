@@ -34,15 +34,15 @@ Completed:
 - `cargo clippy --all-targets -- -D warnings`: clean.
 - `perft(4)` = 197,281.
 - Stockfish 19 detected at `/usr/bin/stockfish`; UCI MultiPV candidate generation works.
-- OpenCode CLI 1.18.35 prompt transport works with local Ollama `ollama/gemma4`.
+- OpenCode Desktop 2.2.5 CLI (`~/.config/ai.opencode.desktop/cli/2.2.5-x64/opencode-cli`) is auto-discovered and works with `opencode-go/deepseek-v4.1-flash` through the running desktop service.
   - `probe --prompt` returned valid JSON.
-  - Full 2-ply and 4-ply games played; agent moves were legal; the session was reused.
-  - About 20–24 s per agent move, about 3,000 tokens, $0 with the local model.
+  - 2-ply game played with the default model: legal `...e5`, about 6 s, about 16,700 tokens, strong theatrical commentary.
+  - Session reuse with local Ollama `ollama/gemma4` also works; about 20–24 s per move, about 3,000 tokens.
 - Commentary and candidate rejection reasons are parsed and displayed; illegal moves are rejected and retried.
 
 Notes / blockers:
 
-- `opencode-go/deepseek-v4.1-flash` CLI auth returned `api_key_expired`. Re-authenticate with `opencode auth login` or use another provider for stronger models.
+- The standalone `/home/rk/.opencode/bin/opencode` 1.18.35 has a separate expired `opencode-go` API key. It is now a fallback; Gambiit prefers the desktop CLI, and `OPENCODE_BIN` can override discovery. Re-authenticate the standalone CLI with `opencode auth login` if it is needed directly.
 - MCP automatic play is not implemented yet; prompt mode is the default. MCP remains a later enhancement.
 - The CLI is a development tool. The final UI uses buttons and automatic turns; the human will not type moves in a terminal.
 
@@ -89,7 +89,7 @@ Design tagline: **“Every move is a performance.”**
 | Tests | `cargo test`, Vitest, Playwright, fake agent | correctness + UI confidence |
 | Packaging | `tauri build`, PKGBUILD, `.desktop` | Arch/CachyOS first |
 
-**Environment checked:** Rust 1.99, Node 26, pnpm, webkit2gtk 2.54, OpenCode CLI 1.18.35. Stockfish is not installed yet; installation/detection is part of Phase 0.
+**Environment checked:** Rust 1.99, Node 26, pnpm, webkit2gtk 2.54, OpenCode Desktop 2.2.5 (working `opencode-go` auth via the desktop service) and standalone CLI 1.18.35, Stockfish 19 at `/usr/bin/stockfish`.
 
 **Why not pure egui:** possible, but themes, SVG piece sets, motion, accessibility and rapid visual iteration are much faster in CSS/Svelte. The Rust core stays reusable if the UI is ever swapped to egui.
 

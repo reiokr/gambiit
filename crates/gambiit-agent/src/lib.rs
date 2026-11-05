@@ -12,7 +12,7 @@ use std::{
     path::PathBuf,
     process::{Command, Stdio},
     thread,
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime},
 };
 use thiserror::Error;
 
@@ -70,7 +70,7 @@ pub struct AgentConfig {
 impl Default for AgentConfig {
     fn default() -> Self {
         Self {
-            model: "ollama/gemma4".to_string(),
+            model: "opencode-go/deepseek-v4.1-flash".to_string(),
             persona: "Theater Master".to_string(),
             language: "en".to_string(),
             timeout_secs: 180,
@@ -96,10 +96,7 @@ pub struct OpenCodeClient {
 
 impl OpenCodeClient {
     pub fn new(timeout_secs: u64) -> Result<Self, AgentError> {
-        let binary = std::env::var_os("OPENCODE_BIN")
-            .map(PathBuf::from)
-            .or_else(|| find_on_path("opencode"))
-            .ok_or(AgentError::OpenCodeNotFound)?;
+        let binary = discover_opencode_binary().ok_or(AgentError::OpenCodeNotFound)?;
         Ok(Self {
             binary,
             timeout_secs,
@@ -124,7 +121,6 @@ impl OpenCodeClient {
         let mut command = Command::new(&self.binary);
         command
             .arg("run")
-            .arg("--pure")
             .arg("--format")
             .arg("json")
             .arg("-m")
@@ -251,12 +247,17 @@ fn parse_opencode_events(stdout: &str) -> ParsedEvents {
             if let Some(cost) = part.get("cost").and_then(Value::as_f64) {
                 parsed.cost = Some(cost);
             }
-            if let Some(tokens) = part
-                .get("tokens")
-                .and_then(|tokens| tokens.get("total"))
-                .and_then(Value::as_u64)
-            {
-                parsed.tokens = Some(tokens);
+            if let Some(tokens) = part.get("tokens") {
+                let total = tokens.get("total").and_then(Value::as_u64).or_else(|| {
+                    let input = tokens.get("input").and_then(Value::as_u64).unwrap_or(0);
+                    let output = tokens.get("output").and_then(Value::as_u64).unwrap_or(0);
+                    let reasoning = tokens.get("reasoning").and_then(Value::as_u64).unwrap_or(0);
+                    let sum = input + output + reasoning;
+                    (sum > 0).then_some(sum)
+                });
+                if total.is_some() {
+                    parsed.tokens = total;
+                }
             }
         }
     }
@@ -564,6 +565,45 @@ fn extract_move_object(text: &str) -> Option<Value> {
     } else {
         None
     }
+}
+
+fn discover_opencode_binary() -> Option<PathBuf> {
+    if let Some(path) = std::env::var_os("OPENCODE_BIN") {
+        let path = PathBuf::from(path);
+        if path.is_file() {
+            return Some(path);
+        }
+    }
+
+    // OpenCode Desktop ships a newer `opencode-cli` that talks to the running
+    // desktop service and therefore uses the same working authentication as
+    // the app. Prefer it over the standalone `opencode` binary.
+    if let Some(path) = find_on_path("opencode-cli") {
+        return Some(path);
+    }
+    if let Some(path) = find_desktop_cli() {
+        return Some(path);
+    }
+
+    find_on_path("opencode")
+}
+
+fn find_desktop_cli() -> Option<PathBuf> {
+    let home = std::env::var_os("HOME")?;
+    let base = PathBuf::from(home).join(".config/ai.opencode.desktop/cli");
+    let entries = std::fs::read_dir(base).ok()?;
+    let mut candidates: Vec<(SystemTime, PathBuf)> = Vec::new();
+    for entry in entries.flatten() {
+        let path = entry.path().join("opencode-cli");
+        if path.is_file() {
+            let modified = std::fs::metadata(&path)
+                .and_then(|metadata| metadata.modified())
+                .unwrap_or(SystemTime::UNIX_EPOCH);
+            candidates.push((modified, path));
+        }
+    }
+    candidates.sort_by_key(|(modified, _)| *modified);
+    candidates.pop().map(|(_, path)| path)
 }
 
 fn find_on_path(binary: &str) -> Option<PathBuf> {

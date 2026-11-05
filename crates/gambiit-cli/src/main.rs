@@ -36,7 +36,7 @@ enum Command {
 #[derive(Debug, Args)]
 struct PlayArgs {
     /// OpenCode model in provider/model format.
-    #[arg(long, default_value = "ollama/gemma4")]
+    #[arg(long, default_value = "opencode-go/deepseek-v4.1-flash")]
     model: String,
     /// Your colour: w/white or b/black.
     #[arg(long, default_value = "w")]
@@ -79,7 +79,7 @@ struct PlayArgs {
 #[derive(Debug, Args)]
 struct ProbeArgs {
     /// OpenCode model to test with --prompt.
-    #[arg(long, default_value = "ollama/gemma4")]
+    #[arg(long, default_value = "opencode-go/deepseek-v4.1-flash")]
     model: String,
     /// Path to the Stockfish binary. Auto-detected when omitted.
     #[arg(long)]
@@ -392,22 +392,25 @@ fn open_stockfish(args: &PlayArgs) -> Option<Stockfish> {
 
 fn probe(args: ProbeArgs) -> Result<()> {
     println!("\x1b[1mGambiit probe\x1b[0m");
-    let opencode_path = find_binary("opencode")
-        .map(|path| path.display().to_string())
-        .unwrap_or_else(|| "opencode".to_string());
-    match command_output("opencode", &["--version"]) {
-        Some(version) => println!("OpenCode: {} ({})", version, opencode_path),
-        None => println!("OpenCode: not found"),
-    }
-    match command_output("opencode", &["models"]) {
-        Some(models) => println!(
-            "Models: {} available",
-            models
-                .lines()
-                .filter(|line| !line.trim().is_empty())
-                .count()
-        ),
-        None => println!("Models: could not list (check `opencode auth`)"),
+    let client = OpenCodeClient::new(args.timeout.max(10)).ok();
+    match client.as_ref() {
+        Some(client) => {
+            let path = client.binary();
+            let version = command_output_path(path, &["--version"])
+                .unwrap_or_else(|| "version unknown".to_string());
+            println!("OpenCode: {} ({})", version, path.display());
+            match command_output_path(path, &["models"]) {
+                Some(models) => println!(
+                    "Models: {} available",
+                    models
+                        .lines()
+                        .filter(|line| !line.trim().is_empty())
+                        .count()
+                ),
+                None => println!("Models: could not list (check `opencode auth`)"),
+            }
+        }
+        None => println!("OpenCode: not found (set OPENCODE_BIN or install OpenCode)"),
     }
 
     let stockfish_path = args.stockfish.clone().or_else(Stockfish::discover);
@@ -421,7 +424,7 @@ fn probe(args: ProbeArgs) -> Result<()> {
 
     if args.prompt {
         println!("\nPrompt test with {}...", args.model);
-        let client = OpenCodeClient::new(args.timeout)?;
+        let client = client.context("OpenCode was not found")?;
         let config = AgentConfig {
             model: args.model.clone(),
             ..Default::default()
@@ -635,22 +638,11 @@ fn read_line(prompt: &str) -> Result<Option<String>> {
     Ok(Some(line.trim().to_string()))
 }
 
-fn command_output(binary: &str, args: &[&str]) -> Option<String> {
+fn command_output_path(binary: &std::path::Path, args: &[&str]) -> Option<String> {
     let output = std::process::Command::new(binary)
         .args(args)
         .output()
         .ok()?;
     let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
     if text.is_empty() { None } else { Some(text) }
-}
-
-fn find_binary(binary: &str) -> Option<PathBuf> {
-    let path_var = std::env::var_os("PATH")?;
-    for dir in std::env::split_paths(&path_var) {
-        let candidate = dir.join(binary);
-        if candidate.is_file() {
-            return Some(candidate);
-        }
-    }
-    None
 }
