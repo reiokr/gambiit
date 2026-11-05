@@ -69,7 +69,7 @@
     clearing = false;
   }
 
-  const canSend = () => input.trim().length > 0 && !busy && !sending && !disabled;
+  $: canSend = input.trim().length > 0 && !busy && !sending && !disabled;
 </script>
 
 <div class="chat">
@@ -179,7 +179,7 @@
       <button
         class="send"
         type="button"
-        disabled={!canSend()}
+        disabled={!canSend}
         on:click={send}
       >
         {busy || sending ? $i18n("chat.sending") : $i18n("chat.send")}
