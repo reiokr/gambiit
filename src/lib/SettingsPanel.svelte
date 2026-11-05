@@ -90,6 +90,8 @@
     draft.sound !== settings.sound ||
     draft.animations !== settings.animations ||
     draft.responseMode !== settings.responseMode ||
+    draft.chatEnabled !== settings.chatEnabled ||
+    draft.drawOffersEnabled !== settings.drawOffersEnabled ||
     Math.abs(draft.fontScale - settings.fontScale) > 0.001;
   $: hasChanges = opponentChanged || colorChanged || appearanceChanged;
   $: provider = draft.model.includes("/")
@@ -674,6 +676,20 @@
                 <span>{$i18n("settings.animations")}</span>
               </label>
             </div>
+          </div>
+          <div class="field">
+            <span>{$i18n("settings.features")}</span>
+            <div class="checks">
+              <label class="check">
+                <input type="checkbox" bind:checked={draft.chatEnabled} />
+                <span>{$i18n("settings.opponentChat")}</span>
+              </label>
+              <label class="check">
+                <input type="checkbox" bind:checked={draft.drawOffersEnabled} />
+                <span>{$i18n("settings.drawOffers")}</span>
+              </label>
+            </div>
+            <small>{$i18n("settings.featuresHint")}</small>
           </div>
         </div>
       </section>

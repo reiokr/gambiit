@@ -49,6 +49,10 @@ fn default_piece_set() -> String {
     "cburnett".to_string()
 }
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Settings {
@@ -66,6 +70,10 @@ pub(crate) struct Settings {
     custom_theme: CustomTheme,
     #[serde(default = "default_piece_set")]
     piece_set: String,
+    #[serde(default = "default_true")]
+    chat_enabled: bool,
+    #[serde(default = "default_true")]
+    draw_offers_enabled: bool,
     sound: bool,
     animations: bool,
     font_scale: f64,
@@ -86,6 +94,8 @@ impl Default for Settings {
             theme: "salon".to_string(),
             custom_theme: CustomTheme::default(),
             piece_set: default_piece_set(),
+            chat_enabled: true,
+            draw_offers_enabled: true,
             sound: true,
             animations: true,
             font_scale: 1.2,
@@ -131,6 +141,22 @@ pub(crate) struct CommentaryCard {
     elapsed_ms: u64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ChatMessage {
+    role: String,
+    text: String,
+    at: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DrawOfferOutcome {
+    accepted: bool,
+    comment: String,
+    snapshot: GameSnapshot,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct GameSnapshot {
@@ -152,6 +178,7 @@ struct GameSnapshot {
     last_move: Option<MoveRecord>,
     board: Vec<SquareView>,
     commentary: Vec<CommentaryCard>,
+    chat: Vec<ChatMessage>,
     settings: Settings,
     agent_error: Option<String>,
     thinking: bool,
@@ -164,6 +191,7 @@ struct Session {
     agent_error: Option<String>,
     stockfish: Option<Stockfish>,
     commentary: Vec<CommentaryCard>,
+    chat: Vec<ChatMessage>,
     thinking: bool,
     game_id: String,
     game_name: String,
@@ -185,6 +213,7 @@ impl Session {
         let mut session = Self::assemble(
             game,
             settings,
+            Vec::new(),
             Vec::new(),
             game_id,
             game_name,
@@ -215,6 +244,7 @@ impl Session {
         match saved.termination.as_str() {
             "resigned_white" => game.resign(Color::Black),
             "resigned_black" => game.resign(Color::White),
+            "draw_agreed" => game.draw_agreed(),
             "aborted" => game.abort(),
             _ => {}
         }
@@ -222,6 +252,7 @@ impl Session {
             game,
             settings,
             saved.commentary,
+            saved.chat,
             saved.id,
             saved.name,
             saved.created_at,
@@ -239,6 +270,7 @@ impl Session {
             game,
             settings,
             commentary,
+            Vec::new(),
             storage::new_id(),
             name,
             storage::now(),
@@ -251,6 +283,7 @@ impl Session {
         game: Game,
         settings: Settings,
         commentary: Vec<CommentaryCard>,
+        chat: Vec<ChatMessage>,
         game_id: String,
         game_name: String,
         created_at: u64,
@@ -280,6 +313,7 @@ impl Session {
             agent_error,
             stockfish,
             commentary,
+            chat,
             thinking: false,
             game_id,
             game_name,
@@ -294,6 +328,9 @@ impl Session {
                 winner: Color::White,
             } => "resigned_black",
             GameStatus::Resigned { .. } => "resigned_white",
+            GameStatus::Draw {
+                reason: "agreement",
+            } => "draw_agreed",
             GameStatus::Aborted => "aborted",
             _ => "ongoing",
         };
@@ -306,6 +343,7 @@ impl Session {
             initial_fen: self.game.initial_fen().to_string(),
             moves: self.game.history().to_vec(),
             commentary: self.commentary.clone(),
+            chat: self.chat.clone(),
             settings: self.settings.clone(),
             result: pgn::result(&self.game).to_string(),
             termination: termination.to_string(),
@@ -341,6 +379,114 @@ impl Session {
         }
         self.persist();
         Ok(self.snapshot())
+    }
+
+    fn chat_send(&mut self, message: &str) -> Result<GameSnapshot, String> {
+        if !self.settings.chat_enabled {
+            return Err("Opponent chat is disabled in settings.".to_string());
+        }
+        let text = message.trim();
+        if text.is_empty() {
+            return Err("The message is empty.".to_string());
+        }
+        if text.chars().count() > 2_000 {
+            return Err("The message is too long (maximum 2000 characters).".to_string());
+        }
+
+        let history: Vec<(String, String)> = self
+            .chat
+            .iter()
+            .filter(|entry| entry.role != "system")
+            .map(|entry| (entry.role.clone(), entry.text.clone()))
+            .collect();
+        let result = if let Some(agent) = self.agent.as_mut() {
+            agent
+                .request_chat(&self.game, &history, text)
+                .map(|(reply, _)| reply)
+                .map_err(|error| error.to_string())
+        } else {
+            Err(self
+                .agent_error
+                .clone()
+                .unwrap_or_else(|| "Agent is unavailable.".to_string()))
+        };
+
+        self.chat.push(ChatMessage {
+            role: "user".to_string(),
+            text: text.to_string(),
+            at: storage::now(),
+        });
+        match result {
+            Ok(reply) => {
+                self.chat.push(ChatMessage {
+                    role: "agent".to_string(),
+                    text: reply,
+                    at: storage::now(),
+                });
+            }
+            Err(error) => {
+                self.chat.push(ChatMessage {
+                    role: "system".to_string(),
+                    text: format!("Chat unavailable: {error}"),
+                    at: storage::now(),
+                });
+            }
+        }
+        self.persist();
+        Ok(self.snapshot())
+    }
+
+    fn clear_chat(&mut self) -> Result<GameSnapshot, String> {
+        self.chat.clear();
+        self.persist();
+        Ok(self.snapshot())
+    }
+
+    fn offer_draw(&mut self) -> Result<DrawOfferOutcome, String> {
+        if !self.settings.draw_offers_enabled {
+            return Err("Draw offers are disabled in settings.".to_string());
+        }
+        if self.game.status().is_over() {
+            return Err("The game is over.".to_string());
+        }
+
+        let result = if let Some(agent) = self.agent.as_mut() {
+            agent
+                .request_draw_decision(&self.game)
+                .map(|(decision, _)| decision)
+                .map_err(|error| error.to_string())
+        } else {
+            Err(self
+                .agent_error
+                .clone()
+                .unwrap_or_else(|| "Agent is unavailable.".to_string()))
+        };
+        let decision = result?;
+        if decision.accept {
+            self.game.draw_agreed();
+        }
+        let comment = if decision.comment.trim().is_empty() {
+            if decision.accept {
+                "A draw, then.".to_string()
+            } else {
+                "I decline the draw.".to_string()
+            }
+        } else {
+            decision.comment.trim().chars().take(800).collect()
+        };
+        if self.settings.chat_enabled {
+            self.chat.push(ChatMessage {
+                role: "agent".to_string(),
+                text: comment.clone(),
+                at: storage::now(),
+            });
+        }
+        self.persist();
+        Ok(DrawOfferOutcome {
+            accepted: decision.accept,
+            comment,
+            snapshot: self.snapshot(),
+        })
     }
 
     fn snapshot(&self) -> GameSnapshot {
@@ -391,6 +537,7 @@ impl Session {
             last_move: self.game.last_move().cloned(),
             board,
             commentary: self.commentary.clone(),
+            chat: self.chat.clone(),
             settings: self.settings.clone(),
             agent_error: self.agent_error.clone(),
             thinking: self.thinking,
@@ -597,6 +744,27 @@ fn make_move(state: State<'_, AppState>, mv: String) -> Result<GameSnapshot, Str
 async fn agent_move(state: State<'_, AppState>) -> Result<GameSnapshot, String> {
     let session = state.session.clone();
     tauri::async_runtime::spawn_blocking(move || session.lock().agent_move())
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+async fn chat_send(state: State<'_, AppState>, message: String) -> Result<GameSnapshot, String> {
+    let session = state.session.clone();
+    tauri::async_runtime::spawn_blocking(move || session.lock().chat_send(&message))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+fn clear_chat(state: State<'_, AppState>) -> Result<GameSnapshot, String> {
+    state.session.lock().clear_chat()
+}
+
+#[tauri::command]
+async fn offer_draw(state: State<'_, AppState>) -> Result<DrawOfferOutcome, String> {
+    let session = state.session.clone();
+    tauri::async_runtime::spawn_blocking(move || session.lock().offer_draw())
         .await
         .map_err(|error| error.to_string())?
 }
@@ -860,6 +1028,7 @@ fn status_parts(status: GameStatus, turn: Color) -> (String, Option<String>) {
                 "50-move rule" => "draw50",
                 "threefold repetition" => "drawThreefold",
                 "insufficient material" => "drawMaterial",
+                "agreement" => "drawAgreed",
                 _ => "draw",
             };
             (key.to_string(), None)
@@ -887,6 +1056,9 @@ pub fn run() {
             update_settings,
             make_move,
             agent_move,
+            chat_send,
+            clear_chat,
+            offer_draw,
             takeback,
             resign,
             list_models,
@@ -995,10 +1167,83 @@ mod tests {
         let object = value.as_object_mut().unwrap();
         object.remove("customTheme");
         object.remove("pieceSet");
+        object.remove("chatEnabled");
+        object.remove("drawOffersEnabled");
         let restored: Settings = serde_json::from_value(value).unwrap();
         assert_eq!(restored.piece_set, "cburnett");
         assert_eq!(restored.custom_theme.accent, "#c9a227");
         assert_eq!(restored.theme, "salon");
+        assert!(restored.chat_enabled);
+        assert!(restored.draw_offers_enabled);
+    }
+
+    #[test]
+    fn feature_toggles_block_their_commands() {
+        let mut chat_settings = Settings {
+            chat_enabled: false,
+            ..Default::default()
+        };
+        let mut chat_session =
+            Session::new_with_persist(chat_settings.clone(), Color::White, false);
+        assert!(chat_session.chat_send("Hello").is_err());
+
+        chat_settings.chat_enabled = true;
+        chat_settings.draw_offers_enabled = false;
+        let mut draw_session = Session::new_with_persist(chat_settings, Color::White, false);
+        draw_session.make_move("e2e4").unwrap();
+        assert!(draw_session.offer_draw().is_err());
+    }
+
+    #[test]
+    fn chat_keeps_the_user_message_when_the_agent_is_offline() {
+        let mut session = session();
+        session.agent = None;
+        session.agent_error = Some("offline for this test".to_string());
+        let snapshot = session.chat_send("Hello there").unwrap();
+        assert_eq!(snapshot.chat.len(), 2);
+        assert_eq!(snapshot.chat[0].role, "user");
+        assert_eq!(snapshot.chat[0].text, "Hello there");
+        assert_eq!(snapshot.chat[1].role, "system");
+        assert!(snapshot.chat[1].text.contains("offline for this test"));
+
+        let cleared = session.clear_chat().unwrap();
+        assert!(cleared.chat.is_empty());
+    }
+
+    #[test]
+    fn agreed_draw_and_chat_survive_a_saved_game() {
+        let mut game = Game::new();
+        game.apply_san("e4").unwrap();
+        game.apply_san("e5").unwrap();
+        game.draw_agreed();
+        let saved = storage::SavedGame {
+            id: "draw-game".to_string(),
+            name: "Draw game".to_string(),
+            created_at: 1,
+            updated_at: 1,
+            human_color: "white".to_string(),
+            initial_fen: game.initial_fen().to_string(),
+            moves: game.history().to_vec(),
+            commentary: Vec::new(),
+            chat: vec![ChatMessage {
+                role: "agent".to_string(),
+                text: "A draw, then.".to_string(),
+                at: 2,
+            }],
+            settings: Settings::default(),
+            result: "1/2-1/2".to_string(),
+            termination: "draw_agreed".to_string(),
+        };
+        let restored = Session::from_saved(saved).unwrap();
+        assert_eq!(
+            restored.game.status(),
+            GameStatus::Draw {
+                reason: "agreement"
+            }
+        );
+        assert_eq!(restored.chat.len(), 1);
+        assert_eq!(restored.chat[0].text, "A draw, then.");
+        assert_eq!(restored.snapshot().status_key, "drawAgreed");
     }
 
     #[test]
@@ -1068,6 +1313,7 @@ mod tests {
             initial_fen: game.initial_fen().to_string(),
             moves: game.history().to_vec(),
             commentary: Vec::new(),
+            chat: Vec::new(),
             settings: Settings::default(),
             result: "*".to_string(),
             termination: "ongoing".to_string(),
@@ -1123,5 +1369,33 @@ mod tests {
         assert_eq!(snapshot.history.len(), 2);
         assert!(!snapshot.commentary[0].comment.is_empty());
         eprintln!("ET comment: {}", snapshot.commentary[0].comment);
+    }
+
+    /// Live chat and draw-offer smoke test against the configured model.
+    /// Ignored by default because it spends provider tokens.
+    #[test]
+    #[ignore]
+    fn chat_and_draw_smoke() {
+        let mut session = session();
+        session.make_move("e2e4").unwrap();
+        let snapshot = session.chat_send("How is the position?").unwrap();
+        assert_eq!(snapshot.chat.len(), 2);
+        assert_eq!(snapshot.chat[0].role, "user");
+        assert_eq!(snapshot.chat[1].role, "agent");
+        assert!(!snapshot.chat[1].text.is_empty());
+        eprintln!("chat reply: {}", snapshot.chat[1].text);
+
+        let outcome = session.offer_draw().unwrap();
+        assert!(!outcome.comment.is_empty());
+        assert_eq!(outcome.accepted, outcome.snapshot.game_over);
+        eprintln!(
+            "draw {}: {}",
+            if outcome.accepted {
+                "accepted"
+            } else {
+                "declined"
+            },
+            outcome.comment
+        );
     }
 }

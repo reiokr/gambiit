@@ -28,7 +28,14 @@
     "gamePanels": "Game panels",
     "tabMoves": "Moves",
     "tabTheater": "Theater",
-    "tabAnalysis": "Analysis"
+    "tabChat": "Chat",
+    "tabAnalysis": "Analysis",
+    "offerDraw": "Offer draw",
+    "offeringDraw": "Offering…",
+    "consideringDraw": "The opponent is considering your draw offer…",
+    "drawAccepted": "Draw agreed",
+    "drawDeclined": "Draw declined",
+    "dismissNotice": "Dismiss notice"
   },
   "board": {
     "label": "Chess board",
@@ -78,6 +85,7 @@
     "drawThreefold": "Draw — threefold repetition.",
     "drawMaterial": "Draw — insufficient material.",
     "draw": "Draw.",
+    "drawAgreed": "Draw — by agreement.",
     "resigned": "{side} wins — opponent resigned.",
     "aborted": "Game aborted."
   },
@@ -158,7 +166,28 @@
     "keySavedMessage": "Key saved locally.",
     "keyRemovedMessage": "Key removed.",
     "credentialsHint": "Stored locally with 0600 permissions. Leave empty to use OpenCode's own authentication. Applied when you start a game.",
-    "opencodeAuthHint": "OpenCode Go and GitHub Copilot may use the desktop app's own login; a custom key may not override it."
+    "opencodeAuthHint": "OpenCode Go and GitHub Copilot may use the desktop app's own login; a custom key may not override it.",
+    "features": "Features",
+    "opponentChat": "Opponent chat",
+    "drawOffers": "Draw offers",
+    "featuresHint": "Both can be turned off at any time. Existing chat is kept."
+  },
+  "chat": {
+    "eyebrow": "Table talk",
+    "available": "across the board",
+    "typing": "typing…",
+    "clear": "Clear",
+    "clearConfirm": "Clear the whole conversation?",
+    "emptyTitle": "Say something.",
+    "emptyBody": "Your opponent can talk, bluff and needle you. The board stays the truth.",
+    "suggestion1": "How do you feel about the position?",
+    "suggestion2": "You got lucky.",
+    "suggestion3": "What is your plan?",
+    "you": "You",
+    "hint": "Enter sends · Shift+Enter for a new line",
+    "send": "Send",
+    "sending": "Sending…",
+    "placeholder": "Speak to your opponent…"
   },
   "personas": {
     "theaterMaster": "Theater Master",

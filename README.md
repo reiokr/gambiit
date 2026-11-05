@@ -33,6 +33,8 @@ What works now:
 - session reuse across moves, so the opponent remembers the game;
 - commentary cards with evaluations, candidate moves, rejection reasons, plan,
   elapsed time and token usage;
+- chat with the opponent between moves, in character and in the agent language;
+- draw offers decided by the opponent, with the result shown on the board;
 - takeback policy enforced per `AGENTS.md`: only your own last move is undoable;
 - automatic save after every move, resume of the latest game and a saved-game
   library (open, rename, delete);
@@ -56,8 +58,8 @@ What works now:
   Estonian included, new languages are added by dropping in a JSON catalog;
 - desktop and terminal builds share the same Rust core, engine and agent layers.
 
-Not yet: clocks, MCP mode, chat, draw offers, Director's Cut, leaderboards and
-broadcast mode. Those are the next phases in `PLAN.md`.
+Not yet: clocks, MCP mode, Director's Cut, leaderboards and broadcast mode.
+Those are the next phases in `PLAN.md`.
 
 ## Run the desktop app
 
@@ -98,8 +100,8 @@ without restarting the current game.
 ### How settings are saved
 
 - Appearance and interface changes (theme, colours, piece set, UI language,
-  sound, animations, font size) are saved immediately and never restart the
-  game.
+  sound, animations, font size, chat and draw-offer toggles) are saved
+  immediately and never restart the game.
 - Model, persona, difficulty or agent-language changes show a warning because
   they affect the current opponent from the next move. Choose **Save changes**
   to keep playing, or **Save & start new game**.
@@ -181,6 +183,21 @@ The analysis runs on a separate Stockfish process, so it does not disturb the
 opponent engine. A short game takes a few seconds; a long game at depth 16 can
 take a minute. The board remains the source of truth: a flag says the agent's
 claim did not match the engine, not that the move was illegal.
+
+## Chat and draw offers
+
+Both features are on by default and can be switched off independently in
+**Settings → Board & interface → Features**.
+
+The **Chat** tab is a conversation with the opponent, separate from move
+commentary. It uses the same persona and agent language, can bluff and needle,
+and never changes the board. Chat history is saved with the game.
+
+**Offer draw** sends a formal draw offer to the model. The opponent accepts or
+declines based on the position and its persona. An accepted offer ends the game
+as a draw; a declined offer leaves a dismissible note and, when chat is enabled,
+the opponent's reply appears in the chat. Draw offers work even when chat is
+disabled.
 
 ## Models and API keys
 

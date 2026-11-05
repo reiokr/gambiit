@@ -59,6 +59,12 @@ pub struct AgentTurn {
 }
 
 #[derive(Debug, Clone)]
+pub struct DrawDecision {
+    pub accept: bool,
+    pub comment: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct AgentConfig {
     pub model: String,
     pub persona: String,
@@ -374,6 +380,60 @@ impl AgentSession {
             "agent did not return a valid move".into()
         })))
     }
+
+    /// Ask the agent for a plain-text chat reply. Chat never changes the board.
+    pub fn request_chat(
+        &mut self,
+        game: &Game,
+        history: &[(String, String)],
+        message: &str,
+    ) -> Result<(String, OpenCodeOutput), AgentError> {
+        let prompt = build_chat_prompt(game, &self.config, history, message);
+        let output = self
+            .client
+            .run(&self.config, &prompt, self.session_id.as_deref())?;
+        if output.session_id.is_some() {
+            self.session_id = output.session_id.clone();
+        }
+        let reply: String = output.text.trim().chars().take(4_000).collect();
+        if reply.is_empty() {
+            return Err(AgentError::EmptyResponse);
+        }
+        Ok((reply, output))
+    }
+
+    /// Ask the agent whether to accept a draw offer. The response is a small
+    /// JSON object; the caller decides how to apply it to the game.
+    pub fn request_draw_decision(
+        &mut self,
+        game: &Game,
+    ) -> Result<(DrawDecision, OpenCodeOutput), AgentError> {
+        let mut last_error = None;
+        for attempt in 0..=self.config.retries {
+            let prompt = if attempt == 0 {
+                build_draw_prompt(game, &self.config)
+            } else {
+                build_draw_retry_prompt(
+                    game,
+                    &self.config,
+                    last_error.as_deref().unwrap_or("invalid response"),
+                )
+            };
+            let output = self
+                .client
+                .run(&self.config, &prompt, self.session_id.as_deref())?;
+            if output.session_id.is_some() {
+                self.session_id = output.session_id.clone();
+            }
+            match parse_draw_decision(&output.text) {
+                Ok(decision) => return Ok((decision, output)),
+                Err(error) => last_error = Some(error.to_string()),
+            }
+        }
+        Err(AgentError::Parse(last_error.unwrap_or_else(|| {
+            "agent did not return a draw decision".into()
+        })))
+    }
 }
 
 pub fn build_move_prompt(game: &Game, config: &AgentConfig, candidates: &[Candidate]) -> String {
@@ -446,6 +506,116 @@ Move must be UCI (preferred) or SAN. Commentary language: {language}.
         candidates = candidates_text,
         persona = persona,
         language = language,
+    )
+}
+
+fn build_chat_prompt(
+    game: &Game,
+    config: &AgentConfig,
+    history: &[(String, String)],
+    message: &str,
+) -> String {
+    let agent_color = !game.human_color();
+    let human_color = game.human_color();
+    let language = if config.language_name.trim().is_empty() {
+        "English"
+    } else {
+        config.language_name.as_str()
+    };
+    let persona = persona_instruction(&config.persona);
+    let conversation = history
+        .iter()
+        .rev()
+        .take(8)
+        .rev()
+        .map(|(role, text)| {
+            let speaker = if role == "user" { "Human" } else { "You" };
+            format!("{speaker}: {}", truncate(text, 600))
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let conversation = if conversation.is_empty() {
+        "(no previous chat)".to_string()
+    } else {
+        conversation
+    };
+    let message = truncate(message, 2_000);
+
+    format!(
+        r#"You are in a live chat with the human during a chess game.
+You play {agent_color}; the human plays {human_color}.
+
+FEN: {fen}
+Move history (SAN): {history}
+Game status: {status}
+
+Recent conversation:
+{conversation}
+
+The human says: "{message}"
+
+{persona}
+
+Reply in {language}, in character, in 1-3 short sentences. Do not output JSON.
+Do not make or describe a move as if it were already played; the interface handles moves separately.
+You may bluff about plans and psychology, but never claim false board facts or rules.
+A formal draw offer is handled by the interface; do not accept or decline it in chat.
+"#,
+        agent_color = color_name(agent_color),
+        human_color = color_name(human_color),
+        fen = game.fen(),
+        history = game.pgn_moves(),
+        status = game.status_text(),
+        conversation = conversation,
+        message = message,
+        persona = persona,
+        language = language,
+    )
+}
+
+fn build_draw_prompt(game: &Game, config: &AgentConfig) -> String {
+    let agent_color = !game.human_color();
+    let human_color = game.human_color();
+    let language = if config.language_name.trim().is_empty() {
+        "English"
+    } else {
+        config.language_name.as_str()
+    };
+    let persona = persona_instruction(&config.persona);
+
+    format!(
+        r#"You are playing chess as {agent_color} against a human ({human_color}).
+The human offers a draw.
+
+FEN: {fen}
+Move history (SAN): {history}
+Game status: {status}
+
+{persona}
+
+Decide whether to accept the draw. Accept if the position is clearly drawn or you are worse;
+decline if you have real winning chances or counterplay. The board is the truth.
+
+Reply with ONLY one JSON object, no markdown fences, no prose before or after:
+{{
+  "accept": false,
+  "comment": "Short reply to the human in {language}."
+}}
+"#,
+        agent_color = color_name(agent_color),
+        human_color = color_name(human_color),
+        fen = game.fen(),
+        history = game.pgn_moves(),
+        status = game.status_text(),
+        persona = persona,
+        language = language,
+    )
+}
+
+fn build_draw_retry_prompt(game: &Game, config: &AgentConfig, error: &str) -> String {
+    let base = build_draw_prompt(game, config);
+    format!(
+        "{base}\n\nYour previous answer was invalid: {error}\nReturn only the JSON object with a boolean \"accept\" field and a short \"comment\"."
     )
 }
 
@@ -577,6 +747,55 @@ pub fn parse_agent_turn(text: &str) -> Result<AgentTurn, AgentError> {
     })
 }
 
+pub fn parse_draw_decision(text: &str) -> Result<DrawDecision, AgentError> {
+    let value = extract_draw_object(text)
+        .ok_or_else(|| AgentError::Parse("no JSON object with a draw decision was found".into()))?;
+
+    let accept = value
+        .get("accept")
+        .or_else(|| value.get("accept_draw"))
+        .or_else(|| value.get("draw"))
+        .and_then(|value| {
+            value.as_bool().or_else(|| {
+                value
+                    .as_str()
+                    .and_then(|text| match text.trim().to_ascii_lowercase().as_str() {
+                        "true" | "yes" | "accept" | "accepted" => Some(true),
+                        "false" | "no" | "decline" | "declined" => Some(false),
+                        _ => None,
+                    })
+            })
+        })
+        .ok_or_else(|| AgentError::Parse("draw decision has no boolean accept field".into()))?;
+
+    let comment = value
+        .get("comment")
+        .or_else(|| value.get("message"))
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim()
+        .to_string();
+
+    Ok(DrawDecision { accept, comment })
+}
+
+/// Find a JSON object containing a draw-decision field. Models sometimes
+/// wrap JSON in prose or code fences; this is intentionally tolerant.
+fn extract_draw_object(text: &str) -> Option<Value> {
+    for (index, _) in text.match_indices('{') {
+        let slice = &text[index..];
+        let mut deserializer = serde_json::Deserializer::from_str(slice);
+        if let Ok(Value::Object(object)) = Value::deserialize(&mut deserializer)
+            && (object.contains_key("accept")
+                || object.contains_key("accept_draw")
+                || object.contains_key("draw"))
+        {
+            return Some(Value::Object(object));
+        }
+    }
+    None
+}
+
 /// Find a JSON object containing a `move`/`uci`/`san` field. Models sometimes
 /// wrap JSON in prose or code fences; this is intentionally tolerant.
 fn extract_move_object(text: &str) -> Option<Value> {
@@ -699,5 +918,54 @@ mod tests {
         };
         let prompt = build_move_prompt(&game, &config, &[]);
         assert!(prompt.contains("Commentary language: Estonian"));
+    }
+
+    #[test]
+    fn parses_draw_decisions() {
+        let decision = parse_draw_decision(r#"{"accept":true,"comment":"Fair enough."}"#).unwrap();
+        assert!(decision.accept);
+        assert_eq!(decision.comment, "Fair enough.");
+
+        let decision = parse_draw_decision(
+            "I decline.\n```json\n{\"accept\": \"false\", \"comment\": \"Not yet.\"}\n```",
+        )
+        .unwrap();
+        assert!(!decision.accept);
+        assert_eq!(decision.comment, "Not yet.");
+
+        assert!(parse_draw_decision(r#"{"comment":"No decision"}"#).is_err());
+    }
+
+    #[test]
+    fn chat_prompt_carries_context_and_persona() {
+        let mut game = Game::new();
+        game.apply_san("e4").unwrap();
+        let config = AgentConfig {
+            persona: "Trickster".to_string(),
+            language: "et".to_string(),
+            language_name: "Estonian".to_string(),
+            ..Default::default()
+        };
+        let history = vec![("user".to_string(), "How is the position?".to_string())];
+        let prompt = build_chat_prompt(&game, &config, &history, "You seem nervous.");
+        assert!(prompt.contains("Trickster"));
+        assert!(prompt.contains("Estonian"));
+        assert!(prompt.contains("You seem nervous."));
+        assert!(prompt.contains("How is the position?"));
+        assert!(prompt.contains("Do not output JSON"));
+    }
+
+    #[test]
+    fn draw_prompt_is_structured() {
+        let game = Game::new();
+        let config = AgentConfig {
+            language: "et".to_string(),
+            language_name: "Estonian".to_string(),
+            ..Default::default()
+        };
+        let prompt = build_draw_prompt(&game, &config);
+        assert!(prompt.contains("The human offers a draw"));
+        assert!(prompt.contains("\"accept\""));
+        assert!(prompt.contains("Estonian"));
     }
 }

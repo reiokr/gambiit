@@ -269,6 +269,12 @@ impl Game {
         self.manual_status = Some(GameStatus::Aborted);
     }
 
+    pub fn draw_agreed(&mut self) {
+        self.manual_status = Some(GameStatus::Draw {
+            reason: "agreement",
+        });
+    }
+
     pub fn status(&self) -> GameStatus {
         if let Some(status) = self.manual_status {
             return status;
@@ -487,6 +493,21 @@ mod tests {
                 reason: "threefold repetition"
             }
         );
+    }
+
+    #[test]
+    fn agreed_draw_ends_the_game() {
+        let mut game = Game::new();
+        game.apply_san("e4").unwrap();
+        game.draw_agreed();
+        assert_eq!(
+            game.status(),
+            GameStatus::Draw {
+                reason: "agreement"
+            }
+        );
+        assert!(game.status().is_over());
+        assert_eq!(game.status().winner(), None);
     }
 
     #[test]

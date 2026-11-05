@@ -54,6 +54,12 @@ export interface CommentaryCard {
   elapsedMs: number;
 }
 
+export interface ChatMessage {
+  role: "user" | "agent" | "system";
+  text: string;
+  at: number;
+}
+
 export interface CustomTheme {
   bg: string;
   panel: string;
@@ -79,6 +85,8 @@ export interface Settings {
   theme: string;
   customTheme: CustomTheme;
   pieceSet: string;
+  chatEnabled: boolean;
+  drawOffersEnabled: boolean;
   sound: boolean;
   animations: boolean;
   fontScale: number;
@@ -121,6 +129,7 @@ export interface GameSnapshot {
   lastMove: MoveRecord | null;
   board: SquareView[];
   commentary: CommentaryCard[];
+  chat: ChatMessage[];
   settings: Settings;
   agentError: string | null;
   thinking: boolean;
@@ -149,6 +158,12 @@ export interface AnalysisPly {
   claimedEval: string | null;
   claimGapCp: number | null;
   claimMismatch: boolean;
+}
+
+export interface DrawOfferOutcome {
+  accepted: boolean;
+  comment: string;
+  snapshot: GameSnapshot;
 }
 
 export interface AnalysisReport {

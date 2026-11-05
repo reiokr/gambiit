@@ -1,6 +1,6 @@
 //! Local game library, resume data and PGN exports.
 
-use crate::{CommentaryCard, Settings};
+use crate::{ChatMessage, CommentaryCard, Settings};
 use gambiit_core::MoveRecord;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -21,6 +21,8 @@ pub struct SavedGame {
     pub initial_fen: String,
     pub moves: Vec<MoveRecord>,
     pub commentary: Vec<CommentaryCard>,
+    #[serde(default)]
+    pub chat: Vec<ChatMessage>,
     pub settings: Settings,
     pub result: String,
     #[serde(default = "default_termination")]

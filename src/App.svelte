@@ -3,6 +3,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import Board from "./lib/Board.svelte";
   import Analysis from "./lib/Analysis.svelte";
+  import Chat from "./lib/Chat.svelte";
   import Commentary from "./lib/Commentary.svelte";
   import GameLibrary from "./lib/GameLibrary.svelte";
   import MoveList from "./lib/MoveList.svelte";
@@ -10,6 +11,7 @@
   import SettingsPanel from "./lib/SettingsPanel.svelte";
   import type {
     ColorKey,
+    DrawOfferOutcome,
     GameSnapshot,
     GameSummary,
     MoveInfo,
@@ -29,7 +31,7 @@
   import { i18n, localeMeta, setLocale } from "./lib/i18n";
   import { personaFor } from "./lib/personas";
 
-  type Tab = "moves" | "theater" | "analysis";
+  type Tab = "moves" | "theater" | "chat" | "analysis";
 
   let snapshot: GameSnapshot | null = null;
   let settings: Settings = loadSettings();
@@ -49,16 +51,26 @@
     null;
   let resultDismissed = false;
   let lastSoundPly = 0;
+  let chatBusy = false;
+  let drawBusy = false;
+  let drawNotice: { accepted: boolean; comment: string } | null = null;
 
+  $: if (snapshot && !snapshot.settings.chatEnabled && activeTab === "chat") {
+    activeTab = "theater";
+  }
   $: canAgentMove =
     !!snapshot &&
     !snapshot.gameOver &&
     snapshot.turn === snapshot.agentColor &&
-    !thinking;
+    !thinking &&
+    !chatBusy &&
+    !drawBusy;
   $: canTakeback =
     !!snapshot &&
     !snapshot.gameOver &&
     !thinking &&
+    !chatBusy &&
+    !drawBusy &&
     snapshot.lastMove?.color === snapshot.humanColor;
   $: material = snapshot
     ? materialScore(snapshot.board)
@@ -86,6 +98,8 @@
     !!snapshot &&
     !snapshot.gameOver &&
     !thinking &&
+    !chatBusy &&
+    !drawBusy &&
     snapshot.turn === snapshot.humanColor &&
     !promotion;
   $: promotionColor = snapshot?.humanColor ?? humanColor;
@@ -165,6 +179,7 @@
     promotion = null;
     resultDismissed = false;
     lastSoundPly = 0;
+    drawNotice = null;
     thinking = false;
     humanColor = color;
     flipped = color === "black";
@@ -221,6 +236,7 @@
     selected = null;
     promotion = null;
     error = "";
+    drawNotice = null;
     try {
       const next = await invoke<GameSnapshot>("make_move", { mv: uci });
       applySnapshot(next);
@@ -307,6 +323,59 @@
     }
   }
 
+  async function offerDraw() {
+    if (!snapshot || snapshot.gameOver || thinking || chatBusy || drawBusy) {
+      return;
+    }
+    drawBusy = true;
+    drawNotice = null;
+    error = "";
+    try {
+      const outcome = await invoke<DrawOfferOutcome>("offer_draw");
+      applySnapshot(outcome.snapshot);
+      drawNotice = {
+        accepted: outcome.accepted,
+        comment: outcome.comment,
+      };
+    } catch (value) {
+      error = errorMessage(value);
+    } finally {
+      drawBusy = false;
+    }
+  }
+
+  async function sendChat(message: string): Promise<string | null> {
+    if (!snapshot || chatBusy || thinking) {
+      return "Wait for the opponent to finish before sending a message.";
+    }
+    chatBusy = true;
+    error = "";
+    try {
+      const next = await invoke<GameSnapshot>("chat_send", { message });
+      applySnapshot(next);
+      return null;
+    } catch (value) {
+      const failure = errorMessage(value);
+      error = failure;
+      return failure;
+    } finally {
+      chatBusy = false;
+    }
+  }
+
+  async function clearChat(): Promise<string | null> {
+    if (!snapshot || chatBusy) return "Chat is busy.";
+    try {
+      const next = await invoke<GameSnapshot>("clear_chat");
+      applySnapshot(next);
+      return null;
+    } catch (value) {
+      const failure = errorMessage(value);
+      error = failure;
+      return failure;
+    }
+  }
+
   function newGame() {
     if (
       snapshot &&
@@ -351,14 +420,15 @@
   }
 
   async function loadSavedGame(id: string) {
-    if (thinking) {
-      error = "Wait for the agent to finish before opening another game.";
+    if (thinking || chatBusy || drawBusy) {
+      error = "Wait for the opponent to finish before opening another game.";
       return;
     }
     try {
       const next = await invoke<GameSnapshot>("load_game", { id });
       applySnapshot(next);
       flipped = next.humanColor === "black";
+      drawNotice = null;
       showGames = false;
       error = "";
       if (next.turn === next.agentColor && !next.gameOver) {
@@ -412,8 +482,8 @@
   }
 
   async function importPgn(pgn: string): Promise<boolean> {
-    if (thinking) {
-      error = "Wait for the agent to finish before importing a game.";
+    if (thinking || chatBusy || drawBusy) {
+      error = "Wait for the opponent to finish before importing a game.";
       return false;
     }
     try {
@@ -423,6 +493,7 @@
       });
       applySnapshot(next);
       flipped = next.humanColor === "black";
+      drawNotice = null;
       showGames = false;
       error = "";
       if (next.turn === next.agentColor && !next.gameOver) {
@@ -601,6 +672,11 @@
               <span class="spinner"></span>
               {$i18n("app.thinking", { name: personaLabel(agentName) })}
             </div>
+          {:else if drawBusy}
+            <div class="thinking-ribbon">
+              <span class="spinner"></span>
+              {$i18n("app.consideringDraw")}
+            </div>
           {/if}
 
           {#if snapshot.gameOver && !resultDismissed}
@@ -648,7 +724,12 @@
         />
 
         <div class="board-actions">
-          <button class="btn ghost" type="button" on:click={newGame}>
+          <button
+            class="btn ghost"
+            type="button"
+            disabled={chatBusy || drawBusy}
+            on:click={newGame}
+          >
             {$i18n("app.newGame")}
           </button>
           <button
@@ -660,10 +741,20 @@
           >
             {$i18n("app.takeBack")}
           </button>
+          {#if snapshot.settings.drawOffersEnabled}
+            <button
+              class="btn ghost"
+              type="button"
+              disabled={snapshot.gameOver || thinking || chatBusy || drawBusy}
+              on:click={offerDraw}
+            >
+              {drawBusy ? $i18n("app.offeringDraw") : $i18n("app.offerDraw")}
+            </button>
+          {/if}
           <button
             class="btn ghost danger"
             type="button"
-            disabled={snapshot.gameOver}
+            disabled={snapshot.gameOver || chatBusy || drawBusy}
             on:click={resign}
           >
             {$i18n("app.resign")}
@@ -674,6 +765,26 @@
             </button>
           {/if}
         </div>
+
+        {#if drawNotice}
+          <div class="draw-notice" class:accepted={drawNotice.accepted}>
+            <div>
+              <strong>
+                {drawNotice.accepted
+                  ? $i18n("app.drawAccepted")
+                  : $i18n("app.drawDeclined")}
+              </strong>
+              {#if drawNotice.comment}<span>{drawNotice.comment}</span>{/if}
+            </div>
+            <button
+              type="button"
+              aria-label={$i18n("app.dismissNotice")}
+              on:click={() => (drawNotice = null)}
+            >
+              ✕
+            </button>
+          </div>
+        {/if}
       </section>
 
       <aside class="sidebar">
@@ -702,6 +813,18 @@
             {$i18n("app.tabTheater")}
             <span>{snapshot.commentary.length}</span>
           </button>
+          {#if snapshot.settings.chatEnabled}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "chat"}
+              class:active={activeTab === "chat"}
+              on:click={() => (activeTab = "chat")}
+            >
+              {$i18n("app.tabChat")}
+              <span>{chatBusy ? "…" : snapshot.chat.length}</span>
+            </button>
+          {/if}
           <button
             type="button"
             role="tab"
@@ -724,6 +847,20 @@
               avatar={agentPersona.avatar}
               accent={agentPersona.accent}
             />
+          {/if}
+          {#if snapshot.settings.chatEnabled}
+            <div class="chat-pane" class:active={activeTab === "chat"}>
+              <Chat
+                messages={snapshot.chat}
+                personaName={personaLabel(agentName)}
+                avatar={agentPersona.avatar}
+                accent={agentPersona.accent}
+                busy={chatBusy}
+                disabled={thinking}
+                onSend={sendChat}
+                onClear={clearChat}
+              />
+            </div>
           {/if}
           <div class="analysis-pane" class:active={activeTab === "analysis"}>
             <Analysis
@@ -962,6 +1099,49 @@
     margin-top: 2px;
   }
 
+  .draw-notice {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid color-mix(in srgb, var(--danger) 42%, var(--border));
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--panel) 92%, var(--danger));
+    color: var(--muted);
+    font-size: calc(10px * var(--font-scale));
+    line-height: 1.5;
+  }
+
+  .draw-notice.accepted {
+    border-color: color-mix(in srgb, var(--success) 45%, var(--border));
+    background: color-mix(in srgb, var(--panel) 92%, var(--success));
+  }
+
+  .draw-notice div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .draw-notice strong {
+    color: var(--text);
+    font-size: calc(10px * var(--font-scale));
+  }
+
+  .draw-notice button {
+    flex: 0 0 auto;
+    padding: 0 3px;
+    border: 0;
+    background: transparent;
+    color: var(--faint);
+    cursor: pointer;
+  }
+
+  .draw-notice button:hover {
+    color: var(--text);
+  }
+
   .btn {
     padding: 8px 13px;
     border: 1px solid var(--border);
@@ -1073,12 +1253,14 @@
     overflow: hidden;
   }
 
-  .analysis-pane {
+  .analysis-pane,
+  .chat-pane {
     display: none;
     height: 100%;
   }
 
-  .analysis-pane.active {
+  .analysis-pane.active,
+  .chat-pane.active {
     display: block;
   }
 

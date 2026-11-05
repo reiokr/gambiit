@@ -22,6 +22,8 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: "salon",
   customTheme: { ...DEFAULT_CUSTOM_THEME },
   pieceSet: "cburnett",
+  chatEnabled: true,
+  drawOffersEnabled: true,
   sound: true,
   animations: true,
   fontScale: 1.2,

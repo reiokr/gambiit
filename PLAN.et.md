@@ -110,6 +110,8 @@ Valmis:
   all, puuduvate malendite varundusega Cburnetti komplektist.
 - Seadete salvestus ei alusta uut mängu välimuse/liidese muudatuste puhul;
   mängu mõjutavad muudatused näitavad hoiatust ja valikut.
+- Vastase vestlus ja ametlikud viigipakkumised, mõlemad seadetes sisse/välja
+  lülitatavad.
 - Viis Stockfishi raskusastet — Algaja, Harrastaja, Edasijõudnu, Tugev ja
   Meister — pluss Kohandatud. Taseme valik seab depth/MultiPV liugurid; liuguri
   liigutamine valib Kohandatud. Igal preseedil on ka Stockfishi `Skill Level`.
@@ -129,8 +131,9 @@ Valmis:
 
 Testid:
 
-- **37 Rust testi** rohelised (core 8, engine 2, agent 5, Tauri app 22) +
-  4 ignored testi (kaks päris-mudeli smoke-testi ja kaks Stockfishi analüüsi testi).
+- **44 Rust testi** rohelised (core 9, engine 2, agent 8, Tauri app 25) +
+  5 ignored testi (päris-mudeli käigu-, vestluse/viigi- ja eestikeelne smoke-test
+  ning kaks Stockfishi analüüsi testi).
 - 1 ignored **agent_smoke** test: `e4` → `...c5` 8,9 sekundiga, 522 tokenit.
 - `cargo clippy --all-targets -- -D warnings` puhas.
 - `pnpm check` — 0 viga, 0 hoiatust.
@@ -303,7 +306,7 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 - süsinikmust taust, soe pähkel/kreem laud, messingine aktsent;
 - `Fraunces`/`Playfair Display` pealkirjadele, `Inter` UI-le, `JetBrains Mono`
   käikudele (praegu süsteemsed varud, fondid lisatakse hiljem);
-- malelaud on “lava”, parem paneel on “kavad”: Käigud / Teater / Analüüs;
+- malelaud on “lava”, parem paneel on “kavad”: Käigud / Teater / Vestlus / Analüüs;
 - mängijaribad: agendi avatar, isiksus, mudel, staatus; inimese kaart koos
   võetud malendite ja materjalieduga;
 - kommentaarikaardid: hinnang, kandidaadid, tagasilükkamise põhjused, plaan;
@@ -475,13 +478,13 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 | **3. Agent UI-s** | Auto/Button, mudel, isiksus, kommentaarid | ✅ valmis |
 | **4. Disainisüsteem** | 4 teemat ✅, teemaredaktor ✅, 5 sisseehitatud malendikomplekti ✅, kohandatud komplektid ✅, animatsioonid, helid | ✅ valmis; rohkem teemasid hiljem |
 | **5. Mängu täiuslikkus** | PGN ✅, salvestus ✅, analüüs ✅; kellad, tulemus | osaliselt |
-| **6. Teater ja ekstra** | MCP, chat, Director's Cut, edetabel | järgmine |
+| **6. Teater ja ekstra** | Vestlus ✅ ja viigipakkumised ✅; MCP, Director's Cut, edetabel | osaliselt |
 | **7. Pakend** | PKGBUILD, `.desktop`, release, docs | hiljem |
 
 Soovitatud järjekord:
 
-1. **Chat + MCP** — agentchessi-kogemus ja psühholoogiline sõda.
-2. **Kellad ja viigipakkumised** — mängu täielikkus.
+1. **Kellad ja ajakontroll** — mängu täielikkus.
+2. **MCP-režiim** — agent saab ise tööriistu kutsuda.
 3. **Rohkem teemasid ja malendikomplekte** — disainipolish.
 4. **Director's Cut / edetabel / broadcast** — teatriekstra.
 5. **Pakend** — release, PKGBUILD.
@@ -602,11 +605,12 @@ broadcast-režiim.
 
 ## 16. Järgmised sammud
 
-1. **Chat + MCP**.
-2. **Kellad + viigipakkumised**.
+1. **Kellad ja ajakontroll**.
+2. **MCP-režiim**.
 3. **Rohkem teemasid ja malendikomplekte**.
 4. **Director's Cut / edetabel / broadcast**.
 5. **Pakend** (PKGBUILD, `.desktop`, release).
 
 Salvestamine, jätkamine, mängude raamatukogu, PGN eksport/import, pärastmängu
-analüüs, teemaredaktor ja kohandatud malendikomplektid on nüüd valmis.
+analüüs, teemaredaktor, kohandatud malendikomplektid, vestlus ja
+viigipakkumised on nüüd valmis.
