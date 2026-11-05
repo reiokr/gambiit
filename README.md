@@ -86,6 +86,11 @@ indicator.
 
 ## Customize
 
+Settings are grouped into four tabs: **Game** (opponent, engine, clock,
+features), **Appearance** (themes, colours, pieces, interface), **Language**
+(UI and agent language) and **Connection** (provider credentials). The Game tab
+holds the settings that shape the match; the other tabs stay out of the way.
+
 The Settings panel controls the opponent model, persona, Auto/Button response
 mode, playing colour, board theme, piece set, language, sound, animations and
 Stockfish candidate depth. Four themes ship now: Salon, Tournament, Midnight and
@@ -93,7 +98,7 @@ Custom.
 
 ### Theme editor
 
-Select **Custom** in **Settings → Board & interface** to open the theme studio.
+Select **Custom** in **Settings → Appearance** to open the theme studio.
 Nine colours can be changed: background, panel, border, text, muted text, accent,
 light square, dark square and board border. Changes preview live on the whole
 app. **Save changes** stores the palette in the profile and in saved games
@@ -115,8 +120,7 @@ without restarting the current game.
 ### Piece sets
 
 Five sets are built in: **Cburnett** (the default), **Livius**, **Meridian**,
-**Meridian Shaded** and **Letter**. Choose one under **Settings → Board &
-interface → Piece set**. Livius, Meridian and Meridian Shaded are CC0 sets by
+**Meridian Shaded** and **Letter**. Choose one under **Settings → Appearance → Piece set**. Livius, Meridian and Meridian Shaded are CC0 sets by
 Martin Sedlák; Letter is a CC0 typographic set made for Gambiit. Cburnett is
 CC BY-SA 3.0.
 
@@ -141,7 +145,7 @@ reference.
 ## Languages
 
 The interface language and the agent’s response language are independent and
-are selected in **Settings → Board & interface**. This is useful when a model
+are selected in **Settings → Language**. This is useful when a model
 writes better in English than in the UI language. Locale catalogs live in
 `src/locales/*.json`; adding a new JSON file adds a new language without touching
 code.
@@ -191,7 +195,7 @@ claim did not match the engine, not that the move was illegal.
 ## Chat and draw offers
 
 Both features are on by default and can be switched off independently in
-**Settings → Board & interface → Features**.
+**Settings → Game → Features**.
 
 The **Chat** tab is a conversation with the opponent, separate from move
 commentary. It uses the same persona and agent language, can bluff and needle,
@@ -205,7 +209,7 @@ disabled.
 
 ## Clocks
 
-Open **Settings → Clock** and enable **Use a chess clock**. Choose Bullet,
+Open **Settings → Game → Clock** and enable **Use a chess clock**. Choose Bullet,
 Blitz, Rapid, Classical or Custom, then set minutes and increment. The clock
 starts when the game starts and runs for the side to move. The opponent's model
 thinking time counts against its own clock, so long time controls are kinder to
@@ -222,7 +226,7 @@ Changing clock settings while a game is in progress asks for a new game.
 ## Models and API keys
 
 The model selector is searchable and grouped by provider. If a provider needs
-an API key, open **Settings → Opponent → Provider credentials**. Keys are kept in
+an API key, open **Settings → Connection**. Keys are kept in
 `~/.config/gambiit/credentials.json` with `0600` permissions and are never sent
 back to the UI. Leaving the key empty uses OpenCode’s existing authentication.
 

@@ -1,6 +1,6 @@
 # Appearance: themes and piece sets
 
-Gambiit keeps appearance in `Settings → Board & interface`. Everything here is
+Gambiit keeps appearance in `Settings → Appearance`. Everything here is
 local to the profile and is stored with saved games.
 
 ## Theme editor

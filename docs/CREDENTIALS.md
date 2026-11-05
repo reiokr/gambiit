@@ -3,7 +3,7 @@
 ## Model picker
 
 Gambiit reads the model list from the installed OpenCode CLI (`opencode models`)
-and shows a searchable picker in **Settings → Opponent → Model**.
+and shows a searchable picker in **Settings → Game → Opponent → Model**.
 
 - Type to filter; the picker groups matches by provider.
 - Click a model to select it, or type a custom `provider/model` string.
@@ -15,7 +15,7 @@ and shows a searchable picker in **Settings → Opponent → Model**.
 OpenCode already owns normal authentication. A provider key in Gambiit is an
 optional override for the current game's child process.
 
-- Open **Settings → Opponent → Provider credentials** after choosing a model.
+- Open **Settings → Connection** after choosing a model.
 - The environment variable is pre-filled for common providers, but it is
   editable.
 - Paste a key and click **Save key**. It is never sent back to the UI.

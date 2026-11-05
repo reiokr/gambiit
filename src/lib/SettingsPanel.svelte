@@ -64,6 +64,9 @@
   let pieceSetMessage = "";
   let applyError = "";
   let applying = false;
+  type SettingsTab = "game" | "appearance" | "language" | "connection";
+  let activeTab: SettingsTab = "game";
+  let bodyEl: HTMLDivElement | null = null;
 
   $: applyFontScale(draft.fontScale);
   $: if (draft.theme === "custom") {
@@ -318,6 +321,14 @@
     draft.timeControl = "custom";
   }
 
+  function selectTab(tab: SettingsTab) {
+    activeTab = tab;
+    bodyEl?.scrollTo({ top: 0 });
+    if (tab === "connection") {
+      void syncProvider();
+    }
+  }
+
   async function submit(startNew: boolean) {
     if (!hasChanges || applying) return;
     applying = true;
@@ -363,14 +374,53 @@
       </button>
     </header>
 
-    <div class="body">
-      <section class="section">
-        <div class="section-title">
-          <h3>{$i18n("settings.opponent")}</h3>
-          <span>{$i18n("settings.opponentHint")}</span>
-        </div>
+    <div class="settings-tabs" role="tablist" aria-label={$i18n("settings.tabs")}>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeTab === "game"}
+        class:active={activeTab === "game"}
+        on:click={() => selectTab("game")}
+      >
+        {$i18n("settings.tabGame")}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeTab === "appearance"}
+        class:active={activeTab === "appearance"}
+        on:click={() => selectTab("appearance")}
+      >
+        {$i18n("settings.tabAppearance")}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeTab === "language"}
+        class:active={activeTab === "language"}
+        on:click={() => selectTab("language")}
+      >
+        {$i18n("settings.tabLanguage")}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeTab === "connection"}
+        class:active={activeTab === "connection"}
+        on:click={() => selectTab("connection")}
+      >
+        {$i18n("settings.tabConnection")}
+      </button>
+    </div>
 
-        <div class="field model-field">
+    <div class="body" bind:this={bodyEl}>
+      {#if activeTab === "game"}
+        <section class="section">
+          <div class="section-title">
+            <h3>{$i18n("settings.opponent")}</h3>
+            <span>{$i18n("settings.opponentHint")}</span>
+          </div>
+<div class="field model-field">
           <span>{$i18n("settings.model")}</span>
           <div class="model-picker">
             <input
@@ -431,74 +481,6 @@
           <small>
             {$i18n("settings.modelsDiscovered", { count: models.length })}
           </small>
-        </div>
-
-        <div class="credentials">
-          {#if provider}
-            <div class="credentials-head">
-              <span>
-                {$i18n("settings.credentials")}
-                <b>{provider}</b>
-              </span>
-              {#if credential?.hasKey}
-                <span class="key-saved">{$i18n("settings.keySaved")}</span>
-              {/if}
-            </div>
-
-            {#if provider === "ollama"}
-              <p class="hint">{$i18n("settings.localProvider")}</p>
-            {:else}
-              <div class="grid two">
-                <label class="field">
-                  <span>{$i18n("settings.envVar")}</span>
-                  <input
-                    bind:value={envVar}
-                    spellcheck="false"
-                    autocomplete="off"
-                  />
-                </label>
-                <label class="field">
-                  <span>{$i18n("settings.apiKey")}</span>
-                  <input
-                    type="password"
-                    bind:value={keyInput}
-                    autocomplete="off"
-                    spellcheck="false"
-                    placeholder={credential?.hasKey
-                      ? $i18n("settings.keySavedPlaceholder")
-                      : $i18n("settings.keyPlaceholder")}
-                  />
-                </label>
-              </div>
-              <div class="credential-actions">
-                <button
-                  class="btn"
-                  type="button"
-                  disabled={keyBusy || !keyInput.trim() || !envVar.trim()}
-                  on:click={saveKey}
-                >
-                  {$i18n("settings.saveKey")}
-                </button>
-                {#if credential?.hasKey}
-                  <button
-                    class="btn ghost"
-                    type="button"
-                    disabled={keyBusy}
-                    on:click={removeKey}
-                  >
-                    {$i18n("settings.removeKey")}
-                  </button>
-                {/if}
-                {#if keyMessage}
-                  <span class="key-message">{keyMessage}</span>
-                {/if}
-              </div>
-              <p class="hint">{$i18n("settings.credentialsHint")}</p>
-              {#if provider === "opencode-go" || provider === "github-copilot"}
-                <p class="hint">{$i18n("settings.opencodeAuthHint")}</p>
-              {/if}
-            {/if}
-          {/if}
         </div>
 
         <div class="field persona-field">
@@ -566,15 +548,159 @@
             </button>
           </div>
         </div>
+              </section>
+
+<section class="section">
+        <div class="section-title">
+          <h3>{$i18n("settings.engine")}</h3>
+          <span>{$i18n("settings.engineHint")}</span>
+        </div>
+
+        <div class="field">
+          <span>{$i18n("settings.difficulty")}</span>
+          <div class="difficulty-grid">
+            {#each DIFFICULTIES as level}
+              <button
+                type="button"
+                class="difficulty-card"
+                class:active={draft.difficulty === level.id}
+                on:click={() => selectDifficulty(level)}
+              >
+                <strong>{$i18n(`difficulty.${level.key}.name`)}</strong>
+                <small>{$i18n(`difficulty.${level.key}.description`)}</small>
+                {#if level.id !== "custom"}
+                  <span class="difficulty-meta">
+                    {$i18n("settings.engineMeta", {
+                      count: level.multipv,
+                      depth: level.depth,
+                    })}
+                  </span>
+                {/if}
+              </button>
+            {/each}
+          </div>
+        </div>
+
+        <div class="grid two custom-engine">
+          <label class="field">
+            <span>
+              {$i18n("settings.depth")}
+              <b>{draft.stockfishDepth}</b>
+            </span>
+            <input
+              type="range"
+              min="5"
+              max="20"
+              step="1"
+              bind:value={draft.stockfishDepth}
+              on:input={() => (draft.difficulty = "custom")}
+            />
+          </label>
+          <label class="field">
+            <span>
+              {$i18n("settings.candidates")}
+              <b>{draft.multipv}</b>
+            </span>
+            <input
+              type="range"
+              min="1"
+              max="6"
+              step="1"
+              bind:value={draft.multipv}
+              on:input={() => (draft.difficulty = "custom")}
+            />
+          </label>
+        </div>
+        <p class="hint">{$i18n("settings.engineNote")}</p>
       </section>
 
       <section class="section">
         <div class="section-title">
-          <h3>{$i18n("settings.boardInterface")}</h3>
-          <span>{$i18n("settings.livePreview")}</span>
+          <h3>{$i18n("settings.clock")}</h3>
+          <span>{$i18n("settings.clockHint")}</span>
         </div>
 
-        <div class="themes">
+        <label class="check clock-toggle">
+          <input type="checkbox" bind:checked={draft.clockEnabled} />
+          <span>{$i18n("settings.clockEnable")}</span>
+        </label>
+
+        {#if draft.clockEnabled}
+          <div class="clock-presets">
+            {#each TIME_CONTROLS as control}
+              <button
+                type="button"
+                class="clock-card"
+                class:active={draft.timeControl === control.id}
+                on:click={() => selectTimeControl(control.id)}
+              >
+                <strong>{$i18n(`clock.${control.key}.name`)}</strong>
+                <small>
+                  {control.id === "custom"
+                    ? clockLabel(
+                        draft.clockInitialMs,
+                        draft.clockIncrementMs,
+                      )
+                    : clockLabel(control.initialMs, control.incrementMs)}
+                </small>
+              </button>
+            {/each}
+          </div>
+
+          {#if draft.timeControl === "custom"}
+            <div class="grid two clock-custom">
+              <label class="field">
+                <span>{$i18n("settings.clockMinutes")}</span>
+                <input
+                  type="number"
+                  min="0.5"
+                  max="180"
+                  step="0.5"
+                  value={draft.clockInitialMs / 60_000}
+                  on:change={setClockMinutes}
+                />
+              </label>
+              <label class="field">
+                <span>{$i18n("settings.clockIncrement")}</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="60"
+                  step="1"
+                  value={draft.clockIncrementMs / 1000}
+                  on:change={setClockIncrement}
+                />
+              </label>
+            </div>
+          {/if}
+
+          <small class="clock-note">{$i18n("settings.clockNote")}</small>
+        {/if}
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h3>{$i18n("settings.features")}</h3>
+            <span>{$i18n("settings.featuresHint")}</span>
+          </div>
+          <div class="checks feature-checks">
+            <label class="check">
+              <input type="checkbox" bind:checked={draft.chatEnabled} />
+              <span>{$i18n("settings.opponentChat")}</span>
+            </label>
+            <label class="check">
+              <input type="checkbox" bind:checked={draft.drawOffersEnabled} />
+              <span>{$i18n("settings.drawOffers")}</span>
+            </label>
+          </div>
+        </section>
+      {:else if activeTab === "appearance"}
+        <section class="section">
+          <div class="section-title">
+            <h3>{$i18n("settings.boardPieces")}</h3>
+            <span>{$i18n("settings.livePreview")}</span>
+          </div>
+<div class="themes">
           {#each THEMES as theme}
             <button
               type="button"
@@ -653,7 +779,49 @@
           {/if}
         </div>
 
-        <div class="grid two">
+                </section>
+
+        <section class="section">
+          <div class="section-title">
+            <h3>{$i18n("settings.interface")}</h3>
+            <span>{$i18n("settings.interfaceHint")}</span>
+          </div>
+          <div class="grid two">
+            <label class="field">
+              <span>
+                {$i18n("settings.fontSize")}
+                <b>{Math.round(draft.fontScale * 100)}%</b>
+              </span>
+              <input
+                type="range"
+                min="0.9"
+                max="1.5"
+                step="0.05"
+                bind:value={draft.fontScale}
+              />
+            </label>
+            <div class="field">
+              <span>{$i18n("settings.soundMotion")}</span>
+              <div class="checks">
+                <label class="check">
+                  <input type="checkbox" bind:checked={draft.sound} />
+                  <span>{$i18n("settings.sound")}</span>
+                </label>
+                <label class="check">
+                  <input type="checkbox" bind:checked={draft.animations} />
+                  <span>{$i18n("settings.animations")}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </section>
+      {:else if activeTab === "language"}
+        <section class="section">
+          <div class="section-title">
+            <h3>{$i18n("settings.language")}</h3>
+            <span>{$i18n("settings.languageHint")}</span>
+          </div>
+<div class="grid two">
           <label class="field">
             <span>{$i18n("settings.uiLanguage")}</span>
             <select
@@ -680,177 +848,91 @@
           </label>
         </div>
 
-        <div class="grid two">
-          <label class="field">
-            <span>
-              {$i18n("settings.fontSize")}
-              <b>{Math.round(draft.fontScale * 100)}%</b>
-            </span>
-            <input
-              type="range"
-              min="0.9"
-              max="1.5"
-              step="0.05"
-              bind:value={draft.fontScale}
-            />
-          </label>
-          <div class="field">
-            <span>{$i18n("settings.interface")}</span>
-            <div class="checks">
-              <label class="check">
-                <input type="checkbox" bind:checked={draft.sound} />
-                <span>{$i18n("settings.sound")}</span>
-              </label>
-              <label class="check">
-                <input type="checkbox" bind:checked={draft.animations} />
-                <span>{$i18n("settings.animations")}</span>
-              </label>
-            </div>
+                </section>
+      {:else}
+        <section class="section">
+          <div class="section-title">
+            <h3>{$i18n("settings.connections")}</h3>
+            <span>{$i18n("settings.connectionsHint")}</span>
           </div>
-          <div class="field">
-            <span>{$i18n("settings.features")}</span>
-            <div class="checks">
-              <label class="check">
-                <input type="checkbox" bind:checked={draft.chatEnabled} />
-                <span>{$i18n("settings.opponentChat")}</span>
-              </label>
-              <label class="check">
-                <input type="checkbox" bind:checked={draft.drawOffersEnabled} />
-                <span>{$i18n("settings.drawOffers")}</span>
-              </label>
-            </div>
-            <small>{$i18n("settings.featuresHint")}</small>
+          <div class="connection-model">
+            <span>{$i18n("settings.model")}</span>
+            <strong>{draft.model || "—"}</strong>
+            <small>{$i18n("settings.connectionModelHint")}</small>
           </div>
-        </div>
-      </section>
-
-      <section class="section">
-        <div class="section-title">
-          <h3>{$i18n("settings.clock")}</h3>
-          <span>{$i18n("settings.clockHint")}</span>
-        </div>
-
-        <label class="check clock-toggle">
-          <input type="checkbox" bind:checked={draft.clockEnabled} />
-          <span>{$i18n("settings.clockEnable")}</span>
-        </label>
-
-        {#if draft.clockEnabled}
-          <div class="clock-presets">
-            {#each TIME_CONTROLS as control}
-              <button
-                type="button"
-                class="clock-card"
-                class:active={draft.timeControl === control.id}
-                on:click={() => selectTimeControl(control.id)}
-              >
-                <strong>{$i18n(`clock.${control.key}.name`)}</strong>
-                <small>
-                  {control.id === "custom"
-                    ? clockLabel(
-                        draft.clockInitialMs,
-                        draft.clockIncrementMs,
-                      )
-                    : clockLabel(control.initialMs, control.incrementMs)}
-                </small>
-              </button>
-            {/each}
-          </div>
-
-          {#if draft.timeControl === "custom"}
-            <div class="grid two clock-custom">
-              <label class="field">
-                <span>{$i18n("settings.clockMinutes")}</span>
-                <input
-                  type="number"
-                  min="0.5"
-                  max="180"
-                  step="0.5"
-                  value={draft.clockInitialMs / 60_000}
-                  on:change={setClockMinutes}
-                />
-              </label>
-              <label class="field">
-                <span>{$i18n("settings.clockIncrement")}</span>
-                <input
-                  type="number"
-                  min="0"
-                  max="60"
-                  step="1"
-                  value={draft.clockIncrementMs / 1000}
-                  on:change={setClockIncrement}
-                />
-              </label>
+<div class="credentials">
+          {#if provider}
+            <div class="credentials-head">
+              <span>
+                {$i18n("settings.credentials")}
+                <b>{provider}</b>
+              </span>
+              {#if credential?.hasKey}
+                <span class="key-saved">{$i18n("settings.keySaved")}</span>
+              {/if}
             </div>
-          {/if}
 
-          <small class="clock-note">{$i18n("settings.clockNote")}</small>
-        {/if}
-      </section>
-
-      <section class="section">
-        <div class="section-title">
-          <h3>{$i18n("settings.engine")}</h3>
-          <span>{$i18n("settings.engineHint")}</span>
-        </div>
-
-        <div class="field">
-          <span>{$i18n("settings.difficulty")}</span>
-          <div class="difficulty-grid">
-            {#each DIFFICULTIES as level}
-              <button
-                type="button"
-                class="difficulty-card"
-                class:active={draft.difficulty === level.id}
-                on:click={() => selectDifficulty(level)}
-              >
-                <strong>{$i18n(`difficulty.${level.key}.name`)}</strong>
-                <small>{$i18n(`difficulty.${level.key}.description`)}</small>
-                {#if level.id !== "custom"}
-                  <span class="difficulty-meta">
-                    {$i18n("settings.engineMeta", {
-                      count: level.multipv,
-                      depth: level.depth,
-                    })}
-                  </span>
+            {#if provider === "ollama"}
+              <p class="hint">{$i18n("settings.localProvider")}</p>
+            {:else}
+              <div class="grid two">
+                <label class="field">
+                  <span>{$i18n("settings.envVar")}</span>
+                  <input
+                    bind:value={envVar}
+                    spellcheck="false"
+                    autocomplete="off"
+                  />
+                </label>
+                <label class="field">
+                  <span>{$i18n("settings.apiKey")}</span>
+                  <input
+                    type="password"
+                    bind:value={keyInput}
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder={credential?.hasKey
+                      ? $i18n("settings.keySavedPlaceholder")
+                      : $i18n("settings.keyPlaceholder")}
+                  />
+                </label>
+              </div>
+              <div class="credential-actions">
+                <button
+                  class="btn"
+                  type="button"
+                  disabled={keyBusy || !keyInput.trim() || !envVar.trim()}
+                  on:click={saveKey}
+                >
+                  {$i18n("settings.saveKey")}
+                </button>
+                {#if credential?.hasKey}
+                  <button
+                    class="btn ghost"
+                    type="button"
+                    disabled={keyBusy}
+                    on:click={removeKey}
+                  >
+                    {$i18n("settings.removeKey")}
+                  </button>
                 {/if}
-              </button>
-            {/each}
-          </div>
+                {#if keyMessage}
+                  <span class="key-message">{keyMessage}</span>
+                {/if}
+              </div>
+              <p class="hint">{$i18n("settings.credentialsHint")}</p>
+              {#if provider === "opencode-go" || provider === "github-copilot"}
+                <p class="hint">{$i18n("settings.opencodeAuthHint")}</p>
+              {/if}
+            {/if}
+          {/if}
         </div>
 
-        <div class="grid two custom-engine">
-          <label class="field">
-            <span>
-              {$i18n("settings.depth")}
-              <b>{draft.stockfishDepth}</b>
-            </span>
-            <input
-              type="range"
-              min="5"
-              max="20"
-              step="1"
-              bind:value={draft.stockfishDepth}
-              on:input={() => (draft.difficulty = "custom")}
-            />
-          </label>
-          <label class="field">
-            <span>
-              {$i18n("settings.candidates")}
-              <b>{draft.multipv}</b>
-            </span>
-            <input
-              type="range"
-              min="1"
-              max="6"
-              step="1"
-              bind:value={draft.multipv}
-              on:input={() => (draft.difficulty = "custom")}
-            />
-          </label>
-        </div>
-        <p class="hint">{$i18n("settings.engineNote")}</p>
-      </section>
+                  {#if !provider}
+            <p class="hint">{$i18n("settings.chooseModelFirst")}</p>
+          {/if}
+        </section>
+      {/if}
     </div>
 
     <footer class="foot">
@@ -969,9 +1051,87 @@
     color: var(--text);
   }
 
+  .settings-tabs {
+    display: flex;
+    gap: 5px;
+    overflow-x: auto;
+    padding: 9px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel-2);
+    scrollbar-width: none;
+  }
+
+  .settings-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .settings-tabs button {
+    flex: 0 0 auto;
+    padding: 7px 12px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--font-ui);
+    font-size: calc(11px * var(--font-scale));
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      border-color 140ms ease,
+      background 140ms ease,
+      color 140ms ease;
+  }
+
+  .settings-tabs button:hover {
+    border-color: var(--border);
+    color: var(--text);
+  }
+
+  .settings-tabs button.active {
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+    background: var(--accent-soft);
+    color: var(--text);
+  }
+
   .body {
     overflow-y: auto;
     padding: 22px 26px;
+  }
+
+  .connection-model {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px 12px;
+    margin-bottom: 2px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--panel-2);
+  }
+
+  .connection-model span {
+    color: var(--muted);
+    font-size: calc(10px * var(--font-scale));
+    font-weight: 600;
+  }
+
+  .connection-model strong {
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: calc(11px * var(--font-scale));
+    overflow-wrap: anywhere;
+  }
+
+  .connection-model small {
+    margin-top: 3px;
+    color: var(--faint);
+    font-size: calc(9px * var(--font-scale));
+    line-height: 1.5;
+  }
+
+  .feature-checks {
+    margin-top: 2px;
   }
 
   .section {

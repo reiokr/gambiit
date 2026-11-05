@@ -2,7 +2,7 @@
 
 Gambiit discovers locale catalogs automatically from **`src/locales/*.json`**.
 The interface language and the agent response language are selected
-independently in **Settings → Board & interface**. This lets the UI stay in one
+independently in **Settings → Language**. This lets the UI stay in one
 language while the model answers in another (for example, an Estonian UI with an
 English agent because the model writes better in English).
 
@@ -25,7 +25,7 @@ English agent because the model writes better in English).
 - The filename is the language code used in settings (`de`).
 
 4. Restart `pnpm tauri dev` or rebuild. The language appears in both language
-   selectors in Settings → Board & interface.
+   selectors in Settings → Language.
 
 No Rust or Svelte changes are needed.
 
