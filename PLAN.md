@@ -83,6 +83,8 @@ Completed:
 - Custom theme editor with live preview and a locally saved palette.
 - Custom piece-set folders under `~/.local/share/gambiit/pieces/` with
   per-piece fallback to the built-in Cburnett set.
+- Settings save appearance and interface changes without restarting the game;
+  game-affecting changes are warned about and can continue or start a new game.
 - Five Stockfish difficulty levels — Beginner, Casual, Intermediate, Strong and
   Master — plus Custom. Selecting a level sets the depth/MultiPV sliders; moving
   a slider selects Custom. Stockfish `Skill Level` is part of each preset.

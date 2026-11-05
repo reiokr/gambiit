@@ -91,8 +91,19 @@ Custom.
 Select **Custom** in **Settings → Board & interface** to open the theme studio.
 Nine colours can be changed: background, panel, border, text, muted text, accent,
 light square, dark square and board border. Changes preview live on the whole
-app. **Apply & start new game** stores the palette in the profile and in saved
-games.
+app. **Save changes** stores the palette in the profile and in saved games
+without restarting the current game.
+
+### How settings are saved
+
+- Appearance and interface changes (theme, colours, piece set, UI language,
+  sound, animations, font size) are saved immediately and never restart the
+  game.
+- Model, persona, difficulty or agent-language changes show a warning because
+  they affect the current opponent from the next move. Choose **Save changes**
+  to keep playing, or **Save & start new game**.
+- Changing colour always requires a new game, so the panel says so and starts it
+  when you save.
 
 ### Custom piece sets
 

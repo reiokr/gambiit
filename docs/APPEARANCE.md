@@ -14,10 +14,16 @@ nine colours:
 | Ink | text, muted text, accent |
 | Board | light square, dark square, board border |
 
-Changes preview immediately across the app. **Apply & start new game** saves the
-palette in the current profile and in the game settings. **Reset palette** restores
-the Salon palette. **Cancel** restores the palette that was active before the
-settings panel opened.
+Changes preview immediately across the app. **Save changes** saves the palette in
+the current profile and in the game settings without restarting the game.
+**Reset palette** restores the Salon palette. **Cancel** restores the palette that
+was active before the settings panel opened.
+
+Appearance and interface settings (theme, colours, piece set, UI language, sound,
+animations, font size) are always saved without a restart. Model, persona,
+difficulty and agent-language changes show a warning because they affect the
+current opponent from the next move; **Save & start new game** is offered next to
+**Save changes**. Changing colour requires a new game.
 
 The custom palette lives in `Settings.customTheme` (camelCase in JSON) and is
 used only when `Settings.theme` is `"custom"`.

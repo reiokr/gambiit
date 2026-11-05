@@ -107,6 +107,8 @@ Valmis:
 - Kohandatud teemaredaktor live-eelvaatega ja lokaalselt salvestatud paletiga.
 - Kohandatud malendikomplektide kaustad `~/.local/share/gambiit/pieces/` all,
   puuduvate malendite varundusega sisseehitatud Cburnetti komplektist.
+- Seadete salvestus ei alusta uut mängu välimuse/liidese muudatuste puhul;
+  mängu mõjutavad muudatused näitavad hoiatust ja valikut.
 - Viis Stockfishi raskusastet — Algaja, Harrastaja, Edasijõudnu, Tugev ja
   Meister — pluss Kohandatud. Taseme valik seab depth/MultiPV liugurid; liuguri
   liigutamine valib Kohandatud. Igal preseedil on ka Stockfishi `Skill Level`.
@@ -126,7 +128,7 @@ Valmis:
 
 Testid:
 
-- **36 Rust testi** rohelised (core 8, engine 2, agent 5, Tauri app 21) +
+- **37 Rust testi** rohelised (core 8, engine 2, agent 5, Tauri app 22) +
   4 ignored testi (kaks päris-mudeli smoke-testi ja kaks Stockfishi analüüsi testi).
 - 1 ignored **agent_smoke** test: `e4` → `...c5` 8,9 sekundiga, 522 tokenit.
 - `cargo clippy --all-targets -- -D warnings` puhas.

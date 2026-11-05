@@ -321,6 +321,28 @@ impl Session {
         }
     }
 
+    fn update_settings(&mut self, next: Settings) -> Result<GameSnapshot, String> {
+        self.settings = normalize_settings(next);
+        let credential_env = credential_env_for_model(&self.settings.model);
+        let config = agent_config(&self.settings, credential_env);
+        if let Some(agent) = self.agent.as_mut() {
+            agent.update_config(config);
+            self.agent_error = None;
+        } else {
+            match AgentSession::new(config) {
+                Ok(agent) => {
+                    self.agent = Some(agent);
+                    self.agent_error = None;
+                }
+                Err(error) => {
+                    self.agent_error = Some(format!("Agent unavailable: {error}"));
+                }
+            }
+        }
+        self.persist();
+        Ok(self.snapshot())
+    }
+
     fn snapshot(&self) -> GameSnapshot {
         let turn = self.game.turn();
         let mut board = Vec::with_capacity(64);
@@ -559,6 +581,11 @@ fn new_game(
     let mut session = state.session.lock();
     *session = Session::new(settings, color);
     Ok(session.snapshot())
+}
+
+#[tauri::command]
+fn update_settings(state: State<'_, AppState>, settings: Settings) -> Result<GameSnapshot, String> {
+    state.session.lock().update_settings(settings)
 }
 
 #[tauri::command]
@@ -857,6 +884,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_state,
             new_game,
+            update_settings,
             make_move,
             agent_move,
             takeback,
@@ -971,6 +999,37 @@ mod tests {
         assert_eq!(restored.piece_set, "cburnett");
         assert_eq!(restored.custom_theme.accent, "#c9a227");
         assert_eq!(restored.theme, "salon");
+    }
+
+    #[test]
+    fn update_settings_keeps_the_current_game() {
+        let mut session = session();
+        session.make_move("e2e4").unwrap();
+        let before: Vec<String> = session
+            .game
+            .history()
+            .iter()
+            .map(|record| record.san.clone())
+            .collect();
+        let next = Settings {
+            theme: "custom".to_string(),
+            piece_set: "demo".to_string(),
+            persona: "Coach".to_string(),
+            font_scale: 1.3,
+            ..Default::default()
+        };
+        let snapshot = session.update_settings(next).unwrap();
+        let after: Vec<String> = snapshot
+            .history
+            .iter()
+            .map(|record| record.san.clone())
+            .collect();
+        assert_eq!(after, before);
+        assert_eq!(snapshot.settings.theme, "custom");
+        assert_eq!(snapshot.settings.piece_set, "demo");
+        assert_eq!(snapshot.settings.persona, "Coach");
+        assert_eq!(snapshot.settings.font_scale, 1.3);
+        assert_eq!(snapshot.turn, "black");
     }
 
     #[test]

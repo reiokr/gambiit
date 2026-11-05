@@ -158,7 +158,7 @@
     }
   }
 
-  async function startGame(color: ColorKey = humanColor) {
+  async function startGame(color: ColorKey = humanColor): Promise<string | null> {
     loading = true;
     error = "";
     selected = null;
@@ -185,8 +185,11 @@
       if (next.turn === next.agentColor && !next.gameOver) {
         await agentMove();
       }
+      return null;
     } catch (value) {
-      error = errorMessage(value);
+      const message = errorMessage(value);
+      error = message;
+      return message;
     } finally {
       loading = false;
     }
@@ -445,14 +448,50 @@
     showSettings = false;
   }
 
-  function applySettings(next: Settings, color: ColorKey) {
-    settings = next;
-    saveSettings(next);
-    applyTheme(next.theme, next.customTheme);
-    void applyPieceSet(next.pieceSet);
-    setLocale(next.uiLanguage);
-    showSettings = false;
-    void startGame(color);
+  async function applySettings(
+    next: Settings,
+    color: ColorKey,
+    startNew: boolean,
+  ): Promise<string | null> {
+    const needsNewGame = startNew || !snapshot || color !== snapshot.humanColor;
+    if (needsNewGame) {
+      const previousSettings = settings;
+      const previousColor = humanColor;
+      const previousFlipped = flipped;
+      settings = next;
+      saveSettings(next);
+      applyTheme(next.theme, next.customTheme);
+      void applyPieceSet(next.pieceSet);
+      applyFontScale(next.fontScale);
+      setLocale(next.uiLanguage);
+      const message = await startGame(color);
+      if (!message) {
+        showSettings = false;
+        return null;
+      }
+      settings = previousSettings;
+      humanColor = previousColor;
+      flipped = previousFlipped;
+      saveSettings(previousSettings);
+      saveHumanColor(previousColor);
+      applyTheme(previousSettings.theme, previousSettings.customTheme);
+      void applyPieceSet(previousSettings.pieceSet);
+      applyFontScale(previousSettings.fontScale);
+      setLocale(previousSettings.uiLanguage);
+      return message;
+    }
+    try {
+      const updated = await invoke<GameSnapshot>("update_settings", {
+        settings: next,
+      });
+      applySnapshot(updated);
+      showSettings = false;
+      return null;
+    } catch (value) {
+      const message = errorMessage(value);
+      error = message;
+      return message;
+    }
   }
 
   onMount(() => {

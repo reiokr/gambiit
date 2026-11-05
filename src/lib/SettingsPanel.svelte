@@ -18,7 +18,11 @@
   export let settings: Settings;
   export let models: string[] = [];
   export let initialColor: ColorKey = "white";
-  export let onApply: (settings: Settings, humanColor: ColorKey) => void = () => {};
+  export let onApply: (
+    settings: Settings,
+    humanColor: ColorKey,
+    startNew: boolean,
+  ) => Promise<string | null> = async () => null;
   export let onClose: () => void = () => {};
   export let onRefreshModels: () => Promise<void> | void = () => {};
 
@@ -57,6 +61,8 @@
   let pieceSets: PieceSetSummary[] = [];
   let pieceSetError = "";
   let pieceSetMessage = "";
+  let applyError = "";
+  let applying = false;
 
   $: applyFontScale(draft.fontScale);
   $: if (draft.theme === "custom") {
@@ -68,6 +74,24 @@
   $: pieceSetMissing =
     pieceSets.length > 0 &&
     !pieceSets.some((set) => set.id === draft.pieceSet);
+  $: opponentChanged =
+    draft.model !== settings.model ||
+    draft.persona !== settings.persona ||
+    draft.difficulty !== settings.difficulty ||
+    draft.stockfishDepth !== settings.stockfishDepth ||
+    draft.multipv !== settings.multipv ||
+    draft.agentLanguage !== settings.agentLanguage;
+  $: colorChanged = humanColor !== initialColor;
+  $: appearanceChanged =
+    draft.theme !== settings.theme ||
+    !sameTheme(draft.customTheme, settings.customTheme) ||
+    draft.pieceSet !== settings.pieceSet ||
+    draft.uiLanguage !== settings.uiLanguage ||
+    draft.sound !== settings.sound ||
+    draft.animations !== settings.animations ||
+    draft.responseMode !== settings.responseMode ||
+    Math.abs(draft.fontScale - settings.fontScale) > 0.001;
+  $: hasChanges = opponentChanged || colorChanged || appearanceChanged;
   $: provider = draft.model.includes("/")
     ? draft.model.split("/")[0].trim()
     : "";
@@ -185,6 +209,20 @@
     return previews[id] ?? [];
   }
 
+  function sameTheme(left: typeof draft.customTheme, right: typeof draft.customTheme): boolean {
+    return (
+      left.bg === right.bg &&
+      left.panel === right.panel &&
+      left.border === right.border &&
+      left.text === right.text &&
+      left.muted === right.muted &&
+      left.accent === right.accent &&
+      left.boardLight === right.boardLight &&
+      left.boardDark === right.boardDark &&
+      left.boardBorder === right.boardBorder
+    );
+  }
+
   function selectTheme(theme: string) {
     draft.theme = theme;
     applyTheme(theme, draft.customTheme);
@@ -248,8 +286,19 @@
     }
   }
 
-  function apply() {
-    onApply({ ...draft }, humanColor);
+  async function submit(startNew: boolean) {
+    if (!hasChanges || applying) return;
+    applying = true;
+    applyError = "";
+    const error = await onApply(
+      { ...draft, customTheme: { ...draft.customTheme } },
+      humanColor,
+      startNew,
+    );
+    if (error) {
+      applyError = error;
+      applying = false;
+    }
   }
 </script>
 
@@ -695,12 +744,48 @@
     </div>
 
     <footer class="foot">
-      <button class="btn ghost" type="button" on:click={onClose}>
-        {$i18n("settings.cancel")}
-      </button>
-      <button class="btn primary" type="button" on:click={apply}>
-        {$i18n("settings.apply")}
-      </button>
+      {#if colorChanged}
+        <p class="foot-warning">{$i18n("settings.colorWarning")}</p>
+      {:else if opponentChanged}
+        <p class="foot-warning">{$i18n("settings.gameWarning")}</p>
+      {/if}
+      {#if applyError}
+        <p class="foot-error">{applyError}</p>
+      {/if}
+      <div class="foot-actions">
+        <button class="btn ghost" type="button" on:click={onClose}>
+          {$i18n("settings.cancel")}
+        </button>
+        {#if opponentChanged && !colorChanged}
+          <button
+            class="btn"
+            type="button"
+            disabled={applying}
+            on:click={() => submit(true)}
+          >
+            {$i18n("settings.saveAndNew")}
+          </button>
+        {/if}
+        {#if colorChanged}
+          <button
+            class="btn primary"
+            type="button"
+            disabled={applying}
+            on:click={() => submit(true)}
+          >
+            {applying ? $i18n("settings.saving") : $i18n("settings.saveAndNew")}
+          </button>
+        {:else}
+          <button
+            class="btn primary"
+            type="button"
+            disabled={!hasChanges || applying}
+            on:click={() => submit(false)}
+          >
+            {applying ? $i18n("settings.saving") : $i18n("settings.saveChanges")}
+          </button>
+        {/if}
+      </div>
     </footer>
   </div>
 </div>
@@ -1365,11 +1450,45 @@
 
   .foot {
     display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    padding: 16px 26px;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 26px 16px;
     border-top: 1px solid var(--border);
     background: var(--panel-2);
+  }
+
+  .foot-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .foot-warning {
+    padding: 7px 9px;
+    margin: 0;
+    border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--border));
+    border-radius: 7px;
+    background: var(--accent-soft);
+    color: var(--muted);
+    font-size: calc(10px * var(--font-scale));
+    line-height: 1.5;
+  }
+
+  .foot-error {
+    padding: 7px 9px;
+    margin: 0;
+    border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border));
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--panel) 92%, var(--danger));
+    color: var(--danger);
+    font-size: calc(10px * var(--font-scale));
+    line-height: 1.5;
+  }
+
+  .btn:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
   }
 
   .btn {
