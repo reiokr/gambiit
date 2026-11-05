@@ -9,6 +9,8 @@ personality, a plan, and a taste for theater.
 
 ![Gambiit desktop UI](docs/ui-preview.png)
 
+**Eestikeelne tööplaan:** [`PLAN.et.md`](PLAN.et.md)
+
 ## Status
 
 **Desktop UI milestone complete** — a playable Tauri app with a real OpenCode

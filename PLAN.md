@@ -7,6 +7,8 @@
 
 > This is the editable working plan. When the repository is created, copy it to
 > `~/projektid/gambiit/PLAN.md` (or `docs/PLAN.md`) and keep it in sync.
+>
+> Estonian working version: [`PLAN.et.md`](PLAN.et.md).
 
 ---
 
