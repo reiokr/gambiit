@@ -95,6 +95,7 @@
     "firstLine": "The first line is yours."
   },
   "commentary": {
+    "noComment": "No commentary was provided for this move.",
     "quiet": "The theater is quiet.",
     "emptyPrefix": "Make a move.",
     "emptySuffix": "will answer with a plan, a reason, and possibly a lie.",

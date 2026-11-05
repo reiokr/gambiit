@@ -95,6 +95,7 @@
     "firstLine": "Esimene rida on sinu."
   },
   "commentary": {
+    "noComment": "Selle käigu kohta kommentaari ei antud.",
     "quiet": "Teater on vaikne.",
     "emptyPrefix": "Tee käik.",
     "emptySuffix": "vastab plaaniga, põhjendusega ja võib-olla valega.",

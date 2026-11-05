@@ -342,6 +342,7 @@ impl AgentSession {
         F: Fn(&AgentTurn) -> Result<(), String>,
     {
         let mut last_error = None;
+        let mut fallback = None;
         for attempt in 0..=self.config.retries {
             let prompt = if attempt == 0 {
                 build_move_prompt(game, &self.config, candidates)
@@ -355,17 +356,39 @@ impl AgentSession {
                 )
             };
 
-            let output = self
+            let output = match self
                 .client
-                .run(&self.config, &prompt, self.session_id.as_deref())?;
+                .run(&self.config, &prompt, self.session_id.as_deref())
+            {
+                Ok(output) => output,
+                Err(error) => {
+                    if let Some((turn, output)) = fallback.take() {
+                        return Ok((turn, output));
+                    }
+                    return Err(error);
+                }
+            };
             if output.session_id.is_some() {
                 self.session_id = output.session_id.clone();
             }
             self.last_raw = Some(output.text.clone());
 
             match parse_agent_turn(&output.text) {
-                Ok(turn) => match validate(&turn) {
-                    Ok(()) => return Ok((turn, output)),
+                Ok(mut turn) => match validate(&turn) {
+                    Ok(()) => {
+                        if turn.comment.trim().is_empty() {
+                            last_error = Some(
+                                "the JSON response must include a non-empty `comment` field for the Theater panel"
+                                    .to_string(),
+                            );
+                            if fallback.is_none() {
+                                turn.comment = fallback_comment(game, &self.config, &turn.mv);
+                                fallback = Some((turn, output));
+                            }
+                        } else {
+                            return Ok((turn, output));
+                        }
+                    }
                     Err(error) => {
                         last_error = Some(error);
                     }
@@ -376,6 +399,9 @@ impl AgentSession {
             }
         }
 
+        if let Some((turn, output)) = fallback {
+            return Ok((turn, output));
+        }
         Err(AgentError::InvalidMove(last_error.unwrap_or_else(|| {
             "agent did not return a valid move".into()
         })))
@@ -482,6 +508,8 @@ COMMENTARY (the persona applies here):
 2. Name 3-4 candidate moves and explain why each rejected candidate was rejected.
 3. Explain the chosen move and your plan.
 You may bluff about evaluations and future plans, but never about mechanics: the game validates legality, captures, check and checkmate. Do not claim a false rule fact.
+
+Every JSON field below is required. `comment` must be a non-empty public sentence (or a few sentences) for the Theater panel; an empty comment is invalid. Include at least two candidate entries and a non-empty plan.
 
 Reply with ONLY one JSON object, no markdown fences, no prose before or after:
 {{
@@ -617,6 +645,19 @@ fn build_draw_retry_prompt(game: &Game, config: &AgentConfig, error: &str) -> St
     format!(
         "{base}\n\nYour previous answer was invalid: {error}\nReturn only the JSON object with a boolean \"accept\" field and a short \"comment\"."
     )
+}
+
+fn fallback_comment(game: &Game, config: &AgentConfig, mv: &str) -> String {
+    let mut probe = game.clone();
+    let san = probe
+        .apply_uci(mv)
+        .or_else(|_| probe.apply_san(mv))
+        .map(|info| info.san)
+        .unwrap_or_else(|_| mv.to_string());
+    match config.language.to_ascii_lowercase().as_str() {
+        "et" | "est" | "estonian" => format!("Mängin {san}. Ülejäänu räägib laud."),
+        _ => format!("I play {san}. The board will tell the rest."),
+    }
 }
 
 fn build_retry_prompt(
@@ -918,6 +959,32 @@ mod tests {
         };
         let prompt = build_move_prompt(&game, &config, &[]);
         assert!(prompt.contains("Commentary language: Estonian"));
+    }
+
+    #[test]
+    fn fallback_comment_uses_san_and_language() {
+        let game = Game::new();
+        let english = AgentConfig::default();
+        assert_eq!(
+            fallback_comment(&game, &english, "g1f3"),
+            "I play Nf3. The board will tell the rest."
+        );
+        let estonian = AgentConfig {
+            language: "et".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(
+            fallback_comment(&game, &estonian, "g1f3"),
+            "Mängin Nf3. Ülejäänu räägib laud."
+        );
+    }
+
+    #[test]
+    fn move_prompt_requires_commentary_fields() {
+        let game = Game::new();
+        let prompt = build_move_prompt(&game, &AgentConfig::default(), &[]);
+        assert!(prompt.contains("Every JSON field below is required"));
+        assert!(prompt.contains("empty comment is invalid"));
     }
 
     #[test]

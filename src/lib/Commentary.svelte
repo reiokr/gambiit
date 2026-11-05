@@ -78,6 +78,8 @@
 
           {#if card.comment}
             <p class="comment">{card.comment}</p>
+          {:else}
+            <p class="comment muted">{$i18n("commentary.noComment")}</p>
           {/if}
 
           {#if card.candidates.length > 0}
@@ -211,6 +213,11 @@
     font-size: calc(12.5px * var(--font-scale));
     line-height: 1.62;
     white-space: pre-line;
+  }
+
+  .comment.muted {
+    color: var(--muted);
+    font-style: italic;
   }
 
   .candidates {
