@@ -66,6 +66,8 @@ pub struct AgentConfig {
     pub language_name: String,
     pub timeout_secs: u64,
     pub retries: usize,
+    /// Extra environment variables for the child process, e.g. provider API keys.
+    pub env: Vec<(String, String)>,
 }
 
 impl Default for AgentConfig {
@@ -77,6 +79,7 @@ impl Default for AgentConfig {
             language_name: "English".to_string(),
             timeout_secs: 180,
             retries: 1,
+            env: Vec::new(),
         }
     }
 }
@@ -121,6 +124,16 @@ impl OpenCodeClient {
         session: Option<&str>,
     ) -> Result<OpenCodeOutput, AgentError> {
         let mut command = Command::new(&self.binary);
+        for (name, value) in &config.env {
+            command.env(name, value);
+        }
+        // The desktop CLI talks to its background service by default. A custom
+        // provider key needs a private server so the child environment is used.
+        if !config.env.is_empty()
+            && self.binary.file_name().and_then(|name| name.to_str()) == Some("opencode-cli")
+        {
+            command.arg("--standalone");
+        }
         command
             .arg("run")
             .arg("--format")

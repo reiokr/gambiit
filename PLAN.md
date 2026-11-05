@@ -72,6 +72,10 @@ Completed:
 - Localized UI + agent language: `src/locales/*.json` auto-discovery, English
   and Estonian catalogs, language selection only in Settings, independent UI
   and agent languages.
+- Searchable model picker grouped by provider, with model-list refresh.
+- Optional provider API keys stored in `~/.config/gambiit/credentials.json`
+  (0600), passed as environment variables to a private OpenCode child server;
+  empty key falls back to OpenCode's own authentication.
 - Five Stockfish difficulty levels — Beginner, Casual, Intermediate, Strong and
   Master — plus Custom. Selecting a level sets the depth/MultiPV sliders; moving
   a slider selects Custom. Stockfish `Skill Level` is part of each preset.

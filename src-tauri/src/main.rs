@@ -1,5 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod credentials;
+
 use gambiit_agent::{AgentConfig, AgentSession, AgentTurn, OpenCodeClient};
 use gambiit_core::{Game, GameStatus, MoveInfo, MoveRecord, color_key};
 use gambiit_engine::Stockfish;
@@ -127,7 +129,8 @@ impl Session {
         game.set_human_color(human_color);
 
         let mut agent_error = None;
-        let agent = match AgentSession::new(agent_config(&settings)) {
+        let credential_env = credential_env_for_model(&settings.model);
+        let agent = match AgentSession::new(agent_config(&settings, credential_env)) {
             Ok(agent) => Some(agent),
             Err(error) => {
                 agent_error = Some(format!("Agent unavailable: {error}"));
@@ -433,6 +436,25 @@ fn list_models() -> Result<Vec<String>, String> {
     Ok(models)
 }
 
+#[tauri::command]
+fn credential_status(provider: String) -> credentials::CredentialStatus {
+    credentials::status(&provider)
+}
+
+#[tauri::command]
+fn save_credential(
+    provider: String,
+    env_var: String,
+    key: String,
+) -> Result<credentials::CredentialStatus, String> {
+    credentials::set(&provider, &env_var, &key)
+}
+
+#[tauri::command]
+fn delete_credential(provider: String) -> Result<credentials::CredentialStatus, String> {
+    credentials::delete(&provider)
+}
+
 fn parse_color(value: &str) -> Option<Color> {
     match value.to_ascii_lowercase().as_str() {
         "white" | "w" => Some(Color::White),
@@ -516,7 +538,7 @@ fn engine_params(settings: &Settings) -> (usize, u32, u8) {
     ))
 }
 
-fn agent_config(settings: &Settings) -> AgentConfig {
+fn agent_config(settings: &Settings, env: Vec<(String, String)>) -> AgentConfig {
     AgentConfig {
         model: settings.model.clone(),
         persona: settings.persona.clone(),
@@ -524,7 +546,15 @@ fn agent_config(settings: &Settings) -> AgentConfig {
         language_name: settings.agent_language_name.clone(),
         timeout_secs: 180,
         retries: 1,
+        env,
     }
+}
+
+fn credential_env_for_model(model: &str) -> Vec<(String, String)> {
+    let provider = model.split('/').next().unwrap_or("").trim();
+    credentials::env_for_provider(provider)
+        .into_iter()
+        .collect()
 }
 
 fn status_parts(status: GameStatus, turn: Color) -> (String, Option<String>) {
@@ -564,7 +594,10 @@ pub fn run() {
             agent_move,
             takeback,
             resign,
-            list_models
+            list_models,
+            credential_status,
+            save_credential,
+            delete_credential
         ])
         .run(tauri::generate_context!())
         .expect("error while running Gambiit");

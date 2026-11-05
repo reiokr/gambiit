@@ -308,6 +308,14 @@
     void startGame(humanColor);
   }
 
+  async function refreshModels() {
+    try {
+      models = await invoke<string[]>("list_models");
+    } catch {
+      models = [];
+    }
+  }
+
   function openSettings() {
     showSettings = true;
   }
@@ -334,11 +342,7 @@
     setLocale(settings.uiLanguage);
     void (async () => {
       await startGame(humanColor);
-      try {
-        models = await invoke<string[]>("list_models");
-      } catch {
-        models = [];
-      }
+      await refreshModels();
     })();
   });
 </script>
@@ -597,6 +601,7 @@
         initialColor={snapshot.humanColor}
         onApply={applySettings}
         onClose={cancelSettings}
+        onRefreshModels={refreshModels}
       />
     {/if}
   </div>

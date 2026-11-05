@@ -36,6 +36,9 @@ What works now:
 - settings for model, persona, response mode, colour, theme, font size
   (90–150%, default 120%), language, sound, animations, Stockfish depth and
   candidate count;
+- searchable model picker grouped by provider, with a model-list refresh;
+- optional provider API keys stored locally with 0600 permissions and passed to
+  OpenCode as environment variables; no key means OpenCode's own auth is used;
 - separate UI and agent languages, both selected in Settings; the agent can
   answer in English while the UI is Estonian;
 - illustrated theater personas: Theater Master, Cold Calculator, Trickster,
@@ -88,6 +91,16 @@ code.
 
 See [`docs/LOCALES.md`](docs/LOCALES.md) for the format and translation workflow.
 English and Estonian are included.
+
+## Models and API keys
+
+The model selector is searchable and grouped by provider. If a provider needs
+an API key, open **Settings → Opponent → Provider credentials**. Keys are kept in
+`~/.config/gambiit/credentials.json` with `0600` permissions and are never sent
+back to the UI. Leaving the key empty uses OpenCode’s existing authentication.
+
+See [`docs/CREDENTIALS.md`](docs/CREDENTIALS.md) for the environment-variable
+mapping, storage details and OpenCode Go/Copilot caveats.
 
 ## Requirements
 

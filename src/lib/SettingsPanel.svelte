@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onMount } from "svelte";
+  import { invoke } from "@tauri-apps/api/core";
   import type { ColorKey, Settings } from "./types";
   import { THEMES, applyTheme } from "./themes";
   import { applyFontScale } from "./settings";
@@ -16,11 +18,143 @@
   export let initialColor: ColorKey = "white";
   export let onApply: (settings: Settings, humanColor: ColorKey) => void = () => {};
   export let onClose: () => void = () => {};
+  export let onRefreshModels: () => Promise<void> | void = () => {};
+
+  interface CredentialStatus {
+    provider: string;
+    envVar: string | null;
+    hasKey: boolean;
+  }
+
+  const PROVIDER_ENV: Record<string, string> = {
+    openai: "OPENAI_API_KEY",
+    anthropic: "ANTHROPIC_API_KEY",
+    openrouter: "OPENROUTER_API_KEY",
+    opencode: "OPENCODE_API_KEY",
+    "opencode-go": "OPENCODE_GO_API_KEY",
+    google: "GOOGLE_GENERATIVE_AI_API_KEY",
+    gemini: "GEMINI_API_KEY",
+    groq: "GROQ_API_KEY",
+    mistral: "MISTRAL_API_KEY",
+    xai: "XAI_API_KEY",
+    deepseek: "DEEPSEEK_API_KEY",
+    localai: "LOCALAI_API_KEY",
+  };
 
   let draft: Settings = { ...settings, fontScale: settings.fontScale ?? 1.2 };
   let humanColor: ColorKey = initialColor;
+  let modelOpen = false;
+  let modelFilter = "";
+  let provider = "";
+  let envVar = "";
+  let credential: CredentialStatus | null = null;
+  let keyInput = "";
+  let keyMessage = "";
+  let keyBusy = false;
+  let providerSync = 0;
 
   $: applyFontScale(draft.fontScale);
+  $: provider = draft.model.includes("/")
+    ? draft.model.split("/")[0].trim()
+    : "";
+  $: filteredModels = models
+    .filter((model) =>
+      model.toLowerCase().includes(modelFilter.toLowerCase()),
+    )
+    .slice(0, 200);
+  $: groupedModels = (() => {
+    const groups = new Map<string, string[]>();
+    for (const model of filteredModels) {
+      const group = model.includes("/") ? model.split("/")[0] : "custom";
+      const list = groups.get(group) ?? [];
+      list.push(model);
+      groups.set(group, list);
+    }
+    return [...groups.entries()].map(([name, entries]) => ({
+      provider: name,
+      models: entries,
+    }));
+  })();
+
+  onMount(() => {
+    void syncProvider();
+  });
+
+  async function syncProvider() {
+    const token = ++providerSync;
+    const current = provider;
+    envVar = PROVIDER_ENV[current] ?? "";
+    credential = null;
+    keyMessage = "";
+    if (!current) return;
+    try {
+      const status = await invoke<CredentialStatus>("credential_status", {
+        provider: current,
+      });
+      if (token !== providerSync) return;
+      credential = status;
+      if (status.envVar) {
+        envVar = status.envVar;
+      }
+    } catch {
+      if (token === providerSync) {
+        credential = null;
+      }
+    }
+  }
+
+  function chooseModel(model: string) {
+    draft.model = model;
+    modelFilter = "";
+    modelOpen = false;
+    void syncProvider();
+  }
+
+  function closeModelMenuSoon() {
+    window.setTimeout(() => {
+      modelOpen = false;
+    }, 120);
+  }
+
+  function handleModelBlur() {
+    closeModelMenuSoon();
+    void syncProvider();
+  }
+
+  async function saveKey() {
+    if (!provider || !envVar.trim() || !keyInput.trim()) return;
+    keyBusy = true;
+    keyMessage = "";
+    try {
+      credential = await invoke<CredentialStatus>("save_credential", {
+        provider,
+        envVar,
+        key: keyInput,
+      });
+      keyInput = "";
+      keyMessage = $i18n("settings.keySavedMessage");
+    } catch (value) {
+      keyMessage = value instanceof Error ? value.message : String(value);
+    } finally {
+      keyBusy = false;
+    }
+  }
+
+  async function removeKey() {
+    if (!provider) return;
+    keyBusy = true;
+    keyMessage = "";
+    try {
+      credential = await invoke<CredentialStatus>("delete_credential", {
+        provider,
+      });
+      keyMessage = $i18n("settings.keyRemovedMessage");
+    } catch (value) {
+      keyMessage = value instanceof Error ? value.message : String(value);
+    } finally {
+      keyBusy = false;
+    }
+  }
 
   const previews: Record<string, string[]> = {
     salon: ["#e8d3b0", "#8b5a2b", "#c9a227"],
@@ -92,24 +226,136 @@
           <span>{$i18n("settings.opponentHint")}</span>
         </div>
 
-        <label class="field">
+        <div class="field model-field">
           <span>{$i18n("settings.model")}</span>
-          <input
-            list="gambiit-models"
-            bind:value={draft.model}
-            spellcheck="false"
-            autocomplete="off"
-            placeholder="provider/model"
-          />
-          <datalist id="gambiit-models">
-            {#each models as model}
-              <option value={model}></option>
-            {/each}
-          </datalist>
+          <div class="model-picker">
+            <input
+              bind:value={draft.model}
+              spellcheck="false"
+              autocomplete="off"
+              placeholder="provider/model"
+              on:focus={(event) => {
+                modelOpen = true;
+                modelFilter = "";
+                event.currentTarget.select();
+              }}
+              on:input={(event) => {
+                modelOpen = true;
+                modelFilter = event.currentTarget.value;
+              }}
+              on:keydown={(event) => {
+                if (event.key === "Escape") modelOpen = false;
+              }}
+              on:blur={handleModelBlur}
+            />
+            <span class="model-caret" aria-hidden="true">▾</span>
+            {#if modelOpen}
+              <div class="model-menu">
+                <div class="model-menu-head">
+                  <span>
+                    {$i18n("settings.modelsShown", {
+                      shown: filteredModels.length,
+                      total: models.length,
+                    })}
+                  </span>
+                  <button
+                    type="button"
+                    on:click={() => void onRefreshModels()}
+                  >
+                    {$i18n("settings.refreshModels")}
+                  </button>
+                </div>
+                <div class="model-options">
+                  {#each groupedModels as group}
+                    <div class="model-provider">{group.provider}</div>
+                    {#each group.models as model}
+                      <button
+                        type="button"
+                        class="model-option"
+                        class:active={draft.model === model}
+                        on:mousedown|preventDefault
+                        on:click={() => chooseModel(model)}
+                      >
+                        {model}
+                      </button>
+                    {/each}
+                  {/each}
+                </div>
+              </div>
+            {/if}
+          </div>
           <small>
             {$i18n("settings.modelsDiscovered", { count: models.length })}
           </small>
-        </label>
+        </div>
+
+        <div class="credentials">
+          {#if provider}
+            <div class="credentials-head">
+              <span>
+                {$i18n("settings.credentials")}
+                <b>{provider}</b>
+              </span>
+              {#if credential?.hasKey}
+                <span class="key-saved">{$i18n("settings.keySaved")}</span>
+              {/if}
+            </div>
+
+            {#if provider === "ollama"}
+              <p class="hint">{$i18n("settings.localProvider")}</p>
+            {:else}
+              <div class="grid two">
+                <label class="field">
+                  <span>{$i18n("settings.envVar")}</span>
+                  <input
+                    bind:value={envVar}
+                    spellcheck="false"
+                    autocomplete="off"
+                  />
+                </label>
+                <label class="field">
+                  <span>{$i18n("settings.apiKey")}</span>
+                  <input
+                    type="password"
+                    bind:value={keyInput}
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder={credential?.hasKey
+                      ? $i18n("settings.keySavedPlaceholder")
+                      : $i18n("settings.keyPlaceholder")}
+                  />
+                </label>
+              </div>
+              <div class="credential-actions">
+                <button
+                  class="btn"
+                  type="button"
+                  disabled={keyBusy || !keyInput.trim() || !envVar.trim()}
+                  on:click={saveKey}
+                >
+                  {$i18n("settings.saveKey")}
+                </button>
+                {#if credential?.hasKey}
+                  <button
+                    class="btn ghost"
+                    type="button"
+                    disabled={keyBusy}
+                    on:click={removeKey}
+                  >
+                    {$i18n("settings.removeKey")}
+                  </button>
+                {/if}
+                {#if keyMessage}
+                  <span class="key-message">{keyMessage}</span>
+                {/if}
+              </div>
+              <p class="hint">{$i18n("settings.credentialsHint")}</p>
+              {#if provider === "opencode-go" || provider === "github-copilot"}
+                <p class="hint">{$i18n("settings.opencodeAuthHint")}</p>
+              {/if}
+            {/if}
+          {/if}
+        </div>
 
         <div class="field persona-field">
           <span>{$i18n("settings.persona")}</span>
@@ -464,6 +710,150 @@
   .field b {
     color: var(--accent);
     font-family: var(--font-mono);
+  }
+
+  .model-field {
+    position: relative;
+  }
+
+  .model-picker {
+    position: relative;
+  }
+
+  .model-picker input {
+    padding-right: 30px;
+  }
+
+  .model-caret {
+    position: absolute;
+    top: 50%;
+    right: 11px;
+    color: var(--faint);
+    font-size: calc(11px * var(--font-scale));
+    pointer-events: none;
+    transform: translateY(-50%);
+  }
+
+  .model-menu {
+    position: absolute;
+    z-index: 40;
+    top: calc(100% + 6px);
+    right: 0;
+    left: 0;
+    max-height: 340px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--panel);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.38);
+  }
+
+  .model-menu-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--faint);
+    font-size: calc(9px * var(--font-scale));
+  }
+
+  .model-menu-head button {
+    padding: 2px 6px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--panel-2);
+    color: var(--muted);
+    font-size: calc(9px * var(--font-scale));
+    cursor: pointer;
+  }
+
+  .model-options {
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+  }
+
+  .model-provider {
+    padding: 7px 8px 3px;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: calc(9px * var(--font-scale));
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .model-option {
+    padding: 5px 8px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: calc(10px * var(--font-scale));
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .model-option:hover,
+  .model-option.active {
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+  }
+
+  .credentials {
+    margin-top: 14px;
+    padding: 11px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--panel-2);
+  }
+
+  .credentials-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--muted);
+    font-size: calc(11px * var(--font-scale));
+  }
+
+  .credentials-head b {
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: calc(10px * var(--font-scale));
+  }
+
+  .key-saved {
+    padding: 2px 6px;
+    border: 1px solid color-mix(in srgb, var(--success) 45%, var(--border));
+    border-radius: 999px;
+    color: var(--success);
+    font-size: calc(9px * var(--font-scale));
+    white-space: nowrap;
+  }
+
+  .credential-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 9px;
+    flex-wrap: wrap;
+  }
+
+  .credential-actions .btn {
+    padding: 6px 10px;
+    font-size: calc(10px * var(--font-scale));
+  }
+
+  .key-message {
+    color: var(--muted);
+    font-size: calc(10px * var(--font-scale));
   }
 
   input:not([type="checkbox"]):not([type="range"]),

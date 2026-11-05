@@ -96,6 +96,10 @@ Valmis:
 - Lokaliseeritud UI + agendi keel: `src/locales/*.json` automaatne avastamine,
   inglise ja eesti kataloog; keelevaik ainult seadetes; UI- ja agendikeel on
   teineteisest sõltumatud.
+- Otsitav mudelivalik pakkujate kaupa ja mudelite nimekirja värskendus.
+- Valikulised pakkuja API-võtmed `~/.config/gambiit/credentials.json` failis
+  (0600), edastatakse keskkonnamuutujana privaatsele OpenCode'i lapsprotsessile;
+  tühi võti kasutab OpenCode'i enda autentimist.
 - Viis Stockfishi raskusastet — Algaja, Harrastaja, Edasijõudnu, Tugev ja
   Meister — pluss Kohandatud. Taseme valik seab depth/MultiPV liugurid; liuguri
   liigutamine valib Kohandatud. Igal preseedil on ka Stockfishi `Skill Level`.

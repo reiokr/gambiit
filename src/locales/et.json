@@ -131,7 +131,22 @@
     "engineNote": "Raskusaste määrab Stockfishi kandidaatide valiku; isiksus muudab ainult häält. Stockfish pakub kandidaadid, mudel valib ühe ja võib hinnangu osas ikkagi bluffida. Laud jääb autoriteetseks.",
     "cancel": "Tühista",
     "apply": "Rakenda ja alusta uut mängu",
-    "modelsDiscovered": "{count} mudelit avastatud"
+    "modelsDiscovered": "{count} mudelit avastatud",
+    "modelsShown": "{shown}/{total} mudelit — kirjuta otsimiseks",
+    "refreshModels": "Värskenda",
+    "credentials": "Pakkuja mandaadid",
+    "keySaved": "Võti salvestatud",
+    "localProvider": "Kohalik pakkuja — API-võtit pole vaja.",
+    "envVar": "Keskkonnamuutuja",
+    "apiKey": "API-võti",
+    "keySavedPlaceholder": "Salvestatud — uue võtme jaoks sisesta uus",
+    "keyPlaceholder": "Kleebi API-võti",
+    "saveKey": "Salvesta võti",
+    "removeKey": "Eemalda",
+    "keySavedMessage": "Võti salvestatud lokaalselt.",
+    "keyRemovedMessage": "Võti eemaldatud.",
+    "credentialsHint": "Salvestatakse lokaalselt 0600 õigustega. Tühjaks jättes kasutatakse OpenCode'i enda autentimist. Rakendub uue mängu alguses.",
+    "opencodeAuthHint": "OpenCode Go ja GitHub Copilot võivad kasutada desktop-rakenduse enda login'i; kohandatud võti ei pruugi seda üle kirjutada."
   },
   "personas": {
     "theaterMaster": "Teatrimeister",

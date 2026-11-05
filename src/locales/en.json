@@ -131,7 +131,22 @@
     "engineNote": "Difficulty sets the Stockfish candidate pool; the persona changes only the voice. Stockfish proposes the candidates, the model chooses one, and may still bluff about the evaluation. The board stays authoritative.",
     "cancel": "Cancel",
     "apply": "Apply & start new game",
-    "modelsDiscovered": "{count} models discovered"
+    "modelsDiscovered": "{count} models discovered",
+    "modelsShown": "{shown} of {total} models — type to search",
+    "refreshModels": "Refresh",
+    "credentials": "Provider credentials",
+    "keySaved": "Key saved",
+    "localProvider": "Local provider — no API key needed.",
+    "envVar": "Environment variable",
+    "apiKey": "API key",
+    "keySavedPlaceholder": "Saved — paste a new key to replace",
+    "keyPlaceholder": "Paste API key",
+    "saveKey": "Save key",
+    "removeKey": "Remove",
+    "keySavedMessage": "Key saved locally.",
+    "keyRemovedMessage": "Key removed.",
+    "credentialsHint": "Stored locally with 0600 permissions. Leave empty to use OpenCode's own authentication. Applied when you start a game.",
+    "opencodeAuthHint": "OpenCode Go and GitHub Copilot may use the desktop app's own login; a custom key may not override it."
   },
   "personas": {
     "theaterMaster": "Theater Master",
