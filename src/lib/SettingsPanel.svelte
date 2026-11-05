@@ -66,6 +66,7 @@
   let pieceSetMessage = "";
   let applyError = "";
   let applying = false;
+  let savedMessage = "";
   type SettingsTab = "game" | "appearance" | "language" | "connection";
   let activeTab: SettingsTab = "game";
   let bodyEl: HTMLDivElement | null = null;
@@ -106,6 +107,7 @@
         draft.clockInitialMs !== settings.clockInitialMs ||
         draft.clockIncrementMs !== settings.clockIncrementMs));
   $: hasChanges = opponentChanged || colorChanged || appearanceChanged || clockChanged;
+  $: if (hasChanges) savedMessage = "";
   $: provider = draft.model.includes("/")
     ? draft.model.split("/")[0].trim()
     : "";
@@ -352,6 +354,7 @@
     if (!hasChanges || applying) return;
     applying = true;
     applyError = "";
+    savedMessage = "";
     const error = await onApply(
       { ...draft, customTheme: { ...draft.customTheme } },
       humanColor,
@@ -359,8 +362,10 @@
     );
     if (error) {
       applyError = error;
-      applying = false;
+    } else {
+      savedMessage = $i18n("settings.saved");
     }
+    applying = false;
   }
 </script>
 
@@ -974,6 +979,9 @@
         <p class="foot-error">{applyError}</p>
       {/if}
       <div class="foot-actions">
+        {#if savedMessage}
+          <span class="foot-saved">{$i18n("settings.saved")}</span>
+        {/if}
         <button class="btn ghost" type="button" on:click={onClose}>
           {$i18n("settings.cancel")}
         </button>
@@ -1882,6 +1890,14 @@
     color: var(--danger);
     font-size: calc(10px * var(--font-scale));
     line-height: 1.5;
+  }
+
+  .foot-saved {
+    margin-right: auto;
+    color: var(--success);
+    font-family: var(--font-mono);
+    font-size: calc(9px * var(--font-scale));
+    letter-spacing: 0.04em;
   }
 
   .btn:disabled {

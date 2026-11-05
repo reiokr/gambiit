@@ -159,6 +159,7 @@
     "cancel": "Cancel",
     "saveChanges": "Save changes",
     "saving": "Saving…",
+    "saved": "Saved",
     "saveAndNew": "Save & start new game",
     "gameWarning": "Model, persona, difficulty or agent language changes affect the current opponent from the next move. You can keep playing, or save and start a new game.",
     "colorWarning": "Changing colour requires a new game. Saving will start it now.",

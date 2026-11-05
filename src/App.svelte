@@ -598,7 +598,6 @@
         settings: next,
       });
       applySnapshot(updated);
-      showSettings = false;
       return null;
     } catch (value) {
       const message = errorMessage(value);

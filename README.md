@@ -116,6 +116,8 @@ without restarting the current game.
   to keep playing, or **Save & start new game**.
 - Changing colour always requires a new game, so the panel says so and starts it
   when you save.
+- **Save changes** keeps the settings panel open so you can keep editing. Only
+  **Save & start new game** closes it.
 
 ### Piece sets
 
