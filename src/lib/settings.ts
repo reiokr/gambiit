@@ -1,4 +1,5 @@
 import type { Settings } from "./types";
+import { DEFAULT_CUSTOM_THEME, sanitizeCustomTheme } from "./themes";
 import {
   DIFFICULTIES,
   DIFFICULTY_ALIASES,
@@ -19,6 +20,8 @@ export const DEFAULT_SETTINGS: Settings = {
   multipv: 4,
   difficulty: "intermediate",
   theme: "salon",
+  customTheme: { ...DEFAULT_CUSTOM_THEME },
+  pieceSet: "cburnett",
   sound: true,
   animations: true,
   fontScale: 1.2,
@@ -54,6 +57,16 @@ export function loadSettings(): Settings {
     if (preset.id !== "custom") {
       merged.stockfishDepth = preset.depth;
       merged.multipv = preset.multipv;
+    }
+    merged.customTheme = sanitizeCustomTheme(stored.customTheme);
+    if (!["salon", "tournament", "midnight", "custom"].includes(merged.theme)) {
+      merged.theme = "salon";
+    }
+    if (
+      typeof merged.pieceSet !== "string" ||
+      !/^[a-zA-Z0-9_-]{1,64}$/.test(merged.pieceSet)
+    ) {
+      merged.pieceSet = "cburnett";
     }
     return merged;
   } catch {

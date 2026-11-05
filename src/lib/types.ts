@@ -54,6 +54,18 @@ export interface CommentaryCard {
   elapsedMs: number;
 }
 
+export interface CustomTheme {
+  bg: string;
+  panel: string;
+  border: string;
+  text: string;
+  muted: string;
+  accent: string;
+  boardLight: string;
+  boardDark: string;
+  boardBorder: string;
+}
+
 export interface Settings {
   model: string;
   persona: string;
@@ -65,9 +77,19 @@ export interface Settings {
   multipv: number;
   difficulty: string;
   theme: string;
+  customTheme: CustomTheme;
+  pieceSet: string;
   sound: boolean;
   animations: boolean;
   fontScale: number;
+}
+
+export interface PieceSetSummary {
+  id: string;
+  name: string;
+  builtIn: boolean;
+  pieces: number;
+  preview: string | null;
 }
 
 export interface GameSummary {

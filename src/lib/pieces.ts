@@ -1,3 +1,5 @@
+import { invoke } from "@tauri-apps/api/core";
+import { writable } from "svelte/store";
 import wK from "../assets/pieces/cburnett/wK.svg";
 import wQ from "../assets/pieces/cburnett/wQ.svg";
 import wR from "../assets/pieces/cburnett/wR.svg";
@@ -26,9 +28,41 @@ const URLS: Record<string, string> = {
   bP,
 };
 
-export function pieceUrl(color: string, role: string): string {
+/** Data URLs for the selected custom piece set; empty means built-in. */
+export const pieceUrls = writable<Record<string, string>>({});
+
+export const DEFAULT_PIECE_PREVIEW = wN;
+
+let pieceSetToken = 0;
+
+export async function applyPieceSet(id: string): Promise<void> {
+  const token = ++pieceSetToken;
+  if (!id || id === "cburnett") {
+    pieceUrls.set({});
+    return;
+  }
+  try {
+    const urls = await invoke<Record<string, string>>("load_piece_set", {
+      id,
+    });
+    if (token === pieceSetToken) {
+      pieceUrls.set(urls ?? {});
+    }
+  } catch {
+    if (token === pieceSetToken) {
+      pieceUrls.set({});
+    }
+  }
+}
+
+export function pieceUrl(
+  color: string,
+  role: string,
+  overrides: Record<string, string> = {},
+): string {
   const side = color === "white" || color === "w" ? "w" : "b";
-  return URLS[side + role.toUpperCase()] ?? "";
+  const code = side + role.toUpperCase();
+  return overrides[code] ?? URLS[code] ?? "";
 }
 
 export function pieceAlt(color: string, role: string): string {

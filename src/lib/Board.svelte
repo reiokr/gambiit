@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ColorKey, MoveInfo, MoveRecord, SquareView } from "./types";
   import { isLightSquare, orderedSquares } from "./board";
-  import { pieceUrl } from "./pieces";
+  import { pieceUrl, pieceUrls } from "./pieces";
   import { i18n } from "./i18n";
 
   export let board: SquareView[] = [];
@@ -78,7 +78,7 @@
         {#key `${cell.square}-${cell.piece.color}-${cell.piece.role}`}
           <img
             class="piece"
-            src={pieceUrl(cell.piece.color, cell.piece.role)}
+            src={pieceUrl(cell.piece.color, cell.piece.role, $pieceUrls)}
             alt=""
             draggable="false"
           />
@@ -122,7 +122,7 @@
               on:click={() => onPromotion(option.uci)}
             >
               <img
-                src={pieceUrl(promotionColor, option.promotion ?? "q")}
+                src={pieceUrl(promotionColor, option.promotion ?? "q", $pieceUrls)}
                 alt=""
                 draggable="false"
               />

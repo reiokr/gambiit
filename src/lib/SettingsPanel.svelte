@@ -1,8 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
-  import type { ColorKey, Settings } from "./types";
-  import { THEMES, applyTheme } from "./themes";
+  import type { ColorKey, PieceSetSummary, Settings } from "./types";
+  import { DEFAULT_CUSTOM_THEME, THEMES, applyTheme } from "./themes";
+  import ThemeEditor from "./ThemeEditor.svelte";
+  import { DEFAULT_PIECE_PREVIEW, applyPieceSet } from "./pieces";
   import { applyFontScale } from "./settings";
   import {
     availableLocales,
@@ -52,8 +54,20 @@
   let keyMessage = "";
   let keyBusy = false;
   let providerSync = 0;
+  let pieceSets: PieceSetSummary[] = [];
+  let pieceSetError = "";
+  let pieceSetMessage = "";
 
   $: applyFontScale(draft.fontScale);
+  $: if (draft.theme === "custom") {
+    applyTheme("custom", draft.customTheme);
+  }
+  $: if (draft.pieceSet) {
+    void applyPieceSet(draft.pieceSet);
+  }
+  $: pieceSetMissing =
+    pieceSets.length > 0 &&
+    !pieceSets.some((set) => set.id === draft.pieceSet);
   $: provider = draft.model.includes("/")
     ? draft.model.split("/")[0].trim()
     : "";
@@ -78,6 +92,7 @@
 
   onMount(() => {
     void syncProvider();
+    void refreshPieceSets();
   });
 
   async function syncProvider() {
@@ -162,9 +177,57 @@
     midnight: ["#9fb4c9", "#3b4f63", "#58a6ff"],
   };
 
+  function themePreview(id: string): string[] {
+    if (id === "custom") {
+      const theme = draft.customTheme;
+      return [theme.boardLight, theme.boardDark, theme.accent];
+    }
+    return previews[id] ?? [];
+  }
+
   function selectTheme(theme: string) {
     draft.theme = theme;
-    applyTheme(theme);
+    applyTheme(theme, draft.customTheme);
+  }
+
+  function updateCustomTheme(theme: typeof draft.customTheme) {
+    draft.customTheme = theme;
+    applyTheme("custom", theme);
+  }
+
+  function resetCustomTheme() {
+    const theme = { ...DEFAULT_CUSTOM_THEME };
+    draft.customTheme = theme;
+    applyTheme("custom", theme);
+  }
+
+  function selectPieceSet(id: string) {
+    draft.pieceSet = id;
+    pieceSetMessage = "";
+  }
+
+  async function refreshPieceSets() {
+    try {
+      pieceSets = await invoke<PieceSetSummary[]>("list_piece_sets");
+      pieceSetError = "";
+    } catch (value) {
+      pieceSetError = value instanceof Error ? value.message : String(value);
+    }
+  }
+
+  async function openPiecesFolder() {
+    pieceSetMessage = "";
+    try {
+      await invoke("open_pieces_folder");
+      pieceSetMessage = $i18n("settings.piecesFolderOpened");
+    } catch (value) {
+      pieceSetError = value instanceof Error ? value.message : String(value);
+    }
+  }
+
+  async function reloadPieceSets() {
+    await refreshPieceSets();
+    pieceSetMessage = $i18n("settings.piecesRefreshed");
   }
 
   function selectUiLanguage(code: string) {
@@ -439,7 +502,7 @@
               on:click={() => selectTheme(theme.id)}
             >
               <span class="swatches">
-                {#each previews[theme.id] ?? [] as color}
+                {#each themePreview(theme.id) as color}
                   <i style={`background:${color}`}></i>
                 {/each}
               </span>
@@ -447,6 +510,66 @@
               <small>{$i18n(`themes.${theme.id}.description`)}</small>
             </button>
           {/each}
+        </div>
+
+        {#if draft.theme === "custom"}
+          <ThemeEditor
+            theme={draft.customTheme}
+            onChange={updateCustomTheme}
+            onReset={resetCustomTheme}
+          />
+        {/if}
+
+        <div class="field piece-field">
+          <span>{$i18n("settings.pieceSet")}</span>
+          <div class="piece-sets">
+            {#each pieceSets as set}
+              <button
+                type="button"
+                class="piece-card"
+                class:active={draft.pieceSet === set.id}
+                aria-pressed={draft.pieceSet === set.id}
+                on:click={() => selectPieceSet(set.id)}
+              >
+                <span class="piece-image">
+                  <img
+                    src={set.preview ?? DEFAULT_PIECE_PREVIEW}
+                    alt=""
+                    draggable="false"
+                  />
+                </span>
+                <span class="piece-copy">
+                  <strong>{set.name}</strong>
+                  <small>
+                    {set.builtIn
+                      ? $i18n("settings.piecesBuiltIn")
+                      : $i18n("settings.piecesCount", { count: set.pieces })}
+                  </small>
+                </span>
+                {#if set.builtIn}
+                  <span class="piece-badge">{$i18n("settings.piecesDefault")}</span>
+                {/if}
+              </button>
+            {/each}
+          </div>
+          <div class="piece-actions">
+            <button class="mini-btn" type="button" on:click={reloadPieceSets}>
+              {$i18n("settings.piecesRefresh")}
+            </button>
+            <button class="mini-btn" type="button" on:click={openPiecesFolder}>
+              {$i18n("settings.piecesFolder")}
+            </button>
+            {#if pieceSetMessage}
+              <span class="piece-note">{pieceSetMessage}</span>
+            {/if}
+          </div>
+          {#if pieceSetError}
+            <small class="piece-error">{pieceSetError}</small>
+          {:else if pieceSetMissing}
+            <small class="piece-error">{$i18n("settings.piecesMissing")}</small>
+          {:else}
+            <small>{$i18n("settings.piecesHint")}</small>
+          {/if}
         </div>
 
         <div class="grid two">
@@ -925,7 +1048,7 @@
 
   .themes {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 10px;
     margin-bottom: 14px;
   }
@@ -966,6 +1089,126 @@
 
   .swatches i {
     flex: 1;
+  }
+
+  .piece-field {
+    margin: 4px 0 14px;
+  }
+
+  .piece-sets {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 7px;
+  }
+
+  .piece-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--panel-2);
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .piece-card:hover {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  }
+
+  .piece-card.active {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 1px var(--accent-soft);
+  }
+
+  .piece-image {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 7px;
+    background:
+      linear-gradient(135deg, var(--accent-soft), transparent),
+      var(--panel);
+  }
+
+  .piece-image img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
+  }
+
+  .piece-copy {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .piece-copy strong {
+    overflow: hidden;
+    font-size: calc(11px * var(--font-scale));
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .piece-copy small {
+    color: var(--faint);
+    font-family: var(--font-mono);
+    font-size: calc(8px * var(--font-scale));
+  }
+
+  .piece-badge {
+    flex: 0 0 auto;
+    padding: 1px 4px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--faint);
+    font-family: var(--font-mono);
+    font-size: calc(7px * var(--font-scale));
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .piece-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 7px;
+  }
+
+  .mini-btn {
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--panel);
+    color: var(--muted);
+    font-size: calc(9px * var(--font-scale));
+    cursor: pointer;
+  }
+
+  .mini-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  .piece-note {
+    color: var(--success);
+    font-family: var(--font-mono);
+    font-size: calc(8px * var(--font-scale));
+  }
+
+  .piece-error {
+    display: block;
+    margin-top: 6px;
+    color: var(--danger);
   }
 
   .persona-field {

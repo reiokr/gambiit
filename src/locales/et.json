@@ -116,6 +116,16 @@
     "uiLanguageHint": "Muudab ainult rakenduse UI-d.",
     "agentLanguage": "Agendi vastuste keel",
     "agentLanguageHint": "AI võib mõnes muus keeles kirjutada paremini kui UI keeles.",
+    "pieceSet": "Malendikomplekt",
+    "piecesBuiltIn": "Sisseehitatud komplekt",
+    "piecesDefault": "Vaikimisi",
+    "piecesCount": "{count} / 12 malendit",
+    "piecesHint": "Lisa kaust ~/.local/share/gambiit/pieces/ failidega wK.svg, wQ.svg … bP.svg. PNG ja WebP sobivad ka; puuduvad malendid võetakse sisseehitatud komplektist.",
+    "piecesFolder": "Ava malendite kaust",
+    "piecesRefresh": "Värskenda komplekte",
+    "piecesRefreshed": "Malendikomplektid värskendatud.",
+    "piecesFolderOpened": "Malendite kaust avatud.",
+    "piecesMissing": "See malendikomplekt puudub; kasutatakse sisseehitatud komplekti.",
     "fontSize": "Fondi suurus",
     "interface": "Liides",
     "sound": "Heli",
@@ -268,6 +278,28 @@
     "midnight": {
       "name": "Südaöö",
       "description": "Külm teras ja sinine valgus. Mängi pärast pimedat."
+    },
+    "custom": {
+      "name": "Kohandatud",
+      "description": "Sinu enda palett, salvestatud profiiliga."
     }
+  },
+  "themeEditor": {
+    "eyebrow": "Teemastuudio",
+    "title": "Ehita oma lava",
+    "hint": "Muudatused eelvaadatakse kohe. Rakenda salvestab paleti sellesse profiili.",
+    "reset": "Lähtesta palett",
+    "stage": "Lava",
+    "background": "Taust",
+    "panel": "Paneel",
+    "border": "Ääris",
+    "ink": "Tint",
+    "text": "Tekst",
+    "muted": "Vaigistatud tekst",
+    "accent": "Aktsent",
+    "board": "Laud",
+    "boardLight": "Hele ruut",
+    "boardDark": "Tume ruut",
+    "boardBorder": "Laua ääris"
   }
 }

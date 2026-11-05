@@ -23,8 +23,8 @@ What works now:
   stalemate, threefold repetition, 50-move rule, insufficient material);
 - Tauri 2 + Svelte 5 desktop window;
 - click-to-move board with legal-move dots, capture rings, last-move highlights,
-  check marks, promotion picker and three themes;
-- Cburnett SVG piece set and a polished theater-inspired layout;
+  check marks, promotion picker and a theme editor;
+- Cburnett SVG piece set plus custom piece-set folders;
 - Stockfish 19 hybrid play: the engine proposes candidate moves, the model
   chooses and explains;
 - OpenCode prompt transport with strict JSON validation and retries;
@@ -55,9 +55,8 @@ What works now:
   Estonian included, new languages are added by dropping in a JSON catalog;
 - desktop and terminal builds share the same Rust core, engine and agent layers.
 
-Not yet: clocks, theme editor, custom piece sets, MCP mode, chat, draw offers,
-Director's Cut, leaderboards and broadcast mode. Those are the next phases in
-`PLAN.md`.
+Not yet: clocks, MCP mode, chat, draw offers, Director's Cut, leaderboards and
+broadcast mode. Those are the next phases in `PLAN.md`.
 
 ## Run the desktop app
 
@@ -83,9 +82,37 @@ indicator.
 ## Customize
 
 The Settings panel controls the opponent model, persona, Auto/Button response
-mode, playing colour, board theme, language, sound, animations and Stockfish
-candidate depth. Three themes ship now: Salon, Tournament and Midnight. The
-theme editor and custom piece-set folders are the next design milestone.
+mode, playing colour, board theme, piece set, language, sound, animations and
+Stockfish candidate depth. Four themes ship now: Salon, Tournament, Midnight and
+Custom.
+
+### Theme editor
+
+Select **Custom** in **Settings → Board & interface** to open the theme studio.
+Nine colours can be changed: background, panel, border, text, muted text, accent,
+light square, dark square and board border. Changes preview live on the whole
+app. **Apply & start new game** stores the palette in the profile and in saved
+games.
+
+### Custom piece sets
+
+Drop a folder into:
+
+```
+~/.local/share/gambiit/pieces/
+```
+
+Name the files `wK`, `wQ`, `wR`, `wB`, `wN`, `wP`, `bK`, `bQ`, `bR`, `bB`, `bN`
+and `bP`, with an `.svg`, `.png`, `.webp`, `.jpg` or `.jpeg` extension. For
+example `~/.local/share/gambiit/pieces/classic/wN.svg`. Missing pieces fall back
+to the built-in Cburnett set, so a partial set is fine. Use **Open pieces folder**
+in Settings to find the directory and **Refresh sets** after adding files.
+
+Piece images are loaded as data URLs and capped at 512 KB per file. The SVG is
+rendered inside an `<img>`, so scripts in a piece file do not run.
+
+See [`docs/APPEARANCE.md`](docs/APPEARANCE.md) for the full palette and piece-set
+reference.
 
 ## Languages
 
@@ -248,7 +275,8 @@ the rules, Stockfish integration and OpenCode contract before the UI is built.
 - **Phase 3:** agent in the UI: Auto / Button / Manual modes, model and persona
   selection, commentary panel, error recovery.
 - **Phase 4:** themes, piece sets, theme editor, animations, sounds,
-  accessibility, English/Estonian UI.
+  accessibility, English/Estonian UI. (Theme editor and custom piece sets are
+  done.)
 - **Phase 5:** clocks, takeback rules, draw/resign, result screen.
   (PGN export/import, the saved-game library and post-game analysis are done.)
 - **Phase 6:** MCP mode, personas/chat, Truth Lens, Director's Cut, leaderboard,

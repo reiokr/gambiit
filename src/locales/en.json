@@ -116,6 +116,16 @@
     "uiLanguageHint": "Changes the app UI only.",
     "agentLanguage": "Agent response language",
     "agentLanguageHint": "The AI may write better in a different language than the UI.",
+    "pieceSet": "Piece set",
+    "piecesBuiltIn": "Built-in set",
+    "piecesDefault": "Default",
+    "piecesCount": "{count} / 12 pieces",
+    "piecesHint": "Add a folder under ~/.local/share/gambiit/pieces/ with files named wK.svg, wQ.svg … bP.svg. PNG and WebP work too; missing pieces fall back to the built-in set.",
+    "piecesFolder": "Open pieces folder",
+    "piecesRefresh": "Refresh sets",
+    "piecesRefreshed": "Piece sets refreshed.",
+    "piecesFolderOpened": "Pieces folder opened.",
+    "piecesMissing": "This piece set is missing; the built-in set is used instead.",
     "fontSize": "Font size",
     "interface": "Interface",
     "sound": "Sound",
@@ -268,6 +278,28 @@
     "midnight": {
       "name": "Midnight",
       "description": "Cold steel and blue light. Play after dark."
+    },
+    "custom": {
+      "name": "Custom",
+      "description": "Your own palette, saved with the profile."
     }
+  },
+  "themeEditor": {
+    "eyebrow": "Theme studio",
+    "title": "Build your own stage",
+    "hint": "Changes preview live. Apply saves the palette to this profile.",
+    "reset": "Reset palette",
+    "stage": "Stage",
+    "background": "Background",
+    "panel": "Panel",
+    "border": "Border",
+    "ink": "Ink",
+    "text": "Text",
+    "muted": "Muted text",
+    "accent": "Accent",
+    "board": "Board",
+    "boardLight": "Light square",
+    "boardDark": "Dark square",
+    "boardBorder": "Board border"
   }
 }

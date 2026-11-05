@@ -80,6 +80,9 @@ Completed:
   saved-game library, PGN export/import with comments and tolerant PGN parsing.
 - Post-game Stockfish analysis with accuracy, move classification, evaluation
   graph, selected-move detail and the Truth Lens.
+- Custom theme editor with live preview and a locally saved palette.
+- Custom piece-set folders under `~/.local/share/gambiit/pieces/` with
+  per-piece fallback to the built-in Cburnett set.
 - Five Stockfish difficulty levels — Beginner, Casual, Intermediate, Strong and
   Master — plus Custom. Selecting a level sets the depth/MultiPV sliders; moving
   a slider selects Custom. Stockfish `Skill Level` is part of each preset.
@@ -99,14 +102,15 @@ Not yet:
 
 - local Axum API and MCP bridge;
 - clocks;
-- theme editor and custom piece-set loading;
+- additional built-in themes and curated piece sets;
+- contrast warnings and the remaining accessibility pass;
 - chat, personas beyond the prompt presets, draw offers, Director's Cut,
   leaderboard and broadcast mode.
 
 Next:
 
-- Add the theme editor and custom piece-set folders.
 - Add clocks and draw offers.
+- Add more bundled themes and piece sets.
 - Then MCP mode, chat and Director's Cut.
 
 ---
@@ -465,7 +469,7 @@ Settings must expose game properties and theater features without code edits.
 | **1. Core + API** | `gambiit-core`, `GameService`, axum API, discovery file, fake agent, perft tests. | All rules/API tests green; fake agent plays 100 games. |
 | **2. UI shell** | Tauri + Svelte, board, moves, local two-player, save/resume. | Legal game in a native window; flip; restart resumes. |
 | **3. Agent in UI** | Prompt transport, Auto/Button modes, model/persona selection, commentary, error handling. | Full game vs OpenCode model without terminal typing; illegal move recovers. |
-| **4. Design system** | 7 themes, piece sets, theme editor, animations, sounds, accessibility. | Theme switches live and persists; contrast warnings work. |
+| **4. Design system** | 4 themes ✅, theme editor ✅, custom piece sets ✅, animations, sounds, accessibility; more themes and curated piece sets planned. | Theme switches live and persists; palette and pieces load from disk. |
 | **5. Game completeness** | PGN ✅, persistence ✅, analysis ✅; clocks, takebacks, draw/resign, result screen, tribute lines. | PGN round-trip; takeback rules enforced; analysis works. |
 | **6. Theater extras** | Personas, chat, Truth Lens, Director’s Cut, leaderboard, MCP, broadcast. | Toggleable and non-intrusive. |
 | **7. Packaging** | PKGBUILD, `.desktop`, icon, docs, tests, performance. | Installable on CachyOS; starts <2 s; README. |

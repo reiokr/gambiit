@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ColorKey, PieceView } from "./types";
-  import { pieceUrl } from "./pieces";
+  import { pieceUrl, pieceUrls } from "./pieces";
   import { i18n } from "./i18n";
 
   export let name: string;
@@ -44,7 +44,7 @@
   <div class="captured" aria-label={$i18n("player.captured")}>
     {#each captured as piece}
       <img
-        src={pieceUrl(piece.color, piece.role)}
+        src={pieceUrl(piece.color, piece.role, $pieceUrls)}
         alt=""
         draggable="false"
       />

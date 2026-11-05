@@ -24,6 +24,7 @@
     saveSettings,
   } from "./lib/settings";
   import { applyTheme } from "./lib/themes";
+  import { applyPieceSet } from "./lib/pieces";
   import { playSound } from "./lib/sound";
   import { i18n, localeMeta, setLocale } from "./lib/i18n";
   import { personaFor } from "./lib/personas";
@@ -134,7 +135,8 @@
     humanColor = next.humanColor;
     saveSettings(next.settings);
     saveHumanColor(next.humanColor);
-    applyTheme(next.settings.theme);
+    applyTheme(next.settings.theme, next.settings.customTheme);
+    void applyPieceSet(next.settings.pieceSet);
     applyFontScale(next.settings.fontScale);
     setLocale(next.settings.uiLanguage);
     thinking = next.thinking;
@@ -436,7 +438,8 @@
   }
 
   function cancelSettings() {
-    applyTheme(settings.theme);
+    applyTheme(settings.theme, settings.customTheme);
+    void applyPieceSet(settings.pieceSet);
     applyFontScale(settings.fontScale);
     setLocale(settings.uiLanguage);
     showSettings = false;
@@ -445,14 +448,16 @@
   function applySettings(next: Settings, color: ColorKey) {
     settings = next;
     saveSettings(next);
-    applyTheme(next.theme);
+    applyTheme(next.theme, next.customTheme);
+    void applyPieceSet(next.pieceSet);
     setLocale(next.uiLanguage);
     showSettings = false;
     void startGame(color);
   }
 
   onMount(() => {
-    applyTheme(settings.theme);
+    applyTheme(settings.theme, settings.customTheme);
+    void applyPieceSet(settings.pieceSet);
     applyFontScale(settings.fontScale);
     setLocale(settings.uiLanguage);
     void (async () => {

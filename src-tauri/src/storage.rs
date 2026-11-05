@@ -57,6 +57,10 @@ pub fn games_dir() -> PathBuf {
     data_dir().join("games")
 }
 
+pub fn pieces_dir() -> PathBuf {
+    data_dir().join("pieces")
+}
+
 fn exports_dir() -> PathBuf {
     data_dir().join("exports")
 }

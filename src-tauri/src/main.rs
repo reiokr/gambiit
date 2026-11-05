@@ -3,6 +3,7 @@
 mod analysis;
 mod credentials;
 mod pgn;
+mod pieces;
 mod storage;
 
 use gambiit_agent::{AgentConfig, AgentSession, AgentTurn, OpenCodeClient};
@@ -13,6 +14,40 @@ use serde::{Deserialize, Serialize};
 use shakmaty::{Color, Role, Square};
 use std::{sync::Arc, time::Instant};
 use tauri::State;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub(crate) struct CustomTheme {
+    bg: String,
+    panel: String,
+    border: String,
+    text: String,
+    muted: String,
+    accent: String,
+    board_light: String,
+    board_dark: String,
+    board_border: String,
+}
+
+impl Default for CustomTheme {
+    fn default() -> Self {
+        Self {
+            bg: "#14110e".to_string(),
+            panel: "#201a15".to_string(),
+            border: "#3d3126".to_string(),
+            text: "#efe6d5".to_string(),
+            muted: "#a89a86".to_string(),
+            accent: "#c9a227".to_string(),
+            board_light: "#e8d3b0".to_string(),
+            board_dark: "#8b5a2b".to_string(),
+            board_border: "#3b2a1a".to_string(),
+        }
+    }
+}
+
+fn default_piece_set() -> String {
+    "cburnett".to_string()
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -27,6 +62,10 @@ pub(crate) struct Settings {
     multipv: usize,
     difficulty: String,
     theme: String,
+    #[serde(default)]
+    custom_theme: CustomTheme,
+    #[serde(default = "default_piece_set")]
+    piece_set: String,
     sound: bool,
     animations: bool,
     font_scale: f64,
@@ -45,6 +84,8 @@ impl Default for Settings {
             multipv: 4,
             difficulty: "intermediate".to_string(),
             theme: "salon".to_string(),
+            custom_theme: CustomTheme::default(),
+            piece_set: default_piece_set(),
             sound: true,
             animations: true,
             font_scale: 1.2,
@@ -635,6 +676,21 @@ async fn analyze_game(
 }
 
 #[tauri::command]
+fn list_piece_sets() -> Result<Vec<pieces::PieceSetSummary>, String> {
+    pieces::list()
+}
+
+#[tauri::command]
+fn load_piece_set(id: String) -> Result<std::collections::BTreeMap<String, String>, String> {
+    pieces::load(&id)
+}
+
+#[tauri::command]
+fn open_pieces_folder() -> Result<(), String> {
+    pieces::open_folder()
+}
+
+#[tauri::command]
 fn credential_status(provider: String) -> credentials::CredentialStatus {
     credentials::status(&provider)
 }
@@ -713,6 +769,15 @@ fn normalize_settings(mut settings: Settings) -> Settings {
     }
     if !(0.9..=1.5).contains(&settings.font_scale) {
         settings.font_scale = defaults.font_scale;
+    }
+    if !matches!(
+        settings.theme.as_str(),
+        "salon" | "tournament" | "midnight" | "custom"
+    ) {
+        settings.theme = defaults.theme;
+    }
+    if settings.piece_set.trim().is_empty() {
+        settings.piece_set = default_piece_set();
     }
     settings
 }
@@ -805,6 +870,9 @@ pub fn run() {
             export_pgn,
             import_pgn,
             analyze_game,
+            list_piece_sets,
+            load_piece_set,
+            open_pieces_folder,
             credential_status,
             save_credential,
             delete_credential
@@ -891,6 +959,18 @@ mod tests {
         assert_eq!(snapshot.settings.ui_language, "et");
         assert_eq!(snapshot.settings.agent_language, "en");
         assert_eq!(snapshot.settings.agent_language_name, "English");
+    }
+
+    #[test]
+    fn settings_survive_missing_theme_and_piece_fields() {
+        let mut value = serde_json::to_value(Settings::default()).unwrap();
+        let object = value.as_object_mut().unwrap();
+        object.remove("customTheme");
+        object.remove("pieceSet");
+        let restored: Settings = serde_json::from_value(value).unwrap();
+        assert_eq!(restored.piece_set, "cburnett");
+        assert_eq!(restored.custom_theme.accent, "#c9a227");
+        assert_eq!(restored.theme, "salon");
     }
 
     #[test]
