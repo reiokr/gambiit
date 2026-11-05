@@ -21,6 +21,7 @@ struct Settings {
     theme: String,
     sound: bool,
     animations: bool,
+    font_scale: f64,
 }
 
 impl Default for Settings {
@@ -35,6 +36,7 @@ impl Default for Settings {
             theme: "salon".to_string(),
             sound: true,
             animations: true,
+            font_scale: 1.2,
         }
     }
 }

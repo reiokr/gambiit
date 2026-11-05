@@ -13,6 +13,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: "salon",
   sound: true,
   animations: true,
+  fontScale: 1.2,
 };
 
 export function loadSettings(): Settings {
@@ -31,6 +32,13 @@ export function saveSettings(settings: Settings): void {
   } catch {
     // Ignore storage failures (private mode, quota).
   }
+}
+
+export function applyFontScale(scale: number): void {
+  const value = Number.isFinite(scale)
+    ? Math.min(1.5, Math.max(0.9, scale))
+    : 1.2;
+  document.documentElement.style.setProperty("--font-scale", String(value));
 }
 
 export function loadHumanColor(): "white" | "black" {

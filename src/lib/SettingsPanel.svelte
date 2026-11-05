@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ColorKey, Settings } from "./types";
   import { THEMES, applyTheme } from "./themes";
+  import { applyFontScale } from "./settings";
 
   export let settings: Settings;
   export let models: string[] = [];
@@ -8,8 +9,10 @@
   export let onApply: (settings: Settings, humanColor: ColorKey) => void = () => {};
   export let onClose: () => void = () => {};
 
-  let draft: Settings = { ...settings };
+  let draft: Settings = { ...settings, fontScale: settings.fontScale ?? 1.2 };
   let humanColor: ColorKey = initialColor;
+
+  $: applyFontScale(draft.fontScale);
 
   const personas = [
     "Theater Master",
@@ -171,8 +174,21 @@
               <option value="et">Estonian</option>
             </select>
           </label>
-          <div class="field">
-            <span>Interface</span>
+          <label class="field">
+            <span>Font size <b>{Math.round(draft.fontScale * 100)}%</b></span>
+            <input
+              type="range"
+              min="0.9"
+              max="1.5"
+              step="0.05"
+              bind:value={draft.fontScale}
+            />
+          </label>
+        </div>
+
+        <div class="field interface-field">
+          <span>Interface</span>
+          <div class="checks">
             <label class="check">
               <input type="checkbox" bind:checked={draft.sound} />
               <span>Sound</span>
@@ -266,7 +282,7 @@
     margin: 0 0 4px;
     color: var(--accent);
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: calc(9px * var(--font-scale));
     font-weight: 700;
     letter-spacing: 0.18em;
     text-transform: uppercase;
@@ -275,7 +291,7 @@
   h2 {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 28px;
+    font-size: calc(28px * var(--font-scale));
     font-weight: 500;
   }
 
@@ -323,14 +339,14 @@
 
   .section-title h3 {
     margin: 0;
-    font-size: 14px;
+    font-size: calc(14px * var(--font-scale));
     font-weight: 700;
     letter-spacing: 0.02em;
   }
 
   .section-title span {
     color: var(--faint);
-    font-size: 10px;
+    font-size: calc(10px * var(--font-scale));
   }
 
   .grid {
@@ -347,7 +363,7 @@
     flex-direction: column;
     gap: 6px;
     color: var(--muted);
-    font-size: 11px;
+    font-size: calc(11px * var(--font-scale));
   }
 
   .field.wide {
@@ -372,7 +388,7 @@
     border-radius: 8px;
     background: var(--panel-2);
     color: var(--text);
-    font-size: 12px;
+    font-size: calc(12px * var(--font-scale));
   }
 
   input[type="range"] {
@@ -382,7 +398,7 @@
 
   small {
     color: var(--faint);
-    font-size: 10px;
+    font-size: calc(10px * var(--font-scale));
   }
 
   .segmented {
@@ -416,7 +432,7 @@
 
   .segmented button strong {
     color: var(--text);
-    font-size: 12px;
+    font-size: calc(12px * var(--font-scale));
   }
 
   .segmented button small {
@@ -456,7 +472,7 @@
 
   .theme strong {
     color: var(--text);
-    font-size: 12px;
+    font-size: calc(12px * var(--font-scale));
   }
 
   .theme small {
@@ -475,6 +491,15 @@
     flex: 1;
   }
 
+  .interface-field {
+    margin-top: 12px;
+  }
+
+  .checks {
+    display: flex;
+    gap: 18px;
+  }
+
   .check {
     display: flex;
     align-items: center;
@@ -490,7 +515,7 @@
   .hint {
     margin: 12px 0 0;
     color: var(--faint);
-    font-size: 10.5px;
+    font-size: calc(10.5px * var(--font-scale));
     line-height: 1.55;
   }
 
@@ -509,7 +534,7 @@
     border-radius: 8px;
     background: var(--panel);
     color: var(--text);
-    font-size: 12px;
+    font-size: calc(12px * var(--font-scale));
     font-weight: 600;
     cursor: pointer;
   }

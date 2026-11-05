@@ -64,6 +64,7 @@ export interface Settings {
   theme: string;
   sound: boolean;
   animations: boolean;
+  fontScale: number;
 }
 
 export interface GameSnapshot {

@@ -86,11 +86,13 @@ Valmis:
 
 - Tauri 2 + Svelte 5 desktop-aken (vaikimisi maksimeeritud).
 - Cburnett SVG malendid, klikk-käigud, legaalsete käikude täpid, löögirõngad,
-  viimase käigu highlight, check'i märk ja promotsiooni valik.
+  viimase käigu highlight, check'i märk ja promotsiooni valik. Laua lahtrid on
+  reaktiivsed, seega malendid uuenevad kohe nii inimese kui agendi käigu järel.
 - Mängijaribad: agent ülal, sina all; võetud malendid ja materjaliede.
 - Kolm teemat: **Salon**, **Tournament**, **Midnight**, vahetatavad seadetes.
 - Seaded: mudel (avastati 788 mudelit), isiksus, Auto/Button, valge/must, teema,
-  keel, heli, animatsioonid, Stockfishi depth ja kandidaatide arv.
+  fondi suurus (90–150%, vaikimisi 120%), keel, heli, animatsioonid, Stockfishi
+  depth ja kandidaatide arv.
 - Kommentaaripaneel: hinnang, kandidaadid koos tagasilükkamise põhjustega, plaan,
   mõtlemisaeg ja tokenikulu.
 - Tagasivõtt järgib `AGENTS.md` reeglit: ainult sinu enda viimast käiku saab

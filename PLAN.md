@@ -61,12 +61,14 @@ Completed:
 
 - Tauri 2 + Svelte 5 desktop app in `src-tauri/` and `src/`.
 - Click-to-move board with Cburnett SVG pieces, legal-move dots, capture rings,
-  last-move highlights, check marks and a promotion picker.
+  last-move highlights, check marks and a promotion picker. Board cells are
+  reactive, so pieces update immediately after both human and agent moves.
 - Player strips, material/captured pieces, status, thinking ribbon and
   theater-style commentary panel.
 - Three themes: Salon, Tournament, Midnight; live preview in Settings.
 - Settings: model, persona, response mode (Auto / Button), colour, theme,
-  language, sound, animations, Stockfish depth and MultiPV.
+  font size (90–150%, default 120%), language, sound, animations, Stockfish
+  depth and MultiPV.
 - Rust commands: `new_game`, `get_state`, `make_move`, `agent_move`, `takeback`,
   `resign`, `list_models`; all moves validated by `gambiit-core`.
 - Takeback policy enforced: only the human's own last move can be undone.

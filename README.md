@@ -33,8 +33,9 @@ What works now:
 - commentary cards with evaluations, candidate moves, rejection reasons, plan,
   elapsed time and token usage;
 - takeback policy enforced per `AGENTS.md`: only your own last move is undoable;
-- settings for model, persona, response mode, colour, theme, language, sound,
-  animations, Stockfish depth and candidate count;
+- settings for model, persona, response mode, colour, theme, font size
+  (90–150%, default 120%), language, sound, animations, Stockfish depth and
+  candidate count;
 - desktop and terminal builds share the same Rust core, engine and agent layers.
 
 Not yet: game persistence/resume, PGN library, clocks, post-game analysis, theme

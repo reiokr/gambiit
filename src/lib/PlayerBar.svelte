@@ -88,7 +88,7 @@
     border-radius: 50%;
     background: var(--panel-2);
     color: var(--muted);
-    font-size: 21px;
+    font-size: calc(21px * var(--font-scale));
   }
 
   .avatar.agent-avatar {
@@ -114,7 +114,7 @@
     overflow: hidden;
     color: var(--text);
     font-family: var(--font-display);
-    font-size: 17px;
+    font-size: calc(17px * var(--font-scale));
     font-weight: 600;
     line-height: 1.2;
     text-overflow: ellipsis;
@@ -127,7 +127,7 @@
     border-radius: 4px;
     color: var(--accent);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: calc(8px * var(--font-scale));
     font-weight: 700;
     letter-spacing: 0.1em;
   }
@@ -137,7 +137,7 @@
     margin-top: 2px;
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: calc(10px * var(--font-scale));
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -171,13 +171,13 @@
     background: var(--accent-soft);
     color: var(--accent-strong);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: calc(11px * var(--font-scale));
     font-weight: 700;
   }
 
   .status {
     color: var(--muted);
-    font-size: 10px;
+    font-size: calc(10px * var(--font-scale));
     letter-spacing: 0.02em;
     white-space: nowrap;
   }

@@ -91,7 +91,7 @@
     min-height: 29px;
     border-radius: 6px;
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: calc(12px * var(--font-scale));
   }
 
   .row:nth-child(odd) {
@@ -101,7 +101,7 @@
   .number {
     padding-left: 7px;
     color: var(--faint);
-    font-size: 10px;
+    font-size: calc(10px * var(--font-scale));
   }
 
   .move {
@@ -132,17 +132,17 @@
   .empty-icon {
     margin-bottom: 5px;
     color: var(--accent);
-    font-size: 22px;
+    font-size: calc(22px * var(--font-scale));
   }
 
   .empty p {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 18px;
+    font-size: calc(18px * var(--font-scale));
   }
 
   .empty small {
     color: var(--faint);
-    font-size: 11px;
+    font-size: calc(11px * var(--font-scale));
   }
 </style>

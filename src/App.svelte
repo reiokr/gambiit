@@ -18,6 +18,7 @@
     sideLabel,
   } from "./lib/board";
   import {
+    applyFontScale,
     loadHumanColor,
     loadSettings,
     saveHumanColor,
@@ -117,6 +118,7 @@
     saveSettings(next.settings);
     saveHumanColor(next.humanColor);
     applyTheme(next.settings.theme);
+    applyFontScale(next.settings.fontScale);
     thinking = next.thinking;
 
     if (next.lastMove && next.lastMove.ply !== lastSoundPly) {
@@ -294,6 +296,7 @@
 
   function cancelSettings() {
     applyTheme(settings.theme);
+    applyFontScale(settings.fontScale);
     showSettings = false;
   }
 
@@ -307,6 +310,7 @@
 
   onMount(() => {
     applyTheme(settings.theme);
+    applyFontScale(settings.fontScale);
     void (async () => {
       await startGame(humanColor);
       try {
@@ -605,7 +609,7 @@
       var(--panel);
     color: var(--accent);
     font-family: var(--font-display);
-    font-size: 25px;
+    font-size: calc(25px * var(--font-scale));
     font-weight: 700;
     line-height: 1;
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
@@ -614,7 +618,7 @@
   .brand-copy h1 {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 21px;
+    font-size: calc(21px * var(--font-scale));
     font-weight: 600;
     letter-spacing: 0.18em;
     line-height: 1;
@@ -624,7 +628,7 @@
     margin: 5px 0 0;
     color: var(--faint);
     font-family: var(--font-display);
-    font-size: 11px;
+    font-size: calc(11px * var(--font-scale));
     font-style: italic;
     letter-spacing: 0.02em;
   }
@@ -644,7 +648,7 @@
     border-radius: 999px;
     background: var(--panel);
     color: var(--muted);
-    font-size: 11px;
+    font-size: calc(11px * var(--font-scale));
     white-space: nowrap;
   }
 
@@ -669,7 +673,7 @@
     border-radius: 9px;
     background: var(--panel);
     color: var(--muted);
-    font-size: 16px;
+    font-size: calc(16px * var(--font-scale));
     cursor: pointer;
     transition:
       border-color 120ms ease,
@@ -693,7 +697,10 @@
   .stage {
     display: flex;
     width: 100%;
-    max-width: min(780px, calc(100vh - 300px));
+    max-width: max(
+      320px,
+      min(780px, calc(100vh - 300px - (var(--font-scale) - 1) * 160px))
+    );
     margin: 0 auto;
     flex-direction: column;
     gap: 8px;
@@ -718,7 +725,7 @@
     background: color-mix(in srgb, var(--panel) 88%, transparent);
     color: var(--accent-strong);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: calc(10px * var(--font-scale));
     pointer-events: none;
     transform: translateX(-50%);
     backdrop-filter: blur(8px);
@@ -738,7 +745,7 @@
     border-radius: 8px;
     background: var(--panel);
     color: var(--text);
-    font-size: 11px;
+    font-size: calc(11px * var(--font-scale));
     font-weight: 600;
     cursor: pointer;
     transition:
@@ -779,7 +786,7 @@
 
   .btn.small {
     padding: 5px 9px;
-    font-size: 10px;
+    font-size: calc(10px * var(--font-scale));
   }
 
   .sidebar {
@@ -814,7 +821,7 @@
     border-bottom: 2px solid transparent;
     background: transparent;
     color: var(--faint);
-    font-size: 11px;
+    font-size: calc(11px * var(--font-scale));
     font-weight: 600;
     cursor: pointer;
   }
@@ -834,7 +841,7 @@
     background: var(--panel-2);
     color: var(--faint);
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: calc(8px * var(--font-scale));
   }
 
   .tab-body {
@@ -869,7 +876,7 @@
     overflow: hidden;
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: calc(9px * var(--font-scale));
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -878,7 +885,7 @@
     margin-top: 3px;
     color: var(--faint);
     font-family: var(--font-display);
-    font-size: 11px;
+    font-size: calc(11px * var(--font-scale));
     font-style: italic;
   }
 
@@ -887,13 +894,13 @@
     flex-direction: column;
     gap: 4px;
     color: var(--muted);
-    font-size: 10px;
+    font-size: calc(10px * var(--font-scale));
     line-height: 1.45;
   }
 
   .agent-error strong {
     color: var(--danger);
-    font-size: 10px;
+    font-size: calc(10px * var(--font-scale));
   }
 
   .agent-error span {
@@ -928,21 +935,21 @@
     border: 1px solid var(--border);
     border-radius: 50%;
     color: var(--accent);
-    font-size: 22px;
+    font-size: calc(22px * var(--font-scale));
   }
 
   .placeholder h3 {
     margin: 0;
     color: var(--text);
     font-family: var(--font-display);
-    font-size: 20px;
+    font-size: calc(20px * var(--font-scale));
     font-weight: 500;
   }
 
   .placeholder p {
     max-width: 280px;
     margin: 0;
-    font-size: 11px;
+    font-size: calc(11px * var(--font-scale));
     line-height: 1.6;
   }
 
@@ -972,7 +979,7 @@
     margin: 0 0 7px;
     color: var(--accent);
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: calc(9px * var(--font-scale));
     font-weight: 700;
     letter-spacing: 0.18em;
     text-transform: uppercase;
@@ -981,7 +988,7 @@
   .result-card h2 {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 28px;
+    font-size: calc(28px * var(--font-scale));
     font-weight: 500;
     line-height: 1.15;
   }
@@ -989,7 +996,7 @@
   .winner {
     margin: 8px 0 0;
     color: var(--muted);
-    font-size: 12px;
+    font-size: calc(12px * var(--font-scale));
   }
 
   .result-actions {
@@ -1013,7 +1020,7 @@
     border-radius: 9px;
     background: color-mix(in srgb, var(--panel) 92%, var(--danger));
     color: var(--text);
-    font-size: 11px;
+    font-size: calc(11px * var(--font-scale));
     line-height: 1.45;
     box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
   }
@@ -1037,7 +1044,7 @@
     justify-content: center;
     gap: 13px;
     color: var(--muted);
-    font-size: 12px;
+    font-size: calc(12px * var(--font-scale));
   }
 
   .loading-mark {
@@ -1050,7 +1057,7 @@
     background: var(--panel);
     color: var(--accent);
     font-family: var(--font-display);
-    font-size: 42px;
+    font-size: calc(42px * var(--font-scale));
     font-weight: 700;
   }
 

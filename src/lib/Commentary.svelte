@@ -7,12 +7,19 @@
   export let model = "";
 
   let scrollEl: HTMLDivElement | null = null;
+  let lastCard: HTMLElement | null = null;
   let lastCount = 0;
 
   afterUpdate(() => {
     if (scrollEl && lastCount !== cards.length) {
       lastCount = cards.length;
-      scrollEl.scrollTop = scrollEl.scrollHeight;
+      if (!lastCard) {
+        scrollEl.scrollTop = 0;
+        return;
+      }
+      const cardTop = lastCard.getBoundingClientRect().top;
+      const containerTop = scrollEl.getBoundingClientRect().top;
+      scrollEl.scrollTop += cardTop - containerTop;
     }
   });
 
@@ -35,7 +42,7 @@
   {:else}
     <div class="cards">
       {#each cards as card, index (index)}
-        <article class="card">
+        <article class="card" bind:this={lastCard}>
           <header class="card-head">
             <span class="avatar">♞</span>
             <div class="title">
@@ -127,7 +134,7 @@
     border-radius: 50%;
     background: var(--panel);
     color: var(--accent);
-    font-size: 15px;
+    font-size: calc(15px * var(--font-scale));
   }
 
   .title {
@@ -141,13 +148,13 @@
   .move {
     color: var(--accent-strong);
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: calc(13px * var(--font-scale));
     font-weight: 700;
   }
 
   .byline {
     color: var(--faint);
-    font-size: 10px;
+    font-size: calc(10px * var(--font-scale));
   }
 
   .eval {
@@ -156,7 +163,7 @@
     border-radius: 999px;
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: calc(10px * var(--font-scale));
     font-weight: 700;
   }
 
@@ -168,7 +175,7 @@
   .comment {
     margin: 10px 0 0;
     color: var(--text);
-    font-size: 12.5px;
+    font-size: calc(12.5px * var(--font-scale));
     line-height: 1.62;
     white-space: pre-line;
   }
@@ -187,7 +194,7 @@
     padding: 5px 7px;
     border-radius: 6px;
     background: rgba(255, 255, 255, 0.025);
-    font-size: 11px;
+    font-size: calc(11px * var(--font-scale));
     line-height: 1.45;
   }
 
@@ -199,7 +206,7 @@
     flex: 0 0 auto;
     color: var(--accent);
     font-family: var(--font-mono);
-    font-size: 10.5px;
+    font-size: calc(10.5px * var(--font-scale));
     font-weight: 700;
   }
 
@@ -213,7 +220,7 @@
     border-left: 2px solid var(--border);
     color: var(--muted);
     font-family: var(--font-display);
-    font-size: 12.5px;
+    font-size: calc(12.5px * var(--font-scale));
     font-style: italic;
     line-height: 1.55;
   }
@@ -224,7 +231,7 @@
     margin-top: 9px;
     color: var(--faint);
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: calc(9px * var(--font-scale));
   }
 
   .empty {
@@ -249,21 +256,21 @@
     border-radius: 50%;
     background: var(--panel-2);
     color: var(--accent);
-    font-size: 28px;
+    font-size: calc(28px * var(--font-scale));
   }
 
   .empty h3 {
     margin: 0;
     color: var(--text);
     font-family: var(--font-display);
-    font-size: 22px;
+    font-size: calc(22px * var(--font-scale));
     font-weight: 500;
   }
 
   .empty p {
     max-width: 280px;
     margin: 0;
-    font-size: 12px;
+    font-size: calc(12px * var(--font-scale));
     line-height: 1.6;
   }
 
@@ -276,6 +283,6 @@
     margin-top: 4px;
     color: var(--faint);
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: calc(9px * var(--font-scale));
   }
 </style>

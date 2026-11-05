@@ -22,6 +22,22 @@
   $: targets = selected
     ? legalMoves.filter((move) => move.from === selected)
     : [];
+  $: cells = squares.map((square) => {
+    const piece = pieces.get(square) ?? null;
+    const target = targets.find((move) => move.to === square);
+    return {
+      square,
+      piece,
+      target,
+      light: isLightSquare(square),
+      last: lastMove?.from === square || lastMove?.to === square,
+      selected: selected === square,
+      check: checkSquare === square,
+      capture: !!target && (!!target.captured || target.isEnPassant),
+      showRank: square[0] === (flipped ? "h" : "a"),
+      showFile: square[1] === (flipped ? "8" : "1"),
+    };
+  });
   $: promotionOptions = promotion
     ? promotion.options.filter(
         (move, index, all) =>
@@ -29,31 +45,6 @@
           all.findIndex((other) => other.promotion === move.promotion) === index,
       )
     : [];
-
-  function pieceAt(square: string) {
-    return pieces.get(square) ?? null;
-  }
-
-  function targetAt(square: string) {
-    return targets.find((move) => move.to === square);
-  }
-
-  function isCapture(square: string) {
-    const target = targetAt(square);
-    return !!target && (!!target.captured || target.isEnPassant);
-  }
-
-  function isLast(square: string) {
-    return lastMove?.from === square || lastMove?.to === square;
-  }
-
-  function showRank(square: string) {
-    return square[0] === (flipped ? "h" : "a");
-  }
-
-  function showFile(square: string) {
-    return square[1] === (flipped ? "8" : "1");
-  }
 
   function handleClick(square: string) {
     if (!interactive || promotion) return;
@@ -66,47 +57,45 @@
   class:animations
   aria-label="Chess board"
 >
-  {#each squares as square (square)}
-    {@const piece = pieceAt(square)}
-    {@const target = targetAt(square)}
+  {#each cells as cell (cell.square)}
     <button
       type="button"
       class="square"
-      class:light={isLightSquare(square)}
-      class:dark={!isLightSquare(square)}
-      class:last={isLast(square)}
-      class:selected={selected === square}
-      class:check={checkSquare === square}
-      class:legal={!!target}
-      class:capture={isCapture(square)}
+      class:light={cell.light}
+      class:dark={!cell.light}
+      class:last={cell.last}
+      class:selected={cell.selected}
+      class:check={cell.check}
+      class:legal={!!cell.target}
+      class:capture={cell.capture}
       class:inactive={!interactive}
-      aria-label={`${square}${piece ? `, ${pieceAlt(piece.color, piece.role)}` : ", empty"}${target ? ", legal move" : ""}`}
+      aria-label={`${cell.square}${cell.piece ? `, ${pieceAlt(cell.piece.color, cell.piece.role)}` : ", empty"}${cell.target ? ", legal move" : ""}`}
       aria-disabled={!interactive}
-      on:click={() => handleClick(square)}
+      on:click={() => handleClick(cell.square)}
     >
-      {#if piece}
-        {#key `${square}-${piece.color}-${piece.role}`}
+      {#if cell.piece}
+        {#key `${cell.square}-${cell.piece.color}-${cell.piece.role}`}
           <img
             class="piece"
-            src={pieceUrl(piece.color, piece.role)}
+            src={pieceUrl(cell.piece.color, cell.piece.role)}
             alt=""
             draggable="false"
           />
         {/key}
       {/if}
 
-      {#if target && !isCapture(square)}
+      {#if cell.target && !cell.capture}
         <span class="legal-dot" aria-hidden="true"></span>
       {/if}
-      {#if target && isCapture(square)}
+      {#if cell.target && cell.capture}
         <span class="legal-ring" aria-hidden="true"></span>
       {/if}
 
-      {#if showRank(square)}
-        <span class="coord rank">{square[1]}</span>
+      {#if cell.showRank}
+        <span class="coord rank">{cell.square[1]}</span>
       {/if}
-      {#if showFile(square)}
-        <span class="coord file">{square[0]}</span>
+      {#if cell.showFile}
+        <span class="coord file">{cell.square[0]}</span>
       {/if}
     </button>
   {/each}
@@ -268,7 +257,7 @@
     position: absolute;
     z-index: 4;
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: calc(9px * var(--font-scale));
     font-weight: 700;
     line-height: 1;
     opacity: 0.62;
@@ -316,7 +305,7 @@
   .promotion-card p {
     margin: 0 0 12px;
     color: var(--muted);
-    font-size: 12px;
+    font-size: calc(12px * var(--font-scale));
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
