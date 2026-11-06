@@ -17,6 +17,7 @@ export const DEFAULT_SETTINGS: Settings = {
   agentLanguageName: "English",
   responseMode: "auto",
   agentMode: "prompt",
+  personaStyle: "subtle",
   stockfishDepth: 11,
   multipv: 4,
   difficulty: "intermediate",

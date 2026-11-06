@@ -74,6 +74,8 @@ pub struct AgentConfig {
     pub retries: usize,
     /// Extra environment variables for the child process, e.g. provider API keys.
     pub env: Vec<(String, String)>,
+    /// Optional bounded move-style guidance from the selected persona.
+    pub style_instruction: String,
 }
 
 impl Default for AgentConfig {
@@ -86,6 +88,7 @@ impl Default for AgentConfig {
             timeout_secs: 180,
             retries: 1,
             env: Vec::new(),
+            style_instruction: String::new(),
         }
     }
 }
@@ -522,6 +525,22 @@ pub fn build_move_prompt(game: &Game, config: &AgentConfig, candidates: &[Candid
         config.language_name.as_str()
     };
     let persona = persona_instruction(&config.persona);
+    let style = config.style_instruction.trim();
+    let style_section = if style.is_empty() {
+        String::new()
+    } else {
+        format!("{style}\n\n")
+    };
+    let candidates_heading = if style.is_empty() {
+        "Stockfish candidate moves (strongest first)"
+    } else {
+        "Stockfish candidate moves (the first is your persona's style preference; all are within the allowed strength margin)"
+    };
+    let selection_rules = if style.is_empty() {
+        "Choose the strongest move from that pool. Never choose a weaker move for theatrical reasons."
+    } else {
+        "The first candidate is the persona's style preference and is within the chosen strength margin. Play it unless you have a concrete reason it is unsound. Do not choose a move outside the candidate pool."
+    };
 
     format!(
         r#"You are playing chess as {agent_color} against a human ({human_color}).
@@ -532,12 +551,12 @@ Move history (SAN): {history}
 Game status: {status}
 Legal moves (UCI (SAN)): {legal}
 
-Stockfish candidate moves (strongest first): {candidates}
+{style_section}{candidates_heading}: {candidates}
 
-MOVE SELECTION (the persona does not apply here):
+MOVE SELECTION:
 - Choose exactly one of the Stockfish candidate moves when the list is available. Do not choose a move outside it.
-- Choose the strongest move from that pool. Never choose a weaker move for theatrical reasons.
-- Difficulty controls the candidate pool; the persona affects only the commentary.
+- {selection_rules}
+- Difficulty controls the candidate pool; the persona affects only the bounded style and commentary.
 
 {persona}
 
@@ -569,7 +588,10 @@ Move must be UCI (preferred) or SAN. Commentary language: {language}.
         history = history,
         status = game.status_text(),
         legal = legal_text,
+        style_section = style_section,
+        candidates_heading = candidates_heading,
         candidates = candidates_text,
+        selection_rules = selection_rules,
         persona = persona,
         language = language,
     )
@@ -713,6 +735,12 @@ pub fn build_mcp_move_prompt(
         config.language_name.as_str()
     };
     let persona = persona_instruction(&config.persona);
+    let style = config.style_instruction.trim();
+    let style_section = if style.is_empty() {
+        String::new()
+    } else {
+        format!("{style}\n\n")
+    };
     let history = game.pgn_moves();
     let history = if history.is_empty() {
         "(no moves yet)"
@@ -728,9 +756,9 @@ FEN: {fen}
 Move history (SAN): {history}
 Game status: {status}
 
-Stockfish candidate moves (strongest first): {candidates}
+Stockfish candidate moves (the first is your persona's style preference; all are within the allowed strength margin): {candidates}
 
-{persona}
+{style_section}{persona}
 
 Fast path:
 1. The board state and candidate moves are already included above. Do not call `get_state` or `get_candidates` mechanically.
@@ -744,14 +772,16 @@ Fast path:
 Rules:
 - The board is truth; never claim false board facts or rules.
 - The chosen move must be legal and from the Stockfish candidate pool.
+- The first candidate is the persona's style preference; play it unless you have a concrete reason it is unsound.
 - You may bluff about plans and evaluations, but the move itself must be sound.
-- The persona affects commentary only.
+- The persona affects bounded style and commentary only.
 "#,
         agent_color = color_name(agent_color),
         human_color = color_name(human_color),
         fen = game.fen(),
         history = history,
         status = game.status_text(),
+        style_section = style_section,
         candidates = candidates_text,
         persona = persona,
         language = language,
@@ -1057,6 +1087,29 @@ mod tests {
         };
         let prompt = build_move_prompt(&game, &config, &[]);
         assert!(prompt.contains("Commentary language: Estonian"));
+    }
+
+    #[test]
+    fn style_instruction_is_rendered_in_prompts() {
+        let game = Game::new();
+        let config = AgentConfig {
+            style_instruction: "Persona move style: trickster.".to_string(),
+            ..Default::default()
+        };
+        let candidates = vec![Candidate {
+            uci: "e2e4".to_string(),
+            score_cp: Some(24),
+            mate_in: None,
+            depth: 10,
+            multipv: 1,
+            pv: Vec::new(),
+        }];
+        let prompt = build_move_prompt(&game, &config, &candidates);
+        assert!(prompt.contains("Persona move style: trickster."));
+        assert!(prompt.contains("style preference"));
+        let mcp = build_mcp_move_prompt(&game, &config, &candidates);
+        assert!(mcp.contains("Persona move style: trickster."));
+        assert!(mcp.contains("style preference"));
     }
 
     #[test]

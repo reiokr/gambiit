@@ -58,7 +58,8 @@ What works now:
 - separate UI and agent languages, both selected in Settings; the agent can
   answer in English while the UI is Estonian;
 - illustrated theater personas: Theater Master, Cold Calculator, Trickster,
-  Panicker, Coach and Chaotic; the persona changes commentary only;
+  Panicker, Coach and Chaotic; the persona changes commentary and a bounded,
+  near-best move style (default Subtle);
 - five Stockfish difficulty levels — Beginner, Casual, Intermediate, Strong and
   Master — plus Custom, with depth and MultiPV sliders;
 - localized UI and agent commentary from `src/locales/*.json`; English and
@@ -274,6 +275,23 @@ shell or file access. MCP can be slower because the model may make tool calls;
 the fast path includes the board and candidate list in the first prompt and
 usually needs only `submit_move`. Prompt mode remains the fallback if MCP is
 unavailable or a model does not use tools well.
+
+## Personas and move style
+
+Personas are not only voices. **Settings → Game → Persona move style** controls
+how much a persona may bend move choice inside the Stockfish candidate pool:
+
+- **Off** — every persona plays the strongest move.
+- **Subtle** (default) — style may choose within 20 centipawns of the best.
+- **Theatrical** — up to 40 centipawns.
+- **Strong** — up to 70 centipawns.
+
+Cold Calculator always plays the best move. Panicker prefers castling, king
+safety and solid choices; Trickster prefers checks, captures, traps and sound
+sacrifices; Theater Master prefers attacks; Chaotic prefers offbeat candidates.
+A style choice never leaves the candidate pool, and the model must still justify
+it. Persona traits therefore shape the performance without taking over the
+engine.
 
 ## Accessibility
 

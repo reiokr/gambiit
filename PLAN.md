@@ -95,9 +95,9 @@ Completed:
   Master — plus Custom. Selecting a level sets the depth/MultiPV sliders; moving
   a slider selects Custom. Stockfish `Skill Level` is part of each preset.
 - Illustrated theater persona cards: Theater Master, Cold Calculator, Trickster,
-  Panicker, Coach and Chaotic. Personas affect commentary only; the move must
-  come from the Stockfish candidate pool. The avatar is also used in the player
-  strip and commentary cards.
+  Panicker, Coach and Chaotic. Personas affect commentary and a bounded move
+  style; the move must come from the Stockfish candidate pool. The avatar is
+  also used in the player strip and commentary cards.
 - Rust commands: `new_game`, `get_state`, `make_move`, `agent_move`, `takeback`,
   `resign`, `list_models`; all moves validated by `gambiit-core`.
 - Takeback policy enforced: only the human's own last move can be undone.
@@ -122,6 +122,16 @@ Next:
 
 ---
 
+## Persona move style (2026-11-06)
+
+Each persona has a style profile (aggression, safety, showmanship, chaos, risk).
+Before the agent turn, the backend scores candidates that are within a tolerance
+of the best move and moves the style-preferred candidate to the front. The model
+is asked to play that candidate and justify it. Default `subtle` uses 20 cp;
+`theatrical` uses 40 cp and `strong` uses 70 cp. Cold Calculator has no style.
+This keeps persona differences visible without allowing an uncontrolled
+strength drop.
+
 ## Planned feature designs (2026-11-06)
 
 ### Model leaderboard
@@ -134,9 +144,11 @@ and usage. Difficulty and time control are filters, not silent assumptions.
 ### Persona mixer
 A trait-based custom persona: theatricality, confidence, warmth, humour,
 aggression, verbosity and deception, plus a name and accent. Traits affect the
-prompt and commentary only; Stockfish candidate strength and difficulty remain
-untouched. The first version edits one custom persona; blending two personas is
-a later extension. Deception is shared with the Truth Lens bluff setting.
+prompt, commentary and a bounded move style. Style may only choose among
+candidates within a small centipawn margin of the best; Stockfish strength and
+difficulty remain the ceiling. The first version edits one custom persona;
+blending two personas is a later extension. Deception is shared with the Truth
+Lens bluff setting.
 
 ### Coach mode
 An optional in-game coach for the human, separate from the opponent persona and
@@ -300,8 +312,9 @@ Pure LLM chess is weak. Difficulty levels use Stockfish as a candidate generator
 - **Custom:** user-chosen depth/MultiPV, Skill 20.
 
 Selecting a level sets the depth/MultiPV sliders; moving a slider selects Custom.
-The LLM must choose from the Stockfish candidate pool. The persona affects the
-commentary only, never the move choice.
+The LLM must choose from the Stockfish candidate pool. The persona affects
+commentary and a bounded near-best style; it never selects a move outside the
+candidate pool or beyond the chosen style tolerance.
 
 Stockfish integration:
 

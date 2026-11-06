@@ -12,6 +12,15 @@
 
 ---
 
+## Isiksuse käigustiil (2026-11-06)
+
+Igal isiksusel on stiiliprofiil (agressiivsus, ohutus, showmanship, kaos, risk).
+Enne agendi käiku hindab backend kandidaate, mis on parimale tolerantsi piires,
+ja tõstab isiksusele sobivaima kandidaadi ette. Mudel peab selle käigu mängima
+ja põhjendama. Vaikimisi `subtle` = 20 cp, `theatrical` = 40 cp, `strong` = 70 cp.
+Külm kalkulaatoril stiili pole. Nii tulevad isiksused esile ilma kontrollimatu
+tugevusekaota.
+
 ## Kavandatud funktsioonide disain (2026-11-06)
 
 ### Mudelite edetabel
@@ -160,8 +169,8 @@ Valmis:
   Meister — pluss Kohandatud. Taseme valik seab depth/MultiPV liugurid; liuguri
   liigutamine valib Kohandatud. Igal preseedil on ka Stockfishi `Skill Level`.
 - Illustreeritud teatri-isiksusekaardid: Teatrimeister, Külm kalkulaator, Pettur,
-  Hirmunud, Treener ja Kaootiline. Isiksus mõjutab ainult kommentaari; käik peab
-  tulema Stockfishi kandidaatide hulgast. Avatar kuvatakse ka mängijaribas ja
+  Hirmunud, Treener ja Kaootiline. Isiksus mõjutab kommentaari ja piiratud
+  käigustiili; käik peab tulema Stockfishi kandidaatide hulgast. Avatar kuvatakse ka mängijaribas ja
   kommentaarikaartidel.
 - Kommentaaripaneel: hinnang, kandidaadid koos tagasilükkamise põhjustega, plaan,
   mõtlemisaeg ja tokenikulu.
@@ -175,9 +184,9 @@ Valmis:
 
 Testid:
 
-- **56 Rust testi** rohelised (core 10, engine 2, agent 11, Tauri app 33) +
-  6 ignored testi (päris-mudeli käigu-, vestluse/viigi-, MCP kahe käigu- ja
-  eestikeelne smoke-test ning kaks Stockfishi analüüsi testi).
+- **61 Rust testi** rohelised (core 10, engine 2, agent 12, Tauri app 37) +
+  7 ignored testi (päris-mudeli käigu-, isiksusestiili-, vestluse/viigi-,
+  MCP kahe käigu- ja eestikeelne smoke-test ning kaks Stockfishi analüüsi testi).
 - 1 ignored **agent_smoke** test: `e4` → `...c5` 8,9 sekundiga, 522 tokenit.
 - `cargo clippy --all-targets -- -D warnings` puhas.
 - `pnpm check` — 0 viga, 0 hoiatust.
@@ -333,8 +342,9 @@ keelatakse.
 | **Kohandatud** | kasutaja depth/MultiPV, Skill 20 |
 
 Taseme valik seab depth/MultiPV liugurid; liuguri liigutamine valib Kohandatud.
-Mudel peab valima Stockfishi kandidaatide hulgast. Isiksus mõjutab ainult
-kommentaari, mitte käiguvalikut.
+Mudel peab valima Stockfishi kandidaatide hulgast. Isiksus mõjutab kommentaari
+ja piiratud lähedaste kandidaatide käigustiili, mitte kunagi käiku väljaspool
+kandidaatide hulka või valitud tolerantsi.
 
 Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusjuhis.
 

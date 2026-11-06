@@ -7,6 +7,7 @@ mod mcp;
 mod pgn;
 mod pieces;
 mod storage;
+mod style;
 
 use gambiit_agent::{AgentConfig, AgentSession, AgentTurn, OpenCodeClient};
 use gambiit_core::{Game, GameStatus, MoveInfo, MoveRecord, color_key};
@@ -62,6 +63,10 @@ fn default_agent_mode() -> String {
     "prompt".to_string()
 }
 
+fn default_persona_style() -> String {
+    "subtle".to_string()
+}
+
 fn default_time_control() -> String {
     "rapid".to_string()
 }
@@ -85,6 +90,8 @@ pub(crate) struct Settings {
     response_mode: String,
     #[serde(default = "default_agent_mode")]
     agent_mode: String,
+    #[serde(default = "default_persona_style")]
+    persona_style: String,
     stockfish_depth: u32,
     multipv: usize,
     difficulty: String,
@@ -120,6 +127,7 @@ impl Default for Settings {
             agent_language_name: "English".to_string(),
             response_mode: "auto".to_string(),
             agent_mode: default_agent_mode(),
+            persona_style: default_persona_style(),
             stockfish_depth: 11,
             multipv: 4,
             difficulty: "intermediate".to_string(),
@@ -798,7 +806,7 @@ impl Session {
         }
 
         let (multipv, depth, skill) = engine_params(&self.settings);
-        let candidates = match self.stockfish.as_mut() {
+        let mut candidates = match self.stockfish.as_mut() {
             Some(engine) => {
                 if let Err(error) = engine.set_skill(skill) {
                     eprintln!("Stockfish skill warning: {error}");
@@ -815,6 +823,13 @@ impl Session {
         };
 
         let prompt_game = self.game.clone();
+        let tolerance = style::tolerance(&self.settings.persona_style);
+        if let Some(index) =
+            style::choose(&prompt_game, &candidates, &self.settings.persona, tolerance)
+            && index > 0
+        {
+            candidates.swap(0, index);
+        }
         let validation_game = prompt_game.clone();
         let legal_hint = prompt_game.legal_uci().join(", ");
         let candidate_ucis: Vec<String> = candidates
@@ -834,7 +849,7 @@ impl Session {
                 })?;
             if !candidate_ucis.is_empty() && !candidate_ucis.contains(&info.uci) {
                 return Err(format!(
-                    "You must choose one of the Stockfish candidate moves: {}. The persona must not change your move choice.",
+                    "You must choose one of the Stockfish candidate moves: {}.",
                     candidate_ucis.join(", ")
                 ));
             }
@@ -1302,6 +1317,12 @@ fn normalize_settings(mut settings: Settings) -> Settings {
     if !matches!(settings.agent_mode.as_str(), "prompt" | "mcp") {
         settings.agent_mode = default_agent_mode();
     }
+    if !matches!(
+        settings.persona_style.as_str(),
+        "off" | "subtle" | "theatrical" | "strong"
+    ) {
+        settings.persona_style = default_persona_style();
+    }
     if let Some((initial, increment)) = clock_preset(&settings.time_control) {
         settings.clock_initial_ms = initial;
         settings.clock_increment_ms = increment;
@@ -1396,6 +1417,11 @@ fn agent_config(settings: &Settings, env: Vec<(String, String)>) -> AgentConfig 
         timeout_secs: 180,
         retries: 1,
         env,
+        style_instruction: if settings.persona_style == "off" {
+            String::new()
+        } else {
+            style::instruction(&settings.persona)
+        },
     }
 }
 
@@ -1694,6 +1720,7 @@ mod tests {
         object.remove("chatEnabled");
         object.remove("drawOffersEnabled");
         object.remove("agentMode");
+        object.remove("personaStyle");
         object.remove("clockEnabled");
         object.remove("timeControl");
         object.remove("clockInitialMs");
@@ -1705,6 +1732,7 @@ mod tests {
         assert!(restored.chat_enabled);
         assert!(restored.draw_offers_enabled);
         assert_eq!(restored.agent_mode, "prompt");
+        assert_eq!(restored.persona_style, "subtle");
         assert!(!restored.clock_enabled);
         assert_eq!(restored.time_control, "rapid");
         assert_eq!(restored.clock_initial_ms, 600_000);
@@ -1907,6 +1935,26 @@ mod tests {
         assert_eq!(snapshot.history.len(), 2);
         assert!(!snapshot.commentary[0].comment.is_empty());
         eprintln!("ET comment: {}", snapshot.commentary[0].comment);
+    }
+
+    /// Persona style compliance smoke test. Ignored by default.
+    #[test]
+    #[ignore]
+    fn persona_style_smoke() {
+        for persona in ["Panicker", "Trickster"] {
+            let settings = Settings {
+                persona: persona.to_string(),
+                persona_style: "subtle".to_string(),
+                ..Default::default()
+            };
+            let mut session = Session::new_with_persist(settings, Color::White, false);
+            session.make_move("e2e4").unwrap();
+            let snapshot = session.agent_move().unwrap();
+            eprintln!(
+                "{persona}: {} — {}",
+                snapshot.history[1].san, snapshot.commentary[0].comment
+            );
+        }
     }
 
     /// Two consecutive MCP turns in one session, using the built app binary as

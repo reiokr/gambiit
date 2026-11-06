@@ -87,6 +87,7 @@
     draft.model !== settings.model ||
     draft.persona !== settings.persona ||
     draft.agentMode !== settings.agentMode ||
+    draft.personaStyle !== settings.personaStyle ||
     draft.difficulty !== settings.difficulty ||
     draft.stockfishDepth !== settings.stockfishDepth ||
     draft.multipv !== settings.multipv ||
@@ -481,6 +482,24 @@
           </div>
           <small class="persona-hint">{$i18n("settings.personaHint")}</small>
         </div>
+
+        <label class="field persona-style-field">
+          <span>{$i18n("settings.personaStyle")}</span>
+          <select
+            value={draft.personaStyle}
+            on:change={(event) =>
+              (draft.personaStyle = event.currentTarget
+                .value as typeof draft.personaStyle)}
+          >
+            <option value="off">{$i18n("settings.personaStyleOff")}</option>
+            <option value="subtle">{$i18n("settings.personaStyleSubtle")}</option>
+            <option value="theatrical">
+              {$i18n("settings.personaStyleTheatrical")}
+            </option>
+            <option value="strong">{$i18n("settings.personaStyleStrong")}</option>
+          </select>
+          <small>{$i18n("settings.personaStyleHint")}</small>
+        </label>
 
         <div class="field">
           <span>{$i18n("settings.afterMove")}</span>
@@ -1690,6 +1709,10 @@
 
   .persona-field {
     margin-top: 14px;
+  }
+
+  .persona-style-field {
+    margin-top: 12px;
   }
 
   .persona-grid {

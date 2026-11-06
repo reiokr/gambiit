@@ -93,6 +93,7 @@ export interface Settings {
   agentLanguageName: string;
   responseMode: "auto" | "button";
   agentMode: "prompt" | "mcp";
+  personaStyle: "off" | "subtle" | "theatrical" | "strong";
   stockfishDepth: number;
   multipv: number;
   difficulty: string;
