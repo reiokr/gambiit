@@ -77,9 +77,12 @@ What works now:
 - keyboard board navigation, screen-reader move announcements, focus-trapped
   dialogs, reduced-motion support and custom-theme contrast warnings;
 - desktop and terminal builds share the same Rust core, engine and agent layers;
-- a native Arch/CachyOS package recipe with a desktop entry and hicolor icons.
+- a native Arch/CachyOS package recipe with a desktop entry and hicolor icons;
+- a read-only local HTTP/SSE API for overlays, scripts and tests, protected by a
+  random localhost token and a `0600` discovery file.
 
-Not yet: the local Axum API. That is the next phase in `PLAN.md`.
+Not yet: mutating HTTP endpoints and a browser-hosted UI. Those are the next
+steps in `PLAN.md`.
 
 ## Run the desktop app
 
@@ -373,6 +376,33 @@ the fallback if MCP is unavailable or a model does not use tools well.
 
 See [`docs/MCP.md`](docs/MCP.md) for the full tool reference, turn lifecycle,
 security notes and troubleshooting.
+
+## Local read-only API
+
+While the desktop app is open it also starts a small HTTP API on `127.0.0.1`.
+It is deliberately read-only in this version. The discovery file is:
+
+```text
+$XDG_RUNTIME_DIR/gambiit/session.json   # directory 0700, file 0600
+```
+
+It contains the URL, a random token, the PID and the API version. Use the token
+as a bearer header, or as a query token for browser `EventSource`:
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN"   "http://127.0.0.1:$PORT/api/state"
+curl -N -H "Authorization: Bearer $TOKEN"   "http://127.0.0.1:$PORT/api/events"
+```
+
+Endpoints:
+
+- `GET /api/health` — unauthenticated liveness check
+- `GET /api/state` — the full current game snapshot
+- `GET /api/events` — SSE `state` events, at most every 500 ms, plus a keepalive
+
+There are no mutation endpoints: the API cannot move, chat, resign or change
+settings. See [`docs/API.md`](docs/API.md) for the schema, CORS rules, security
+model and limitations.
 
 ## Personas and move style
 

@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod analysis;
+mod api;
 mod bluff;
 mod coach;
 mod credentials;
@@ -2089,13 +2090,28 @@ pub fn run() {
             None
         }
     };
-    tauri::Builder::default()
+    let session = Arc::new(Mutex::new(Session::new_with_persist(
+        Settings::default(),
+        Color::White,
+        false,
+    )));
+    let local_api = match api::start(session.clone()) {
+        Ok(api) => {
+            eprintln!(
+                "Local read-only API: {} (discovery: {})",
+                api.url,
+                api.discovery_path.display()
+            );
+            Some(api)
+        }
+        Err(error) => {
+            eprintln!("Local API unavailable: {error}");
+            None
+        }
+    };
+    let app = tauri::Builder::default()
         .manage(AppState {
-            session: Arc::new(Mutex::new(Session::new_with_persist(
-                Settings::default(),
-                Color::White,
-                false,
-            ))),
+            session,
             mcp: bridge,
         })
         .invoke_handler(tauri::generate_handler![
@@ -2132,8 +2148,16 @@ pub fn run() {
             save_credential,
             delete_credential
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Gambiit");
+        .build(tauri::generate_context!())
+        .expect("error while building Gambiit");
+    let mut local_api = local_api;
+    app.run(move |_handle, event| {
+        if matches!(event, tauri::RunEvent::Exit)
+            && let Some(api) = local_api.take()
+        {
+            api.cleanup();
+        }
+    });
 }
 
 fn main() {

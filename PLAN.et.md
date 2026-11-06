@@ -40,6 +40,19 @@ ja seitse liugurit. Esimene versioon redigeerib üht kohandatud isiksust; kahe
 isiksuse segamine on hilisem laiendus. Petlikkus on seotud Tõeobjektiivi
 bluff-seadega.
 
+## Lokaalne API (2026-11-06)
+
+- Lugemis-API Axumil aadressil `127.0.0.1`, juhusliku bearer-tokeniga.
+- Endpointid: `GET /api/health`, `GET /api/state`, `GET /api/events` (SSE).
+- Discovery-fail `$XDG_RUNTIME_DIR/gambiit/session.json`, kaust `0700` ja fail
+  `0600`; atomaarne kirjutamine ja koristus normaalsel väljumisel.
+- State/SSE tagastavad sama autoriteetse snapshot’i nagu Tauri UI. Mutatsioone,
+  shelli/failitööriistu ega pakkuja võtmeid ei ole.
+- CORS ainult Tauri webview’ originidele; vastused `no-store` ja `nosniff`.
+  Tokeni võrdlus on constant-time.
+- Testid katavad tokeni lugemise, constant-time võrdluse, discovery õigused ja
+  kuju, avaliku health endpointi ning kaitstud state endpointi.
+
 ## Pakendamine (2026-11-06)
 
 - `packaging/PKGBUILD` ehitab Gambiiti loodud lähtetarballist;
@@ -208,7 +221,7 @@ Valmis:
 
 Testid:
 
-- **90 Rust testi** rohelised (core 10, engine 2, agent 17, Tauri app 61) +
+- **94 Rust testi** rohelised (core 10, engine 2, agent 17, Tauri app 65) +
   13 ignored testi (päris-mudeli käigu-, eestikeelne, isiksusestiili-,
   bluff-intensiivsuse-, treeneri-, režissööri-, MCP kahe käigu- ja MCP
   vestluse/viigi-smoke-test ning neli Stockfishi testi).
@@ -221,7 +234,7 @@ Testid:
 
 - rohkem sisseehitatud teemasid ja kureeritud malendikomplekte;
 - forced-colors/high-contrast režiim ja täielik ekraanilugeja audit;
-- lokaalne Axum API.
+- HTTP API mutatsioonid ja brauserimood.
 
 ---
 
@@ -528,7 +541,7 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 
 - pärastmängu analüüs (accuracy, blunderid, eval-graaf);
 - teemaredaktor + kohandatud malendikomplektid;
-- lokaalne Axum API.
+- HTTP API mutatsioonid ja brauserimood.
 
 ### Stretch
 
@@ -553,7 +566,7 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 
 Soovitatud järjekord:
 
-1. **Lokaalne Axum API** — HTTP/SSE liides välistele klientidele.
+1. **HTTP API mutatsioonid + brauserimood** — game actions ja `gambiit serve`.
 2. **Rohkem teemasid ja malendikomplekte** — disainipolish.
 3. **Forced-colors ja ekraanilugeja audit**.
 
@@ -673,7 +686,7 @@ broadcast-režiim.
 
 ## 16. Järgmised sammud
 
-1. **Lokaalne Axum API**.
+1. **HTTP API mutatsioonid + brauserimood**.
 2. **Rohkem teemasid ja malendikomplekte**.
 3. **Forced-colors ja ekraanilugeja audit**.
 

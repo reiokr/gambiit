@@ -112,14 +112,14 @@ Completed:
 
 Not yet:
 
-- local Axum API;
+- mutating HTTP API endpoints and a browser-hosted UI;
 - additional built-in themes and curated piece sets;
 - forced-colors/high-contrast mode and a full screen-reader audit;
 - personas beyond the prompt presets.
 
 Next:
 
-- Local Axum API.
+- Mutating HTTP API endpoints and a browser-hosted UI.
 - More bundled themes, piece sets and a forced-colors/screen-reader audit.
 
 ---
@@ -151,6 +151,19 @@ candidates within a small centipawn margin of the best; Stockfish strength and
 difficulty remain the ceiling. The first version edits one custom persona;
 blending two personas is a later extension. Deception is shared with the Truth
 Lens bluff setting.
+
+## Local API (2026-11-06)
+
+- Read-only Axum API on `127.0.0.1` with a random bearer token.
+- Endpoints: `GET /api/health`, `GET /api/state`, `GET /api/events` (SSE).
+- Discovery file `$XDG_RUNTIME_DIR/gambiit/session.json`, directory `0700` and
+  file `0600`; atomic write and cleanup on normal exit.
+- State/SSE return the same authoritative snapshot as the Tauri UI. No mutation
+  endpoints, no shell/file access and no provider keys.
+- CORS is restricted to the Tauri webview origins; responses are `no-store` and
+  `nosniff`. Token comparison is constant-time.
+- Tests cover token extraction, constant-time comparison, discovery
+  permissions/shape, public health and protected state.
 
 ## Packaging (2026-11-06)
 
