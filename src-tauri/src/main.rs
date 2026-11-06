@@ -20,6 +20,7 @@ use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use shakmaty::{Color, Role, Square};
 use std::{
+    io::Write,
     sync::Arc,
     time::{Instant, SystemTime, UNIX_EPOCH},
 };
@@ -1906,29 +1907,41 @@ fn write_mcp_config(bridge: &mcp::Bridge) -> Result<std::path::PathBuf, String> 
         let _ = std::fs::set_permissions(&directory, std::fs::Permissions::from_mode(0o700));
     }
     let path = directory.join("opencode.json");
-    let config = serde_json::json!({
-        "mcp": {
-            "gambiit": {
-                "type": "local",
-                "command": [executable, "--mcp-server"],
-                "environment": {
-                    "GAMBIIT_MCP_URL": bridge.url(),
-                    "GAMBIIT_MCP_TOKEN": bridge.token()
-                },
-                "enabled": true
-            }
-        }
-    });
-    std::fs::write(
-        &path,
-        serde_json::to_string_pretty(&config).map_err(|error| error.to_string())?,
-    )
-    .map_err(|error| error.to_string())?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+    let mut config = gambiit_agent::restricted_agent_config();
+    if let Some(object) = config.as_object_mut() {
+        object.insert(
+            "mcp".to_string(),
+            serde_json::json!({
+                "gambiit": {
+                    "type": "local",
+                    "command": [executable, "--mcp-server"],
+                    "environment": {
+                        "GAMBIIT_MCP_URL": bridge.url(),
+                        "GAMBIIT_MCP_TOKEN": bridge.token()
+                    },
+                    "enabled": true
+                }
+            }),
+        );
     }
+    let contents = serde_json::to_string_pretty(&config).map_err(|error| error.to_string())?;
+    let temporary = directory.join(".opencode.json.tmp");
+    {
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create(true).truncate(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let mut file = options
+            .open(&temporary)
+            .map_err(|error| error.to_string())?;
+        file.write_all(contents.as_bytes())
+            .map_err(|error| error.to_string())?;
+        file.sync_all().ok();
+    }
+    std::fs::rename(&temporary, &path).map_err(|error| error.to_string())?;
     Ok(directory)
 }
 
@@ -2867,6 +2880,21 @@ mod tests {
         assert_eq!(second.commentary.len(), 2);
         assert!(!second.commentary[1].comment.is_empty());
         eprintln!("MCP move 2: {}", second.history[3].san);
+    }
+
+    #[test]
+    fn mcp_config_uses_the_restricted_agent() {
+        let bridge = mcp::start().unwrap();
+        let directory = write_mcp_config(&bridge).unwrap();
+        let config: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(directory.join("opencode.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(config["default_agent"], "gambiit");
+        assert_eq!(config["agent"]["gambiit"]["tools"]["bash"], false);
+        assert_eq!(config["agent"]["gambiit"]["tools"]["webfetch"], false);
+        assert!(config["mcp"]["gambiit"]["command"].is_array());
+        let _ = std::fs::remove_dir_all(directory);
     }
 
     /// MCP chat and draw-offer smoke test through the built app binary.

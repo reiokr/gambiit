@@ -293,12 +293,12 @@ read.
   is checked when Stockfish candidates exist.
 - Wrong-turn submissions and duplicate submissions are rejected.
 
-The MCP transport does not grant shell or file access to the model on its own.
-The temporary project config registers only the Gambiit MCP server. OpenCode's
-own built-in tools and global plugins remain governed by the user's OpenCode
-configuration; Gambiit does not disable them for you. If you need strict
-isolation, run Gambiit with a dedicated OpenCode profile or agent that disables
-the tools you do not want.
+Gambiit runs the model with a dedicated `gambiit` OpenCode agent. The temporary
+project config disables `bash`, `edit`, `write`, `read`, `webfetch`, `websearch`,
+`task`, todo, list, glob, grep, patch and related built-in tools. MCP turns add
+the Gambiit MCP server as the only tool provider Gambiit registers. External
+OpenCode plugins are outside Gambiit's control; use a clean OpenCode profile if
+you need to exclude them as well.
 
 ## 8. Files and environment variables
 
@@ -312,6 +312,20 @@ The file has this shape:
 
 ```json
 {
+  "default_agent": "gambiit",
+  "agent": {
+    "gambiit": {
+      "mode": "primary",
+      "tools": {
+        "bash": false,
+        "edit": false,
+        "write": false,
+        "read": false,
+        "webfetch": false,
+        "task": false
+      }
+    }
+  },
   "mcp": {
     "gambiit": {
       "type": "local",
@@ -325,6 +339,10 @@ The file has this shape:
   }
 }
 ```
+
+The actual generated file lists the full disabled-tool set. The model is started
+with `--agent gambiit`. Prompt turns use a separate temporary project with the
+same restricted agent and no MCP server.
 
 Environment variables:
 

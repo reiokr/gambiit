@@ -6,11 +6,13 @@
 use gambiit_core::{Game, MoveInfo, color_name};
 use gambiit_engine::Candidate;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Value, json};
 use std::{
-    io::Read,
+    fs,
+    io::{Read, Write},
     path::{Path, PathBuf},
     process::{Command, Stdio},
+    sync::OnceLock,
     thread,
     time::{Duration, Instant, SystemTime},
 };
@@ -32,6 +34,8 @@ pub enum AgentError {
     InvalidMove(String),
     #[error("agent returned no usable text")]
     EmptyResponse,
+    #[error("could not prepare the Gambiit agent workspace: {0}")]
+    Workspace(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -131,6 +135,88 @@ pub struct OpenCodeClient {
     timeout_secs: u64,
 }
 
+static RESTRICTED_WORKSPACE: OnceLock<Result<PathBuf, String>> = OnceLock::new();
+
+/// OpenCode project config for the Gambiit agent.
+///
+/// The agent may use the Gambiit MCP server when one is added to this object,
+/// but every built-in shell, file, web and task tool is denied. Gambiit adds
+/// the MCP server itself in `write_mcp_config`.
+pub fn restricted_agent_config() -> Value {
+    json!({
+        "default_agent": "gambiit",
+        "agent": {
+            "gambiit": {
+                "description": "Gambiit chess opponent. Use only the Gambiit chess tools; never shell, files, web or other agents.",
+                "mode": "primary",
+                "tools": {
+                    "bash": false,
+                    "edit": false,
+                    "write": false,
+                    "read": false,
+                    "webfetch": false,
+                    "websearch": false,
+                    "task": false,
+                    "todowrite": false,
+                    "todoread": false,
+                    "list": false,
+                    "glob": false,
+                    "grep": false,
+                    "patch": false,
+                    "multiedit": false,
+                    "apply_patch": false,
+                    "lsp-diagnostics": false,
+                    "lsp-hover": false
+                },
+                "permission": {
+                    "bash": "deny",
+                    "edit": "deny",
+                    "write": "deny",
+                    "read": "deny",
+                    "webfetch": "deny",
+                    "websearch": "deny",
+                    "task": "deny"
+                }
+            }
+        }
+    })
+}
+
+fn restricted_workspace() -> Result<PathBuf, AgentError> {
+    let result = RESTRICTED_WORKSPACE.get_or_init(|| {
+        let directory = std::env::temp_dir().join(format!("gambiit-agent-{}", std::process::id()));
+        fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&directory, fs::Permissions::from_mode(0o700))
+                .map_err(|error| error.to_string())?;
+        }
+        let path = directory.join("opencode.json");
+        let temporary = directory.join(".opencode.json.tmp");
+        let contents = serde_json::to_string_pretty(&restricted_agent_config())
+            .map_err(|error| error.to_string())?;
+        {
+            let mut options = fs::OpenOptions::new();
+            options.write(true).create(true).truncate(true);
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::OpenOptionsExt;
+                options.mode(0o600);
+            }
+            let mut file = options
+                .open(&temporary)
+                .map_err(|error| error.to_string())?;
+            file.write_all(contents.as_bytes())
+                .map_err(|error| error.to_string())?;
+            file.sync_all().ok();
+        }
+        fs::rename(&temporary, &path).map_err(|error| error.to_string())?;
+        Ok(directory)
+    });
+    result.clone().map_err(AgentError::Workspace)
+}
+
 impl OpenCodeClient {
     pub fn new(timeout_secs: u64) -> Result<Self, AgentError> {
         let binary = discover_opencode_binary().ok_or(AgentError::OpenCodeNotFound)?;
@@ -146,7 +232,8 @@ impl OpenCodeClient {
 
     /// Run one prompt through the OpenCode CLI and collect the text events.
     ///
-    /// `--pure` keeps the game independent of the user's OpenCode plugins.
+    /// The prompt runs in a private temporary OpenCode project using the
+    /// restricted `gambiit` agent: no shell, file, web or task tools.
     /// `--format json` emits NDJSON; we parse the assistant text parts and the
     /// session id, ignoring unrelated events.
     pub fn run(
@@ -155,16 +242,43 @@ impl OpenCodeClient {
         prompt: &str,
         session: Option<&str>,
     ) -> Result<OpenCodeOutput, AgentError> {
-        self.run_with_env(config, prompt, session, &[], None)
+        let workspace = restricted_workspace()?;
+        self.run_with_agent(
+            config,
+            prompt,
+            session,
+            &[],
+            Some(&workspace),
+            Some("gambiit"),
+        )
     }
 
-    pub fn run_with_env(
+    /// Run an MCP turn in the restricted agent project prepared by the caller.
+    fn run_mcp(
+        &self,
+        config: &AgentConfig,
+        prompt: &str,
+        session: Option<&str>,
+        working_dir: &Path,
+    ) -> Result<OpenCodeOutput, AgentError> {
+        self.run_with_agent(
+            config,
+            prompt,
+            session,
+            &[],
+            Some(working_dir),
+            Some("gambiit"),
+        )
+    }
+
+    fn run_with_agent(
         &self,
         config: &AgentConfig,
         prompt: &str,
         session: Option<&str>,
         extra_env: &[(String, String)],
         working_dir: Option<&Path>,
+        agent: Option<&str>,
     ) -> Result<OpenCodeOutput, AgentError> {
         let mut command = Command::new(&self.binary);
         if let Some(directory) = working_dir {
@@ -193,6 +307,9 @@ impl OpenCodeClient {
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
+        if let Some(agent) = agent {
+            command.arg("--agent").arg(agent);
+        }
         if let Some(session) = session {
             command.arg("-s").arg(session);
         }
@@ -478,12 +595,11 @@ impl AgentSession {
         prompt: &str,
         working_dir: &Path,
     ) -> Result<OpenCodeOutput, AgentError> {
-        let output = self.client.run_with_env(
+        let output = self.client.run_mcp(
             &self.config,
             prompt,
             self.session_id.as_deref(),
-            &[],
-            Some(working_dir),
+            working_dir,
         )?;
         if output.session_id.is_some() {
             self.session_id = output.session_id.clone();
@@ -1341,6 +1457,51 @@ mod tests {
         assert!(prompt.contains("e2e4"));
         assert!(prompt.contains("Fast path"));
         assert!(prompt.contains("Do not call `get_state` or `get_candidates` mechanically"));
+    }
+
+    #[test]
+    fn restricted_agent_denies_builtin_tools() {
+        let config = restricted_agent_config();
+        assert_eq!(config["default_agent"], "gambiit");
+        let tools = &config["agent"]["gambiit"]["tools"];
+        for tool in [
+            "bash",
+            "edit",
+            "write",
+            "read",
+            "webfetch",
+            "websearch",
+            "task",
+            "todowrite",
+            "todoread",
+            "list",
+            "glob",
+            "grep",
+        ] {
+            assert_eq!(tools[tool], false, "{tool} must be disabled");
+        }
+        assert_eq!(config["agent"]["gambiit"]["permission"]["bash"], "deny");
+    }
+
+    #[test]
+    fn restricted_workspace_writes_a_private_agent_config() {
+        let directory = restricted_workspace().unwrap();
+        let path = directory.join("opencode.json");
+        let value: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(value["default_agent"], "gambiit");
+        assert_eq!(value["agent"]["gambiit"]["tools"]["bash"], false);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(
+                std::fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+                0o600
+            );
+            assert_eq!(
+                std::fs::metadata(&directory).unwrap().permissions().mode() & 0o777,
+                0o700
+            );
+        }
     }
 
     #[test]

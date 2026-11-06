@@ -221,7 +221,7 @@ Valmis:
 
 Testid:
 
-- **94 Rust testi** rohelised (core 10, engine 2, agent 17, Tauri app 65) +
+- **97 Rust testi** rohelised (core 10, engine 2, agent 19, Tauri app 66) +
   13 ignored testi (päris-mudeli käigu-, eestikeelne, isiksusestiili-,
   bluff-intensiivsuse-, treeneri-, režissööri-, MCP kahe käigu- ja MCP
   vestluse/viigi-smoke-test ning neli Stockfishi testi).
@@ -361,9 +361,11 @@ Tööriistad:
 - `submit_draw` — viigipakkumise turnil
 
 MCP sild loeb lokaalsest sillast pordi ja tokeni ning forwardib tööriistakutsed
-sellele. Gambiit ise shelli- ega failitööriistu ei anna; OpenCode'i enda
-sisseehitatud tööriistad sõltuvad kasutaja OpenCode'i seadistusest. Iga turn on
-tüübistatud (move/chat/draw) ja valet tüüpi vastus lükatakse tagasi.
+sellele. Mudel käivitub eraldi `gambiit` OpenCode'agendina, millel on
+sisseehitatud shelli-, faili-, veebi- ja taskitööriistad keelatud; MCP-turnidel
+registreeritakse ainult Gambiiti MCP server. Välised pluginad jäävad kasutaja
+kontrolli alla. Iga turn on tüübistatud (move/chat/draw) ja valet tüüpi vastus
+lükatakse tagasi.
 
 ### 7.4 Stockfish hübriid
 
@@ -652,9 +654,9 @@ $XDG_RUNTIME_DIR/gambiit/session.json   # port + token, 0600
 - CSP ja sanitiseeritud kommentaarid: agendi tekst renderdatakse plain text /
   markdownina, mitte `{@html}`-ina.
 - PGN/teema import valideeritakse; suuruse piirid; ei mingit käivitatavat koodi.
-- Agent-workspace registreerib ainult Gambiiti MCP serveri; Gambiit ise
-  shelli-/failitööriistu ei anna. OpenCode'i sisseehitatud tööriistad sõltuvad
-  kasutaja OpenCode'i seadistusest.
+- Eraldi `gambiit` OpenCode'agent keelab sisseehitatud shelli-, faili-, veebi-
+  ja taskitööriistad; MCP-turnidel registreeritakse ainult Gambiit MCP server.
+  Pluginad jäävad kasutaja kontrolli alla.
 - Rakendus ei loe ega salvesta API-võtmeid; OpenCode haldab autentimist.
 - Logid redigeerivad tokenid.
 

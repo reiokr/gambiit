@@ -366,11 +366,12 @@ the game:
 been run) plus the current position evaluation, best move and candidate list.
 It never changes the board and does not run a new analysis.
 
-The MCP bridge listens only on `127.0.0.1` with a random token. Gambiit uses a
-private temporary OpenCode project config for the bridge. The bridge itself
-grants no shell or file tools; OpenCode's own built-in tools and plugins remain
-governed by your OpenCode configuration. MCP can be slower because the model may
-make tool calls; the fast path includes the board and candidate list in the first
+The MCP bridge listens only on `127.0.0.1` with a random token. Gambiit runs the
+model with a dedicated `gambiit` OpenCode agent: the temporary project config
+disables bash, edit, write, read, webfetch, websearch, task and related built-in
+tools, and MCP turns add only the Gambiit MCP server. External OpenCode plugins
+remain outside Gambiit's control. MCP can be slower because the model may make
+tool calls; the fast path includes the board and candidate list in the first
 prompt and usually needs only the relevant submission tool. Prompt mode remains
 the fallback if MCP is unavailable or a model does not use tools well.
 
