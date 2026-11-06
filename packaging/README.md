@@ -5,7 +5,7 @@ Gambiit ships as a native Tauri binary. The Arch/CachyOS package installs:
 - `/usr/bin/gambiit`
 - `/usr/share/applications/gambiit.desktop`
 - hicolor icons in 32, 128, 256, 512 and scalable sizes
-- the MIT license and README
+- the MIT license, README and `docs/` guides
 
 Stockfish is an optional runtime dependency, not bundled: it is GPL software and
 the app discovers the system binary. OpenCode is the AI opponent; either the
