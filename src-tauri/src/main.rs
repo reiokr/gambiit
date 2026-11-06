@@ -2,6 +2,7 @@
 
 mod analysis;
 mod credentials;
+mod leaderboard;
 mod mcp;
 mod pgn;
 mod pieces;
@@ -315,6 +316,7 @@ struct Session {
     commentary: Vec<CommentaryCard>,
     chat: Vec<ChatMessage>,
     clock: Option<GameClock>,
+    analysis: Option<analysis::AnalysisSummary>,
     thinking: bool,
     game_id: String,
     game_name: String,
@@ -340,6 +342,7 @@ impl Session {
             Vec::new(),
             Vec::new(),
             clock,
+            None,
             game_id,
             game_name,
             storage::now(),
@@ -389,6 +392,7 @@ impl Session {
             saved.commentary,
             saved.chat,
             clock,
+            saved.analysis,
             saved.id,
             saved.name,
             saved.created_at,
@@ -409,6 +413,7 @@ impl Session {
             commentary,
             Vec::new(),
             clock,
+            None,
             storage::new_id(),
             name,
             storage::now(),
@@ -424,6 +429,7 @@ impl Session {
         commentary: Vec<CommentaryCard>,
         chat: Vec<ChatMessage>,
         clock: Option<GameClock>,
+        analysis: Option<analysis::AnalysisSummary>,
         game_id: String,
         game_name: String,
         created_at: u64,
@@ -455,6 +461,7 @@ impl Session {
             commentary,
             chat,
             clock,
+            analysis,
             thinking: false,
             game_id,
             game_name,
@@ -494,6 +501,7 @@ impl Session {
                 black_ms: clock.black_ms,
                 increment_ms: clock.increment_ms,
             }),
+            analysis: self.analysis.clone(),
             settings: self.settings.clone(),
             result: pgn::result(&self.game).to_string(),
             termination: termination.to_string(),
@@ -753,6 +761,7 @@ impl Session {
             .apply_uci(mv)
             .or_else(|_| self.game.apply_san(mv))
             .map_err(|error| error.to_string())?;
+        self.analysis = None;
         self.add_increment(mover);
         self.persist();
         Ok(self.snapshot())
@@ -879,6 +888,7 @@ impl Session {
 
         self.game
             .annotate_last(Some(turn.comment.clone()), turn.eval.clone());
+        self.analysis = None;
         let mut candidates: Vec<CandidateView> = turn
             .candidates
             .iter()
@@ -972,6 +982,7 @@ impl Session {
             return Err("Only your own last move can be taken back.".into());
         }
         self.game.undo_last();
+        self.analysis = None;
         self.persist();
         Ok(self.snapshot())
     }
@@ -1154,13 +1165,34 @@ async fn analyze_game(
     state: State<'_, AppState>,
     depth: u32,
 ) -> Result<analysis::AnalysisReport, String> {
-    let game = state.session.lock().game.clone();
-    if game.history().is_empty() {
-        return Err("There are no moves to analyze yet.".to_string());
-    }
-    tauri::async_runtime::spawn_blocking(move || analysis::analyze(&game, depth))
+    let (game_id, game, human_color) = {
+        let session = state.session.lock();
+        if session.game.history().is_empty() {
+            return Err("There are no moves to analyze yet.".to_string());
+        }
+        (
+            session.game_id.clone(),
+            session.game.clone(),
+            session.game.human_color(),
+        )
+    };
+    let report = tauri::async_runtime::spawn_blocking(move || analysis::analyze(&game, depth))
         .await
-        .map_err(|error| error.to_string())?
+        .map_err(|error| error.to_string())??;
+    let summary = analysis::AnalysisSummary::from_report(&report, human_color == Color::Black);
+    if let Err(error) = storage::save_analysis(&game_id, &summary) {
+        eprintln!("Could not save analysis summary: {error}");
+    }
+    let mut session = state.session.lock();
+    if session.game_id == game_id && session.game.history().len() == report.positions.len() {
+        session.analysis = Some(summary);
+    }
+    Ok(report)
+}
+
+#[tauri::command]
+fn get_leaderboard(difficulty: Option<String>) -> Result<leaderboard::Leaderboard, String> {
+    leaderboard::build(difficulty.as_deref())
 }
 
 #[tauri::command]
@@ -1458,6 +1490,7 @@ pub fn run() {
             export_pgn,
             import_pgn,
             analyze_game,
+            get_leaderboard,
             list_piece_sets,
             load_piece_set,
             open_pieces_folder,
@@ -1616,6 +1649,7 @@ mod tests {
                 black_ms: 600_000,
                 increment_ms: 5_000,
             }),
+            analysis: None,
             settings,
             result: "*".to_string(),
             termination: "ongoing".to_string(),
@@ -1731,6 +1765,7 @@ mod tests {
                 at: 2,
             }],
             clock: None,
+            analysis: None,
             settings: Settings::default(),
             result: "1/2-1/2".to_string(),
             termination: "draw_agreed".to_string(),
@@ -1816,6 +1851,7 @@ mod tests {
             commentary: Vec::new(),
             chat: Vec::new(),
             clock: None,
+            analysis: None,
             settings: Settings::default(),
             result: "*".to_string(),
             termination: "ongoing".to_string(),

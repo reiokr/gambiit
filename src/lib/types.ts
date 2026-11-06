@@ -118,6 +118,33 @@ export interface PieceSetSummary {
   preview: string | null;
 }
 
+export interface LeaderboardRow {
+  model: string;
+  games: number;
+  finished: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  winRate: number;
+  moves: number;
+  analyzedGames: number;
+  accuracy: number | null;
+  blunders: number;
+  mistakes: number;
+  inaccuracies: number;
+  truthLensFlags: number;
+  bluffRate: number | null;
+  avgResponseMs: number | null;
+  tokens: number;
+  cost: number;
+  difficulties: string[];
+}
+
+export interface Leaderboard {
+  rows: LeaderboardRow[];
+  difficulties: string[];
+}
+
 export interface GameSummary {
   id: string;
   name: string;

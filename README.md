@@ -47,6 +47,8 @@ What works now:
 - post-game Stockfish analysis: accuracy for both sides, move classification,
   an evaluation graph, selected-move detail with a board, and the Truth Lens
   comparing the agent's claimed evaluations with the engine;
+- a local model leaderboard built from saved games, with win rate, accuracy,
+  blunder counts, bluff rate, response time, tokens and cost;
 - settings for model, persona, response mode, colour, theme, font size
   (90–150%, default 120%), language, sound, animations, Stockfish depth and
   candidate count;
@@ -230,6 +232,17 @@ the app closed is not counted. PGN exports include a standard
 `TimeControl "600+5"` tag when a clock is enabled.
 
 Changing clock settings while a game is in progress asks for a new game.
+
+## Leaderboard
+
+The **Leaderboard** tab in the game library groups finished and unfinished saved
+games by model. It shows W/D/L, win rate, accuracy, blunders/mistakes/
+inaccuracies, Truth Lens bluff rate, average response time, tokens and cost.
+Use the difficulty filter to compare models under similar conditions.
+
+Accuracy and bluff rate are populated when you run post-game analysis; the
+summary is stored with the game. Games without analysis still contribute their
+result and token usage. Win rate ignores unfinished games.
 
 ## Models and API keys
 

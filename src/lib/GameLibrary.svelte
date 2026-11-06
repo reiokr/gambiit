@@ -2,6 +2,7 @@
   import type { GameSummary } from "./types";
   import { i18n } from "./i18n";
   import { focusTrap } from "./a11y";
+  import Leaderboard from "./Leaderboard.svelte";
 
   export let games: GameSummary[] = [];
   export let currentId = "";
@@ -15,7 +16,7 @@
   export let onImportPgn: (pgn: string) => Promise<boolean> = async () => false;
   export let onClose: () => void = () => {};
 
-  let activeTab: "saved" | "pgn" = "saved";
+  let activeTab: "saved" | "pgn" | "leaderboard" = "saved";
   let importText = "";
   let message = "";
   let busy = false;
@@ -122,6 +123,15 @@
       >
         {$i18n("games.pgn")}
       </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeTab === "leaderboard"}
+        class:active={activeTab === "leaderboard"}
+        on:click={() => (activeTab = "leaderboard")}
+      >
+        {$i18n("games.leaderboard")}
+      </button>
     </div>
 
     <div class="body">
@@ -170,7 +180,7 @@
             {/each}
           </div>
         {/if}
-      {:else}
+      {:else if activeTab === "pgn"}
         <section class="pgn-section">
           <div class="section-title">
             <h3>{$i18n("games.exportTitle")}</h3>
@@ -218,6 +228,8 @@
             </button>
           </div>
         </section>
+      {:else}
+        <Leaderboard />
       {/if}
     </div>
   </div>

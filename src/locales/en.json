@@ -283,6 +283,7 @@
     "title": "Games",
     "saved": "Saved games",
     "pgn": "PGN",
+    "leaderboard": "Leaderboard",
     "new": "New game",
     "open": "Open",
     "rename": "Rename",
@@ -348,6 +349,28 @@
       "mistake": "Mistake",
       "blunder": "Blunder"
     }
+  },
+  "leaderboard": {
+    "eyebrow": "Local standings",
+    "title": "Model leaderboard",
+    "hint": "Results, speed and theater from your saved games. Only local games are counted.",
+    "difficulty": "Difficulty",
+    "allDifficulties": "All difficulties",
+    "games": "{count} games",
+    "recordHint": "Wins / draws / losses from the opponent's side",
+    "winRate": "Win rate",
+    "accuracy": "Accuracy",
+    "blunders": "Blunders / mistakes / inaccuracies",
+    "bluffRate": "Bluff rate",
+    "flags": "{count} flags",
+    "response": "Avg response",
+    "tokens": "Tokens",
+    "cost": "Cost",
+    "analyzed": "Analyzed",
+    "loading": "Loading leaderboard…",
+    "empty": "No games yet.",
+    "emptyHint": "Finish a game and it will appear here. Run post-game analysis to unlock accuracy and bluff rate.",
+    "footnote": "Accuracy and bluff rate come from saved post-game analysis summaries. Win rate excludes unfinished games."
   },
   "themes": {
     "salon": {

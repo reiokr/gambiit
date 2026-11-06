@@ -283,6 +283,7 @@
     "title": "Mängud",
     "saved": "Salvestatud mängud",
     "pgn": "PGN",
+    "leaderboard": "Edetabel",
     "new": "Uus mäng",
     "open": "Ava",
     "rename": "Nimeta ümber",
@@ -348,6 +349,28 @@
       "mistake": "Viga",
       "blunder": "Ränk viga"
     }
+  },
+  "leaderboard": {
+    "eyebrow": "Kohalik edetabel",
+    "title": "Mudelite edetabel",
+    "hint": "Tulemused, kiirus ja teater sinu salvestatud mängudest. Arvesse lähevad ainult kohalikud mängud.",
+    "difficulty": "Raskusaste",
+    "allDifficulties": "Kõik raskusastmed",
+    "games": "{count} mängu",
+    "recordHint": "Võidud / viigid / kaotused vastase vaatenurgast",
+    "winRate": "Võiduprotsent",
+    "accuracy": "Täpsus",
+    "blunders": "Blunderid / vead / ebatäpsused",
+    "bluffRate": "Bluff rate",
+    "flags": "{count} märget",
+    "response": "Keskm. vastus",
+    "tokens": "Tokenid",
+    "cost": "Kulu",
+    "analyzed": "Analüüsitud",
+    "loading": "Laadin edetabelit…",
+    "empty": "Mänge veel pole.",
+    "emptyHint": "Lõpeta mäng ja see ilmub siia. Pärastmängu analüüs avab täpsuse ja bluff rate'i.",
+    "footnote": "Täpsus ja bluff rate tulevad salvestatud analüüsi kokkuvõtetest. Võiduprotsent ei arvesta pooleliolevaid mänge."
   },
   "themes": {
     "salon": {

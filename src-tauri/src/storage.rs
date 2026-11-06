@@ -1,6 +1,6 @@
 //! Local game library, resume data and PGN exports.
 
-use crate::{ChatMessage, CommentaryCard, SavedClock, Settings};
+use crate::{ChatMessage, CommentaryCard, SavedClock, Settings, analysis::AnalysisSummary};
 use gambiit_core::MoveRecord;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -25,6 +25,8 @@ pub struct SavedGame {
     pub chat: Vec<ChatMessage>,
     #[serde(default)]
     pub clock: Option<SavedClock>,
+    #[serde(default)]
+    pub analysis: Option<AnalysisSummary>,
     pub settings: Settings,
     pub result: String,
     #[serde(default = "default_termination")]
@@ -120,6 +122,37 @@ pub fn save(game: &SavedGame) -> Result<(), String> {
     }
     let json = serde_json::to_string_pretty(game).map_err(|error| error.to_string())?;
     write_atomic(&games_dir().join(format!("{}.json", game.id)), &json)
+}
+
+pub fn load_all() -> Result<Vec<SavedGame>, String> {
+    let dir = games_dir();
+    if !dir.exists() {
+        return Ok(Vec::new());
+    }
+    let entries = fs::read_dir(dir).map_err(|error| error.to_string())?;
+    let mut games = Vec::new();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|extension| extension.to_str()) != Some("json") {
+            continue;
+        }
+        let Ok(raw) = fs::read_to_string(&path) else {
+            continue;
+        };
+        if let Ok(game) = serde_json::from_str::<SavedGame>(&raw) {
+            games.push(game);
+        }
+    }
+    Ok(games)
+}
+
+pub fn save_analysis(id: &str, summary: &AnalysisSummary) -> Result<(), String> {
+    let mut game = load(id)?;
+    if game.moves.len() as u32 != summary.analyzed_plies {
+        return Err("The game changed while analysis was running.".to_string());
+    }
+    game.analysis = Some(summary.clone());
+    save(&game)
 }
 
 pub fn load(id: &str) -> Result<SavedGame, String> {

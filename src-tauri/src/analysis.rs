@@ -2,7 +2,7 @@
 
 use gambiit_core::{Game, GameStatus};
 use gambiit_engine::Stockfish;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use shakmaty::Color;
 
 #[derive(Debug, Clone, Serialize)]
@@ -40,6 +40,63 @@ pub struct AnalysisReport {
     pub white_inaccuracies: u32,
     pub black_inaccuracies: u32,
     pub truth_lens_flags: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnalysisSummary {
+    pub depth: u32,
+    pub analyzed_plies: u32,
+    pub agent_accuracy: f64,
+    pub agent_moves: u32,
+    pub agent_blunders: u32,
+    pub agent_mistakes: u32,
+    pub agent_inaccuracies: u32,
+    pub truth_lens_flags: u32,
+}
+
+impl AnalysisSummary {
+    pub fn from_report(report: &AnalysisReport, agent_is_white: bool) -> Self {
+        let agent_color = if agent_is_white { "white" } else { "black" };
+        let positions = report
+            .positions
+            .iter()
+            .filter(|position| position.color == agent_color)
+            .collect::<Vec<_>>();
+        let mut summary = Self {
+            depth: report.depth,
+            analyzed_plies: report.positions.len() as u32,
+            agent_accuracy: if agent_is_white {
+                report.white_accuracy
+            } else {
+                report.black_accuracy
+            },
+            agent_moves: positions.len() as u32,
+            agent_blunders: if agent_is_white {
+                report.white_blunders
+            } else {
+                report.black_blunders
+            },
+            agent_mistakes: if agent_is_white {
+                report.white_mistakes
+            } else {
+                report.black_mistakes
+            },
+            agent_inaccuracies: if agent_is_white {
+                report.white_inaccuracies
+            } else {
+                report.black_inaccuracies
+            },
+            truth_lens_flags: positions
+                .iter()
+                .filter(|position| position.claim_mismatch)
+                .count() as u32,
+        };
+        if summary.agent_moves == 0 {
+            summary.agent_accuracy = 0.0;
+        }
+        summary
+    }
 }
 
 #[derive(Debug, Clone)]

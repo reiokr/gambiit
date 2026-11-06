@@ -89,6 +89,8 @@ Completed:
 - Opponent chat and formal draw offers, each switchable in Settings.
 - Optional chess clocks with presets, custom time controls, increments, flag
   fall and PGN `TimeControl` output.
+- Local model leaderboard with win rate, accuracy, blunders, bluff rate,
+  response time, tokens and cost, filterable by difficulty.
 - Five Stockfish difficulty levels — Beginner, Casual, Intermediate, Strong and
   Master — plus Custom. Selecting a level sets the depth/MultiPV sliders; moving
   a slider selects Custom. Stockfish `Skill Level` is part of each preset.
@@ -117,6 +119,45 @@ Next:
 
 - Add more bundled themes and piece sets.
 - Then packaging and Director's Cut.
+
+---
+
+## Planned feature designs (2026-11-06)
+
+### Model leaderboard
+A local, filterable table built from saved games. It groups results by model and
+shows games, W/D/L, win rate, average accuracy, blunders/mistakes/inaccuracies,
+Truth Lens flags, average response time, tokens and cost. Accuracy requires a
+stored post-game analysis summary; games without one still contribute results
+and usage. Difficulty and time control are filters, not silent assumptions.
+
+### Persona mixer
+A trait-based custom persona: theatricality, confidence, warmth, humour,
+aggression, verbosity and deception, plus a name and accent. Traits affect the
+prompt and commentary only; Stockfish candidate strength and difficulty remain
+untouched. The first version edits one custom persona; blending two personas is
+a later extension. Deception is shared with the Truth Lens bluff setting.
+
+### Coach mode
+An optional in-game coach for the human, separate from the opponent persona and
+agent session. It uses Stockfish truth plus an honest coach prompt. Actions:
+explain position, progressive hint (idea → candidate → move), and review the
+last move. It is on demand, not automatic, and never changes the opponent’s move.
+
+### Truth Lens 2.0
+The current post-game Truth Lens compares numeric evaluations with Stockfish and
+flags differences of at least 1.50 pawns. Extend it to parse more claims
+(winning/losing/equal/mate) and add a bluff-intensity slider: 0 honest, 50
+theatrical but plausible, 100 unreliable narrator. Bluffing applies only to
+evaluations and plans, never to rules or move legality. The leaderboard reports
+bluff rate.
+
+### Director’s Cut
+A post-game narrative generated from the analysis report, commentary and chat.
+It is organised into acts (opening, turning point, final act), selects key
+moments by evaluation swing, shows mini boards and quotes, and overlays Truth
+Lens notes. It is one optional LLM call after analysis, not a live mode. It is
+labeled as theater, separate from objective analysis.
 
 ---
 
@@ -476,7 +517,7 @@ Settings must expose game properties and theater features without code edits.
 | **3. Agent in UI** | Prompt transport, Auto/Button modes, model/persona selection, commentary, error handling. | Full game vs OpenCode model without terminal typing; illegal move recovers. |
 | **4. Design system** | 4 themes ✅, theme editor ✅, 5 built-in piece sets ✅, custom sets ✅, animations, sounds, keyboard/screen-reader basics ✅; more themes planned. | Theme switches live and persists; palette and pieces load from disk. |
 | **5. Game completeness** | PGN ✅, persistence ✅, analysis ✅, clocks ✅, draw/resign ✅; takebacks, result screen, tribute lines. | PGN round-trip; takeback rules enforced; analysis and flags work. |
-| **6. Theater extras** | Personas ✅, chat ✅, Truth Lens ✅, draw offers ✅, MCP move transport ✅; Director’s Cut, leaderboard, broadcast. | Toggleable and non-intrusive. |
+| **6. Theater extras** | Personas ✅, chat ✅, Truth Lens ✅, draw offers ✅, MCP move transport ✅, model leaderboard ✅; Director’s Cut, broadcast. | Toggleable and non-intrusive. |
 | **7. Packaging** | PKGBUILD, `.desktop`, icon, docs, tests, performance. | Installable on CachyOS; starts <2 s; README. |
 
 Start with Phase 0. The biggest risk is the agent loop, not the board or themes.

@@ -12,6 +12,46 @@
 
 ---
 
+## Kavandatud funktsioonide disain (2026-11-06)
+
+### Mudelite edetabel
+Kohalik, filtreeritav tabel salvestatud mängudest. Rühmitab tulemused mudeli
+kaupa: mängud, võidud/viigid/kaotused, võiduprotsent, keskmine accuracy,
+blunderid/vead/ebatäpsused, Tõeobjektiivi lipukesed, keskmine vastuseaeg,
+tokenid ja kulu. Accuracy ja bluff rate vajavad salvestatud analüüsi kokkuvõtet;
+analüüsimata mängud annavad siiski tulemuse ja kasutuse. Difficulty ja ajakontroll
+on filtrid, mitte vaikimisi eeldused.
+
+### Isiksusemikser
+Trait-põhine kohandatud isiksus: teatraalsus, enesekindlus, soojus, huumor,
+agressiivsus, sõnavõtu pikkus ja petlikkus, pluss nimi ja aktsent. Traitid
+mõjutavad ainult prompti ja kommentaari; Stockfishi kandidaadid ja difficulty
+jäävad puutumata. Esimene versioon redigeerib üht kohandatud isiksust; kahe
+isiksuse segamine on hilisem laiendus. Petlikkus on seotud Tõeobjektiivi
+bluff-seadega.
+
+### Treenerirežiim
+Valikuline mänguaegne treener inimesele, vastase isiksusest ja agent-sessioonist
+eraldi. Kasutab Stockfishi tõde ja ausat treeneri prompti. Tegevused: seisu
+selgitamine, järkjärguline vihje (idee → kandidaat → käik) ja viimase käigu
+ülevaade. Ainult nupuvajutusel, mitte automaatselt; ei muuda vastase käiku.
+
+### Tõeobjektiiv 2.0
+Praegune pärastmängu Tõeobjektiiv võrdleb numbrilisi hinnanguid Stockfishiga ja
+märgib ≥ 1,50 etturi erinevuse. Laiendus loeb ka väiteid „võidan/kaotan/viik/matt“
+ning lisab bluff-intensiivsuse liuguri: 0 aus, 50 teatraalne aga usutav, 100
+ebausaldusväärne jutustaja. Bluff kehtib ainult hinnangutele ja plaanidele, mitte
+reeglitele ega käigu legaalsusele. Edetabel näitab bluff rate’i.
+
+### Režissööri lõige
+Pärastmängu narratiiv, mis luuakse analüüsi, kommentaaride ja vestluse põhjal.
+Liigendatud vaatusteks (avang, pöördepunkt, finaal), valib eval-kõikumiste järgi
+võtmehetked, näitab väikeseid laudu ja tsitaate ning lisab Tõeobjektiivi märkused.
+Üks valikuline LLM-kutse pärast analüüsi, mitte live-režiim. Selgelt teater,
+objektiivsest analüüsist eraldi.
+
+---
+
 ## 1. Lühikokkuvõte
 
 Gambiit on **Rustil põhinev desktop-malemäng**, kus vastane on OpenCode'i AI-mudel.
@@ -114,6 +154,8 @@ Valmis:
   lülitatavad.
 - Valikuline malekell bullet/blitz/rapid/klassikaline/kohandatud ajakontrolliga,
   lisaaeg, lipu langemine ja PGN-i `TimeControl` väli.
+- Kohalik mudelite edetabel salvestatud mängudest: võiduprotsent, accuracy,
+  blunderid, bluff rate, vastuseaeg, tokenid ja kulu.
 - Viis Stockfishi raskusastet — Algaja, Harrastaja, Edasijõudnu, Tugev ja
   Meister — pluss Kohandatud. Taseme valik seab depth/MultiPV liugurid; liuguri
   liigutamine valib Kohandatud. Igal preseedil on ka Stockfishi `Skill Level`.
@@ -133,7 +175,7 @@ Valmis:
 
 Testid:
 
-- **55 Rust testi** rohelised (core 10, engine 2, agent 11, Tauri app 32) +
+- **56 Rust testi** rohelised (core 10, engine 2, agent 11, Tauri app 33) +
   6 ignored testi (päris-mudeli käigu-, vestluse/viigi-, MCP kahe käigu- ja
   eestikeelne smoke-test ning kaks Stockfishi analüüsi testi).
 - 1 ignored **agent_smoke** test: `e4` → `...c5` 8,9 sekundiga, 522 tokenit.
@@ -476,7 +518,7 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 | **3. Agent UI-s** | Auto/Button, mudel, isiksus, kommentaarid | ✅ valmis |
 | **4. Disainisüsteem** | 4 teemat ✅, teemaredaktor ✅, 5 sisseehitatud malendikomplekti ✅, kohandatud komplektid ✅, animatsioonid, helid, klaviatuuri/ekraanilugeja põhjad ✅ | ✅ valmis; rohkem teemasid hiljem |
 | **5. Mängu täiuslikkus** | PGN ✅, salvestus ✅, analüüs ✅, kellad ✅, viik/alistumine ✅; tulemus | osaliselt |
-| **6. Teater ja ekstra** | Vestlus ✅, viigipakkumised ✅, MCP-käigud ✅; MCP vestlus/analüüs, Director's Cut, edetabel | osaliselt |
+| **6. Teater ja ekstra** | Vestlus ✅, viigipakkumised ✅, MCP-käigud ✅, mudelite edetabel ✅; MCP vestlus/analüüs, Director's Cut | osaliselt |
 | **7. Pakend** | PKGBUILD, `.desktop`, release, docs | hiljem |
 
 Soovitatud järjekord:
