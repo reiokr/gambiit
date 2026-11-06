@@ -720,6 +720,7 @@
     applyFontScale(settings.fontScale);
     applyMotion(settings.animations);
     setLocale(settings.uiLanguage);
+    appliedSettings = JSON.stringify(settings);
     const timer = window.setInterval(() => void refreshClock(), 250);
     void (async () => {
       await refreshGames();

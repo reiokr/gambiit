@@ -35,7 +35,7 @@ use tokio::sync::watch;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use uuid::Uuid;
 
-use crate::Session;
+use crate::{GameSnapshot, Session};
 
 const API_VERSION: u32 = 1;
 const STATE_POLL_INTERVAL: Duration = Duration::from_millis(500);
@@ -125,13 +125,16 @@ pub(crate) fn start(session: Arc<Mutex<Session>>) -> Result<LocalApi, String> {
                 tokio::spawn(async move {
                     let mut last_fingerprint = initial_fingerprint;
                     loop {
-                        if let Some(json) = snapshot_if_changed(&poll_state, &mut last_fingerprint)
-                            && !json.is_empty()
+                        if let Some(snapshot) =
+                            snapshot_if_changed(&poll_state, &mut last_fingerprint)
                         {
-                            // `send_replace` also stores the value while no
-                            // SSE client is subscribed, so a later client sees
-                            // the latest state instead of the startup snapshot.
-                            poll_state.latest.send_replace(json);
+                            let json = serde_json::to_string(&snapshot).unwrap_or_default();
+                            if !json.is_empty() {
+                                // `send_replace` also stores the value while no
+                                // SSE client is subscribed, so a later client sees
+                                // the latest state instead of the startup snapshot.
+                                poll_state.latest.send_replace(json);
+                            }
                         }
                         tokio::time::sleep(STATE_POLL_INTERVAL).await;
                     }
@@ -155,14 +158,14 @@ pub(crate) fn start(session: Arc<Mutex<Session>>) -> Result<LocalApi, String> {
     })
 }
 
-fn snapshot_if_changed(state: &ApiState, last_fingerprint: &mut u64) -> Option<String> {
+fn snapshot_if_changed(state: &ApiState, last_fingerprint: &mut u64) -> Option<GameSnapshot> {
     let mut session = state.session.lock();
     let fingerprint = session.state_fingerprint();
     if fingerprint == *last_fingerprint {
         return None;
     }
     *last_fingerprint = fingerprint;
-    Some(serde_json::to_string(&session.snapshot()).unwrap_or_default())
+    Some(session.snapshot())
 }
 
 fn router(state: ApiState) -> Router {
@@ -200,11 +203,11 @@ async fn health() -> Json<serde_json::Value> {
 }
 
 async fn get_state(State(state): State<ApiState>) -> Response {
-    let body = {
+    let snapshot = {
         let mut session = state.session.lock();
-        serde_json::to_string(&session.snapshot())
+        session.snapshot()
     };
-    match body {
+    match serde_json::to_string(&snapshot) {
         Ok(body) => (
             [(
                 header::CONTENT_TYPE,
@@ -446,7 +449,8 @@ mod tests {
         assert!(snapshot_if_changed(&state, &mut last).is_none());
 
         state.session.lock().make_move("e2e4").unwrap();
-        let json = snapshot_if_changed(&state, &mut last).expect("changed state");
+        let snapshot = snapshot_if_changed(&state, &mut last).expect("changed state");
+        let json = serde_json::to_string(&snapshot).unwrap();
         assert!(json.contains("\"turn\":\"black\""));
         assert!(snapshot_if_changed(&state, &mut last).is_none());
 
