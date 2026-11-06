@@ -221,7 +221,7 @@ Valmis:
 
 Testid:
 
-- **97 Rust testi** rohelised (core 10, engine 2, agent 19, Tauri app 66) +
+- **101 Rust testi** rohelised (core 10, engine 2, agent 19, Tauri app 70) +
   13 ignored testi (päris-mudeli käigu-, eestikeelne, isiksusestiili-,
   bluff-intensiivsuse-, treeneri-, režissööri-, MCP kahe käigu- ja MCP
   vestluse/viigi-smoke-test ning neli Stockfishi testi).

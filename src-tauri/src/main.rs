@@ -20,6 +20,7 @@ use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use shakmaty::{Color, Role, Square};
 use std::{
+    hash::{Hash, Hasher},
     io::Write,
     sync::Arc,
     time::{Instant, SystemTime, UNIX_EPOCH},
@@ -536,20 +537,12 @@ impl Session {
             }
         };
 
-        let stockfish = Stockfish::discover().and_then(|path| match Stockfish::new(&path) {
-            Ok(engine) => Some(engine),
-            Err(error) => {
-                eprintln!("Stockfish unavailable: {error}");
-                None
-            }
-        });
-
         Self {
             game,
             settings,
             agent,
             agent_error,
-            stockfish,
+            stockfish: None,
             commentary,
             chat,
             coach: Vec::new(),
@@ -562,6 +555,23 @@ impl Session {
             created_at,
             persist_enabled: true,
         }
+    }
+
+    /// Start Stockfish on first use instead of on every session creation.
+    fn engine(&mut self) -> Result<&mut Stockfish, String> {
+        if self.stockfish.is_none() {
+            let path = Stockfish::discover().ok_or_else(|| {
+                "Stockfish is not installed. Install it to enable the coach and analysis."
+                    .to_string()
+            })?;
+            let engine = Stockfish::new(&path)
+                .map_err(|error| format!("Stockfish could not start: {error}"))?;
+            self.stockfish = Some(engine);
+        }
+        Ok(self
+            .stockfish
+            .as_mut()
+            .expect("Stockfish was initialized above"))
     }
 
     fn saved(&self) -> storage::SavedGame {
@@ -651,9 +661,9 @@ impl Session {
         let (prompt, level) = match action {
             "explain" => {
                 let (eval_text, _) = {
-                    let engine = self.stockfish.as_mut().ok_or_else(|| {
-                        "The coach needs Stockfish. Install it to get honest analysis.".to_string()
-                    })?;
+                    let engine = self
+                        .engine()
+                        .map_err(|error| format!("The coach needs Stockfish. {error}"))?;
                     coach_context(engine, &game, 1)?
                 };
                 (
@@ -667,9 +677,9 @@ impl Session {
                 }
                 let level = level.unwrap_or(1).clamp(1, 3);
                 let (eval_text, candidates) = {
-                    let engine = self.stockfish.as_mut().ok_or_else(|| {
-                        "The coach needs Stockfish. Install it to get honest hints.".to_string()
-                    })?;
+                    let engine = self
+                        .engine()
+                        .map_err(|error| format!("The coach needs Stockfish. {error}"))?;
                     coach_context(engine, &game, 3)?
                 };
                 (
@@ -686,9 +696,9 @@ impl Session {
             }
             "review" => {
                 let facts = {
-                    let engine = self.stockfish.as_mut().ok_or_else(|| {
-                        "The coach needs Stockfish. Install it to review moves.".to_string()
-                    })?;
+                    let engine = self
+                        .engine()
+                        .map_err(|error| format!("The coach needs Stockfish. {error}"))?;
                     coach::review_facts(engine, &game, human_color)?
                 };
                 (coach::review_prompt(&facts, &language), None)
@@ -889,6 +899,9 @@ impl Session {
     }
 
     fn tick_clock(&mut self) {
+        if self.clock.is_none() {
+            return;
+        }
         let turn = self.game.turn();
         if self.game.status().is_over() {
             if let Some(clock) = self.clock.as_mut() {
@@ -922,8 +935,12 @@ impl Session {
     }
 
     fn clock_view(&self) -> Option<ClockView> {
+        self.clock_view_for(self.game.status().is_over())
+    }
+
+    fn clock_view_for(&self, game_over: bool) -> Option<ClockView> {
         let clock = self.clock.as_ref()?;
-        let running = if self.game.status().is_over() {
+        let running = if game_over {
             None
         } else {
             Some(self.game.turn())
@@ -931,9 +948,52 @@ impl Session {
         Some(clock.view(running))
     }
 
+    /// Cheap change detector for the read-only API.
+    ///
+    /// The SSE poller must not build and serialize a full snapshot when nothing
+    /// has changed. Every field that reaches `GameSnapshot` is represented
+    /// here, either directly or through a derived value.
+    pub(crate) fn state_fingerprint(&mut self) -> u64 {
+        self.tick_clock();
+        let status = self.game.status();
+        let clock = self.clock_view_for(status.is_over());
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        self.game_id.hash(&mut hasher);
+        self.game_name.hash(&mut hasher);
+        self.game.fen().hash(&mut hasher);
+        color_key(self.game.human_color()).hash(&mut hasher);
+        let (status_key, status_side) = status_parts(status, self.game.turn());
+        status_key.hash(&mut hasher);
+        status_side.hash(&mut hasher);
+        self.game.history().len().hash(&mut hasher);
+        hash_json(&self.game.last_move(), &mut hasher);
+        self.commentary.len().hash(&mut hasher);
+        hash_json(&self.commentary.last(), &mut hasher);
+        self.chat.len().hash(&mut hasher);
+        hash_json(&self.chat.last(), &mut hasher);
+        self.coach.len().hash(&mut hasher);
+        hash_json(&self.coach.last(), &mut hasher);
+        self.coach_thinking.hash(&mut hasher);
+        self.thinking.hash(&mut hasher);
+        self.agent_error.hash(&mut hasher);
+        match clock {
+            Some(clock) => {
+                clock_bucket(clock.white_ms).hash(&mut hasher);
+                clock_bucket(clock.black_ms).hash(&mut hasher);
+                clock.increment_ms.hash(&mut hasher);
+                clock.running.hash(&mut hasher);
+            }
+            None => 0u8.hash(&mut hasher),
+        }
+        hash_json(&self.settings, &mut hasher);
+        hasher.finish()
+    }
+
     fn snapshot(&mut self) -> GameSnapshot {
         self.tick_clock();
         let turn = self.game.turn();
+        let status = self.game.status();
+        let check = self.game.is_check();
         let mut board = Vec::with_capacity(64);
         let mut check_square = None;
 
@@ -941,7 +1001,7 @@ impl Session {
             for file in 0..8 {
                 let square = Square::new(rank * 8 + file);
                 let piece = self.game.piece_at(square);
-                if self.game.is_check()
+                if check
                     && let Some(piece) = piece
                     && piece.color == turn
                     && piece.role == Role::King
@@ -959,7 +1019,6 @@ impl Session {
             }
         }
 
-        let status = self.game.status();
         let (status_key, status_side) = status_parts(status, turn);
         GameSnapshot {
             game_id: self.game_id.clone(),
@@ -968,12 +1027,12 @@ impl Session {
             turn: color_key(turn).to_string(),
             human_color: color_key(self.game.human_color()).to_string(),
             agent_color: color_key(!self.game.human_color()).to_string(),
-            status_text: self.game.status_text(),
+            status_text: self.game.status_text_for(status),
             status_key,
             status_side,
             game_over: status.is_over(),
             winner: status.winner().map(|color| color_key(color).to_string()),
-            check: self.game.is_check(),
+            check,
             check_square,
             legal_moves: self.game.legal_moves(),
             history: self.game.history().to_vec(),
@@ -983,7 +1042,7 @@ impl Session {
             chat: self.chat.clone(),
             coach: self.coach.clone(),
             coach_thinking: self.coach_thinking,
-            clock: self.clock_view(),
+            clock: self.clock_view_for(status.is_over()),
             settings: self.settings.clone(),
             agent_error: self.agent_error.clone(),
             thinking: self.thinking,
@@ -1040,12 +1099,13 @@ impl Session {
         }
 
         let (multipv, depth, skill) = engine_params(&self.settings);
-        let mut candidates = match self.stockfish.as_mut() {
-            Some(engine) => {
+        let fen = self.game.fen();
+        let mut candidates = match self.engine() {
+            Ok(engine) => {
                 if let Err(error) = engine.set_skill(skill) {
                     eprintln!("Stockfish skill warning: {error}");
                 }
-                match engine.candidates(&self.game.fen(), multipv, depth) {
+                match engine.candidates(&fen, multipv, depth) {
                     Ok(candidates) => candidates,
                     Err(error) => {
                         eprintln!("Stockfish warning: {error}");
@@ -1053,7 +1113,10 @@ impl Session {
                     }
                 }
             }
-            None => Vec::new(),
+            Err(error) => {
+                eprintln!("Stockfish unavailable: {error}");
+                Vec::new()
+            }
         };
 
         let prompt_game = self.game.clone();
@@ -1183,7 +1246,7 @@ impl Session {
     fn mcp_candidates(&mut self) -> Vec<Candidate> {
         let (multipv, depth, skill) = engine_params(&self.settings);
         let fen = self.game.fen();
-        let Some(engine) = self.stockfish.as_mut() else {
+        let Some(engine) = self.engine().ok() else {
             return Vec::new();
         };
         if let Err(error) = engine.set_skill(skill) {
@@ -1523,10 +1586,11 @@ fn get_state(state: State<'_, AppState>) -> Result<GameSnapshot, String> {
 fn clock_tick(state: State<'_, AppState>) -> Result<ClockUpdate, String> {
     let mut session = state.session.lock();
     session.tick_clock();
+    let game_over = session.game.status().is_over();
     Ok(ClockUpdate {
         game_id: session.game_id.clone(),
-        clock: session.clock_view(),
-        game_over: session.game.status().is_over(),
+        clock: session.clock_view_for(game_over),
+        game_over,
     })
 }
 
@@ -2066,6 +2130,19 @@ fn shuffle_candidates(candidates: &mut [CandidateView]) {
     }
 }
 
+fn hash_json<T: Serialize + ?Sized>(value: &T, hasher: &mut impl Hasher) {
+    match serde_json::to_vec(value) {
+        Ok(bytes) => bytes.hash(hasher),
+        Err(_) => 0u8.hash(hasher),
+    }
+}
+
+/// Quantize clock values to display precision so a running clock does not
+/// force a full snapshot serialization on every poll.
+fn clock_bucket(ms: u64) -> u64 {
+    if ms < 20_000 { ms / 100 } else { ms / 1_000 }
+}
+
 fn status_parts(status: GameStatus, turn: Color) -> (String, Option<String>) {
     match status {
         GameStatus::Ongoing => ("ongoing".to_string(), Some(color_key(turn).to_string())),
@@ -2190,6 +2267,35 @@ mod tests {
 
     fn session() -> Session {
         Session::new_with_persist(Settings::default(), Color::White, false)
+    }
+
+    #[test]
+    fn session_defers_stockfish_until_first_use() {
+        let session = session();
+        assert!(session.stockfish.is_none());
+    }
+
+    #[test]
+    fn state_fingerprint_tracks_visible_changes() {
+        let mut session = session();
+        let initial = session.state_fingerprint();
+        assert_eq!(initial, session.state_fingerprint());
+
+        session.make_move("e2e4").unwrap();
+        let moved = session.state_fingerprint();
+        assert_ne!(initial, moved);
+        assert_eq!(moved, session.state_fingerprint());
+
+        session.chat.push(ChatMessage {
+            role: "user".to_string(),
+            text: "hello".to_string(),
+            at: 1,
+        });
+        let chatted = session.state_fingerprint();
+        assert_ne!(moved, chatted);
+
+        session.settings.agent_language = "et".to_string();
+        assert_ne!(chatted, session.state_fingerprint());
     }
 
     #[test]

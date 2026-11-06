@@ -52,6 +52,8 @@
   let games: GameSummary[] = [];
   let pgnPreview = "";
   let models: string[] = [];
+  let modelsLoaded = false;
+  let appliedSettings = "";
   let promotion: { from: string; to: string; options: MoveInfo[] } | null =
     null;
   let resultDismissed = false;
@@ -189,14 +191,12 @@
     const previous = snapshot;
     snapshot = next;
     settings = next.settings;
+    const colorChanged = next.humanColor !== humanColor;
     humanColor = next.humanColor;
-    saveSettings(next.settings);
-    saveHumanColor(next.humanColor);
-    applyTheme(next.settings.theme, next.settings.customTheme);
-    void applyPieceSet(next.settings.pieceSet);
-    applyFontScale(next.settings.fontScale);
-    applyMotion(next.settings.animations);
-    setLocale(next.settings.uiLanguage);
+    if (colorChanged) {
+      saveHumanColor(next.humanColor);
+    }
+    applySettingsSideEffects(next.settings);
     thinking = next.thinking;
 
     if (next.lastMove && next.lastMove.ply !== lastSoundPly) {
@@ -230,6 +230,18 @@
     } else if (next.gameOver && previous && !previous.gameOver) {
       announcement = statusTextFor(next);
     }
+  }
+
+  function applySettingsSideEffects(next: Settings) {
+    const serialized = JSON.stringify(next);
+    if (serialized === appliedSettings) return;
+    appliedSettings = serialized;
+    saveSettings(next);
+    applyTheme(next.theme, next.customTheme);
+    void applyPieceSet(next.pieceSet);
+    applyFontScale(next.fontScale);
+    applyMotion(next.animations);
+    setLocale(next.uiLanguage);
   }
 
   async function startGame(color: ColorKey = humanColor): Promise<string | null> {
@@ -406,6 +418,7 @@
 
   async function refreshClock() {
     if (
+      document.hidden ||
       clockPolling ||
       !snapshot?.clock ||
       snapshot.gameOver ||
@@ -523,6 +536,8 @@
       models = await invoke<string[]>("list_models");
     } catch {
       models = [];
+    } finally {
+      modelsLoaded = true;
     }
   }
 
@@ -639,6 +654,9 @@
   function openSettings() {
     showGames = false;
     showSettings = true;
+    if (!modelsLoaded) {
+      void refreshModels();
+    }
   }
 
   function cancelSettings() {
@@ -711,7 +729,6 @@
       if (!snapshot) {
         await startGame(humanColor);
       }
-      await refreshModels();
     })();
     return () => window.clearInterval(timer);
   });

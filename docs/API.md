@@ -99,7 +99,9 @@ Bearer token required. Returns a Server-Sent Events stream.
 
 - Event name: `state`
 - Data: the same JSON snapshot as `/api/state`
-- A new event is sent when the snapshot changes (at most every 500 ms).
+- A new event is sent when the game state changes (checked every 500 ms).
+  Clock values are quantized to display precision, so a running clock does not
+  force a full snapshot on every poll.
 - A `keepalive` comment is sent every 15 seconds.
 - A new client immediately receives the current state.
 - No historical replay or `Last-Event-ID` resume in v1.

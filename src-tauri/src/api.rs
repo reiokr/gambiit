@@ -82,11 +82,15 @@ pub(crate) fn start(session: Arc<Mutex<Session>>) -> Result<LocalApi, String> {
         .local_addr()
         .map_err(|error| format!("Could not read the local API address: {error}"))?;
     let token = new_token();
-    let initial = {
+    let (initial, initial_fingerprint) = {
         let mut session = session.lock();
-        serde_json::to_string(&session.snapshot()).unwrap_or_default()
+        let fingerprint = session.state_fingerprint();
+        (
+            serde_json::to_string(&session.snapshot()).unwrap_or_default(),
+            fingerprint,
+        )
     };
-    let (latest, _) = watch::channel(initial.clone());
+    let (latest, _) = watch::channel(initial);
     let state = ApiState {
         session,
         token: Arc::new(token.clone()),
@@ -119,17 +123,15 @@ pub(crate) fn start(session: Arc<Mutex<Session>>) -> Result<LocalApi, String> {
                 };
                 let poll_state = state.clone();
                 tokio::spawn(async move {
-                    let mut last = initial;
+                    let mut last_fingerprint = initial_fingerprint;
                     loop {
-                        let json = {
-                            let mut session = poll_state.session.lock();
-                            serde_json::to_string(&session.snapshot()).unwrap_or_default()
-                        };
-                        if !json.is_empty() && json != last {
-                            last = json.clone();
-                            if poll_state.latest.send(json).is_err() {
-                                break;
-                            }
+                        if let Some(json) = snapshot_if_changed(&poll_state, &mut last_fingerprint)
+                            && !json.is_empty()
+                        {
+                            // `send_replace` also stores the value while no
+                            // SSE client is subscribed, so a later client sees
+                            // the latest state instead of the startup snapshot.
+                            poll_state.latest.send_replace(json);
                         }
                         tokio::time::sleep(STATE_POLL_INTERVAL).await;
                     }
@@ -151,6 +153,16 @@ pub(crate) fn start(session: Arc<Mutex<Session>>) -> Result<LocalApi, String> {
         url: format!("http://{addr}"),
         discovery_path,
     })
+}
+
+fn snapshot_if_changed(state: &ApiState, last_fingerprint: &mut u64) -> Option<String> {
+    let mut session = state.session.lock();
+    let fingerprint = session.state_fingerprint();
+    if fingerprint == *last_fingerprint {
+        return None;
+    }
+    *last_fingerprint = fingerprint;
+    Some(serde_json::to_string(&session.snapshot()).unwrap_or_default())
 }
 
 fn router(state: ApiState) -> Router {
@@ -188,12 +200,19 @@ async fn health() -> Json<serde_json::Value> {
 }
 
 async fn get_state(State(state): State<ApiState>) -> Response {
-    let value = {
+    let body = {
         let mut session = state.session.lock();
-        serde_json::to_value(session.snapshot())
+        serde_json::to_string(&session.snapshot())
     };
-    match value {
-        Ok(value) => Json(value).into_response(),
+    match body {
+        Ok(body) => (
+            [(
+                header::CONTENT_TYPE,
+                HeaderValue::from_static("application/json"),
+            )],
+            body,
+        )
+            .into_response(),
         Err(error) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({ "error": error.to_string() })),
@@ -420,8 +439,46 @@ mod tests {
         )
     }
 
+    #[test]
+    fn poll_skips_unchanged_state_and_keeps_latest_for_late_subscribers() {
+        let (state, _) = test_state();
+        let mut last = state.session.lock().state_fingerprint();
+        assert!(snapshot_if_changed(&state, &mut last).is_none());
+
+        state.session.lock().make_move("e2e4").unwrap();
+        let json = snapshot_if_changed(&state, &mut last).expect("changed state");
+        assert!(json.contains("\"turn\":\"black\""));
+        assert!(snapshot_if_changed(&state, &mut last).is_none());
+
+        state.latest.send_replace(json.clone());
+        assert_eq!(*state.latest.subscribe().borrow(), json);
+    }
+
     async fn status(app: Router, request: HttpRequest<Body>) -> StatusCode {
         app.oneshot(request).await.unwrap().status()
+    }
+
+    #[tokio::test]
+    async fn state_response_is_json() {
+        let (state, token) = test_state();
+        let app = router(state);
+        let response = app
+            .oneshot(
+                HttpRequest::builder()
+                    .uri("/api/state")
+                    .header(header::AUTHORIZATION, format!("Bearer {token}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.headers()[header::CONTENT_TYPE], "application/json");
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(value["turn"], "white");
     }
 
     #[tokio::test]

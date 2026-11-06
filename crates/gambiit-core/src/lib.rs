@@ -293,11 +293,21 @@ impl Game {
             };
         }
 
-        let key = self.repetition_key();
+        // `apply_move` records the key of every position, including the
+        // current one, so status checks do not need to rebuild a FEN.
+        let computed;
+        let key = match self.position_keys.last() {
+            Some(key) => key,
+            None => {
+                computed = self.repetition_key();
+                &computed
+            }
+        };
         let repeats = self
             .position_keys
             .iter()
-            .filter(|existing| *existing == &key)
+            .filter(|existing| *existing == key)
+            .take(3)
             .count();
         if repeats >= 3 {
             return GameStatus::Draw {
@@ -327,8 +337,13 @@ impl Game {
     }
 
     pub fn status_text(&self) -> String {
+        self.status_text_for(self.status())
+    }
+
+    /// Render status text when the caller has already evaluated the status.
+    pub fn status_text_for(&self, status: GameStatus) -> String {
         let turn = color_name(self.turn());
-        match self.status() {
+        match status {
             GameStatus::Ongoing => format!("{turn} to move."),
             GameStatus::Check => format!("{turn} is in check."),
             GameStatus::Checkmate { winner } => {
