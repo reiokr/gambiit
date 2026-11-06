@@ -54,6 +54,8 @@ What works now:
   Stockfish-backed review of your last move;
 - an optional Director's Cut: a three-act theatrical recap with mini boards,
   verified quotes and Truth Lens notes after an analysis;
+- broadcast mode: a large centered board, enlarged player bars and a live
+  commentary ticker, with the sidebar and board actions hidden for OBS;
 - a local model leaderboard built from saved games, with win rate, accuracy,
   blunder counts, bluff rate, response time, tokens and cost;
 - settings for model, persona, response mode, colour, theme, font size
@@ -76,8 +78,8 @@ What works now:
   dialogs, reduced-motion support and custom-theme contrast warnings;
 - desktop and terminal builds share the same Rust core, engine and agent layers.
 
-Not yet: MCP tools for chat, draw offers and analysis, the local Axum API and
-broadcast mode. Those are the next phases in `PLAN.md`.
+Not yet: MCP tools for chat, draw offers and analysis, and the local Axum API.
+Those are the next phases in `PLAN.md`.
 
 ## Run the desktop app
 
@@ -273,6 +275,20 @@ The coach never changes the opponent's move or the board. It is on demand, not
 automatic. Hints are available on your turn; review works after you have made a
 move. Coach notes are kept for the current session and are not saved with the
 game. Stockfish is required for honest position reports, hints and reviews.
+
+## Broadcast mode
+
+Press the **◉ Broadcast** button in the top bar to switch to the stream layout.
+The sidebar, board actions and normal top-bar controls disappear; the board
+grows to fill the window, both player bars get larger, and a live commentary
+ticker appears at the bottom. The ticker shows the opponent's avatar and name,
+its latest commentary, the claimed evaluation and the last few moves. While the
+opponent is thinking, it shows the thinking state instead.
+
+Click **Exit broadcast** or press **Escape** to return to the normal layout. The
+game, chat, coach and analysis state are preserved while the layout is hidden.
+Broadcast mode is CSS-only and does not open a second window, so OBS can capture
+the Gambiit window directly.
 
 ## Clocks
 
@@ -480,7 +496,7 @@ the rules, Stockfish integration and OpenCode contract before the UI is built.
   (PGN export/import, the saved-game library, post-game analysis and clocks are
   done.)
 - **Phase 6:** personas/chat, Truth Lens, MCP move transport, Director's Cut,
-  leaderboard, broadcast mode. (MCP move mode is done.)
+  leaderboard, broadcast mode. (All of these are done.)
 - **Phase 7:** packaging (PKGBUILD, `.desktop`), docs, performance.
 
 ## License

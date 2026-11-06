@@ -18,6 +18,7 @@
   export let clockMs: number | null = null;
   export let clockActive = false;
   export let clockStopped = false;
+  export let broadcast = false;
 
   $: advantage = material > 0 ? `+${material}` : `${material}`;
   $: clockLow =
@@ -30,6 +31,7 @@
   class="player"
   class:active
   class:agent={isAgent}
+  class:broadcast
   data-side={color}
   style={accent ? `--player-accent:${accent}` : undefined}
 >
@@ -109,6 +111,33 @@
   .player.active {
     border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
     box-shadow: 0 0 0 1px var(--accent-soft);
+  }
+
+  .player.broadcast {
+    min-height: 68px;
+    padding: 10px 16px;
+    gap: 12px;
+  }
+
+  .player.broadcast .avatar {
+    width: 50px;
+    height: 50px;
+    flex: 0 0 50px;
+    font-size: calc(26px * var(--font-scale));
+  }
+
+  .player.broadcast .name {
+    font-size: calc(19px * var(--font-scale));
+  }
+
+  .player.broadcast .subtitle {
+    font-size: calc(11px * var(--font-scale));
+  }
+
+  .player.broadcast .clock {
+    min-width: 78px;
+    padding: 7px 10px;
+    font-size: calc(18px * var(--font-scale));
   }
 
   .avatar {

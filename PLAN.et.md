@@ -209,7 +209,7 @@ Testid:
 
 - rohkem sisseehitatud teemasid ja kureeritud malendikomplekte;
 - forced-colors/high-contrast režiim ja täielik ekraanilugeja audit;
-- lokaalne Axum API ja broadcast-režiim.
+- lokaalne Axum API.
 
 ---
 
@@ -517,8 +517,7 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 
 - pärastmängu analüüs (accuracy, blunderid, eval-graaf);
 - teemaredaktor + kohandatud malendikomplektid;
-- lokaalne Axum API;
-- Broadcast-režiim.
+- lokaalne Axum API.
 
 ### Stretch
 
@@ -538,15 +537,14 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 | **3. Agent UI-s** | Auto/Button, mudel, isiksus, kommentaarid | ✅ valmis |
 | **4. Disainisüsteem** | 4 teemat ✅, teemaredaktor ✅, 5 sisseehitatud malendikomplekti ✅, kohandatud komplektid ✅, animatsioonid, helid, klaviatuuri/ekraanilugeja põhjad ✅ | ✅ valmis; rohkem teemasid hiljem |
 | **5. Mängu täiuslikkus** | PGN ✅, salvestus ✅, analüüs ✅, kellad ✅, viik/alistumine ✅; tulemus | osaliselt |
-| **6. Teater ja ekstra** | Vestlus ✅, viigipakkumised ✅, MCP-käigud ✅, mudelite edetabel ✅, režissööri lõige ✅; MCP vestlus/analüüs, broadcast | osaliselt |
+| **6. Teater ja ekstra** | Vestlus ✅, viigipakkumised ✅, MCP-käigud ✅, mudelite edetabel ✅, režissööri lõige ✅, eetrirežiim ✅; MCP vestlus/analüüs | osaliselt |
 | **7. Pakend** | PKGBUILD, `.desktop`, release, docs | hiljem |
 
 Soovitatud järjekord:
 
 1. **Rohkem teemasid ja malendikomplekte** — disainipolish.
 2. **MCP tööriistad vestlusele, viigile ja analüüsile** — MCP-režiimi laiendus.
-3. **Broadcast-režiim** — teatriekstra.
-4. **Pakend** — release, PKGBUILD.
+3. **Pakend** — release, PKGBUILD.
 
 ---
 
@@ -646,8 +644,7 @@ $XDG_RUNTIME_DIR/gambiit/session.json   # port + token, 0600
    “trash-talk score” mudelite/isiksuste kaupa.
 4. **Isiksusemikser** — liugurid: agressiivsus, pettus, sõnavõtt, draama,
    huumor, keel; preseedid + avatar/aktsent.
-5. **Broadcast-režiim** — suur laud, kommentaariticker, peidetud paneelid;
-   OBS-ile sobiv.
+5. **Eetrirežiim** — valmis: suur laud, kommentaariticker, peidetud paneelid; OBS-ile sobiv.
 6. **Avangurolet** — juhuslik avang kureeritud raamatust või temaatiline matš.
 7. **Handikapid** — agent ilma liputa, inimesele lisaaeg jne.
 8. **Pressikonverents** — pärast mängu küsimused-vastused rollis.
@@ -665,9 +662,8 @@ broadcast-režiim.
 
 1. **Rohkem teemasid ja malendikomplekte**.
 2. **MCP tööriistad vestlusele, viigile ja analüüsile**.
-3. **Broadcast-režiim**.
-4. **Pakend** (PKGBUILD, `.desktop`, release).
+3. **Pakend** (PKGBUILD, `.desktop`, release).
 
 Salvestamine, jätkamine, mängude raamatukogu, PGN eksport/import, pärastmängu
 analüüs, teemaredaktor, kohandatud malendikomplektid, vestlus, viigipakkumised,
-malekellad, MCP-käigud, treener ja režissööri lõige on nüüd valmis.
+malekellad, MCP-käigud, treener, režissööri lõige ja eetrirežiim on nüüd valmis.

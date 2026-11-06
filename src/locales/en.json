@@ -30,6 +30,8 @@
     "tabTheater": "Theater",
     "tabChat": "Chat",
     "tabCoach": "Coach",
+    "broadcast": "Broadcast mode",
+    "exitBroadcast": "Exit broadcast",
     "tabAnalysis": "Analysis",
     "offerDraw": "Offer draw",
     "offeringDraw": "Offering…",
@@ -254,6 +256,12 @@
     "send": "Send",
     "sending": "Sending…",
     "placeholder": "Speak to your opponent…"
+  },
+  "broadcast": {
+    "live": "On air",
+    "waiting": "The stage is set. Waiting for the first move.",
+    "thinking": "{name} is thinking…",
+    "eval": "claim"
   },
   "coach": {
     "eyebrow": "Honest coach",

@@ -3,6 +3,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import Board from "./lib/Board.svelte";
   import Analysis from "./lib/Analysis.svelte";
+  import BroadcastTicker from "./lib/BroadcastTicker.svelte";
   import Chat from "./lib/Chat.svelte";
   import Coach from "./lib/Coach.svelte";
   import Commentary from "./lib/Commentary.svelte";
@@ -47,6 +48,7 @@
   let activeTab: Tab = "theater";
   let showSettings = false;
   let showGames = false;
+  let broadcast = false;
   let games: GameSummary[] = [];
   let pgnPreview = "";
   let models: string[] = [];
@@ -498,6 +500,12 @@
     return coachRequest("coach_clear");
   }
 
+  function handleBroadcastKeydown(event: KeyboardEvent) {
+    if (broadcast && !promotion && event.key === "Escape") {
+      broadcast = false;
+    }
+  }
+
   function newGame() {
     if (
       snapshot &&
@@ -709,6 +717,8 @@
   });
 </script>
 
+<svelte:window on:keydown={handleBroadcastKeydown} />
+
 {#if !snapshot}
   <div class="loading-screen">
     <div class="loading-mark">G</div>
@@ -716,7 +726,7 @@
     <p>{$i18n("app.settingTheStage")}</p>
   </div>
 {:else}
-  <div class="app">
+  <div class="app" class:broadcast>
     <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
       {announcement}
     </div>
@@ -734,33 +744,52 @@
           <i></i>
           {localizedStatus}
         </span>
-        <button
-          class="icon-btn"
-          type="button"
-          title={$i18n("games.title")}
-          aria-label={$i18n("games.title")}
-          on:click={openGames}
-        >
-          ▤
-        </button>
-        <button
-          class="icon-btn"
-          type="button"
-          title={$i18n("app.flipBoard")}
-          aria-label={$i18n("app.flipBoard")}
-          on:click={() => (flipped = !flipped)}
-        >
-          ⇅
-        </button>
-        <button
-          class="icon-btn"
-          type="button"
-          title={$i18n("app.settings")}
-          aria-label={$i18n("app.settings")}
-          on:click={openSettings}
-        >
-          ⚙
-        </button>
+        {#if broadcast}
+          <button
+            class="btn ghost broadcast-exit"
+            type="button"
+            on:click={() => (broadcast = false)}
+          >
+            {$i18n("app.exitBroadcast")}
+          </button>
+        {:else}
+          <button
+            class="icon-btn"
+            type="button"
+            title={$i18n("app.broadcast")}
+            aria-label={$i18n("app.broadcast")}
+            on:click={() => (broadcast = true)}
+          >
+            ◉
+          </button>
+          <button
+            class="icon-btn"
+            type="button"
+            title={$i18n("games.title")}
+            aria-label={$i18n("games.title")}
+            on:click={openGames}
+          >
+            ▤
+          </button>
+          <button
+            class="icon-btn"
+            type="button"
+            title={$i18n("app.flipBoard")}
+            aria-label={$i18n("app.flipBoard")}
+            on:click={() => (flipped = !flipped)}
+          >
+            ⇅
+          </button>
+          <button
+            class="icon-btn"
+            type="button"
+            title={$i18n("app.settings")}
+            aria-label={$i18n("app.settings")}
+            on:click={openSettings}
+          >
+            ⚙
+          </button>
+        {/if}
       </div>
     </header>
 
@@ -781,6 +810,7 @@
           clockMs={agentClock}
           clockActive={agentClockRunning}
           clockStopped={snapshot.gameOver}
+          broadcast={broadcast}
         />
 
         <div class="board-shell">
@@ -856,6 +886,7 @@
           clockMs={humanClock}
           clockActive={humanClockRunning}
           clockStopped={snapshot.gameOver}
+          broadcast={broadcast}
         />
 
         <div class="board-actions">
@@ -1058,6 +1089,20 @@
       </aside>
     </main>
 
+    {#if broadcast}
+      <div class="broadcast-strip">
+        <BroadcastTicker
+          cards={snapshot.commentary}
+          history={snapshot.history}
+          persona={personaLabel(agentName)}
+          model={agentModel}
+          avatar={agentPersona.avatar}
+          accent={agentPersona.accent}
+          thinking={thinking}
+        />
+      </div>
+    {/if}
+
     {#if error}
       <div class="error-banner" role="alert">
         <span>{error}</span>
@@ -1106,6 +1151,49 @@
     min-height: 100vh;
     margin: 0 auto;
     padding: 16px 22px 24px;
+  }
+
+  .app.broadcast {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+    padding: 10px 16px 14px;
+  }
+
+  .app.broadcast .topbar {
+    margin-bottom: 10px;
+  }
+
+  .app.broadcast .brand-copy p {
+    display: none;
+  }
+
+  .app.broadcast .main {
+    display: flex;
+    flex: 1;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  .app.broadcast .sidebar,
+  .app.broadcast .board-actions {
+    display: none;
+  }
+
+  .app.broadcast .stage {
+    max-width: max(320px, min(1100px, calc(100vh - 345px)));
+    gap: 10px;
+  }
+
+  .broadcast-strip {
+    flex: 0 0 auto;
+    margin-top: 10px;
+  }
+
+  .app.broadcast .broadcast-exit {
+    padding: 7px 12px;
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+    color: var(--text);
   }
 
   .topbar {

@@ -116,7 +116,7 @@ Not yet:
 - MCP tools for chat, draw offers and analysis;
 - additional built-in themes and curated piece sets;
 - forced-colors/high-contrast mode and a full screen-reader audit;
-- personas beyond the prompt presets and broadcast mode.
+- personas beyond the prompt presets.
 
 Next:
 
@@ -491,7 +491,6 @@ Settings must expose game properties and theater features without code edits.
 - MCP mode and agent workspace path.
 - Logs folder, open logs, copy diagnostics.
 - Data folder, backup/export games, reset settings.
-- Experimental features (MCP auto-play, broadcast mode).
 
 ---
 
@@ -521,7 +520,6 @@ Settings must expose game properties and theater features without code edits.
 
 ### Stretch — “full theater”
 
-- Broadcast mode.
 - Opening roulette, handicaps, press conference, grudge-match memory.
 - Local TTS, puzzles, online play (separate large project).
 
@@ -537,7 +535,7 @@ Settings must expose game properties and theater features without code edits.
 | **3. Agent in UI** | Prompt transport, Auto/Button modes, model/persona selection, commentary, error handling. | Full game vs OpenCode model without terminal typing; illegal move recovers. |
 | **4. Design system** | 4 themes ✅, theme editor ✅, 5 built-in piece sets ✅, custom sets ✅, animations, sounds, keyboard/screen-reader basics ✅; more themes planned. | Theme switches live and persists; palette and pieces load from disk. |
 | **5. Game completeness** | PGN ✅, persistence ✅, analysis ✅, clocks ✅, draw/resign ✅; takebacks, result screen, tribute lines. | PGN round-trip; takeback rules enforced; analysis and flags work. |
-| **6. Theater extras** | Personas ✅, chat ✅, Truth Lens ✅, draw offers ✅, MCP move transport ✅, model leaderboard ✅, Director’s Cut ✅; broadcast. | Toggleable and non-intrusive. |
+| **6. Theater extras** | Personas ✅, chat ✅, Truth Lens ✅, draw offers ✅, MCP move transport ✅, model leaderboard ✅, Director’s Cut ✅, broadcast ✅. | Toggleable and non-intrusive. |
 | **7. Packaging** | PKGBUILD, `.desktop`, icon, docs, tests, performance. | Installable on CachyOS; starts <2 s; README. |
 
 Start with Phase 0. The biggest risk is the agent loop, not the board or themes.
@@ -623,7 +621,7 @@ Atomic writes (temp + rename), PGN export always available.
 2. **Director’s Cut** — implemented: a three-act narrative with key moments, board snapshots, quotes and Truth Lens notes.
 3. **Model leaderboard** — local W/L/D, accuracy, average thinking time, “trash-talk score” per model/persona; weekly/season view.
 4. **Persona mixer** — sliders for aggression, deception, verbosity, drama, humor, language; presets with avatars/accents.
-5. **Broadcast mode** — large board, commentary ticker, hidden side panels; OBS-friendly.
+5. **Broadcast mode** — implemented: large board, commentary ticker, hidden side panels; OBS-friendly.
 6. **Opening roulette** — curated random openings or thematic matches.
 7. **Handicaps** — agent without a queen, human extra time, etc.
 8. **Press conference** — post-game Q&A in character.

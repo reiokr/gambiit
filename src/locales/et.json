@@ -30,6 +30,8 @@
     "tabTheater": "Teater",
     "tabChat": "Vestlus",
     "tabCoach": "Treener",
+    "broadcast": "Eetrirežiim",
+    "exitBroadcast": "Välju eetrist",
     "tabAnalysis": "Analüüs",
     "offerDraw": "Paku viiki",
     "offeringDraw": "Pakun…",
@@ -254,6 +256,12 @@
     "send": "Saada",
     "sending": "Saadan…",
     "placeholder": "Räägi vastasega…"
+  },
+  "broadcast": {
+    "live": "Eetris",
+    "waiting": "Lava on valmis. Ootan esimest käiku.",
+    "thinking": "{name} mõtleb…",
+    "eval": "väide"
   },
   "coach": {
     "eyebrow": "Aus treener",
