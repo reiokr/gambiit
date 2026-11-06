@@ -5,7 +5,7 @@ use gambiit_engine::Stockfish;
 use serde::{Deserialize, Serialize};
 use shakmaty::Color;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalysisPly {
     pub ply: u32,
@@ -25,7 +25,7 @@ pub struct AnalysisPly {
     pub claim_mismatch: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalysisReport {
     pub depth: u32,

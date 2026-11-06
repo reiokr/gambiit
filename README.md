@@ -52,6 +52,8 @@ What works now:
   about the board or rules;
 - an optional honest coach with a position report, three-step hints and a
   Stockfish-backed review of your last move;
+- an optional Director's Cut: a three-act theatrical recap with mini boards,
+  verified quotes and Truth Lens notes after an analysis;
 - a local model leaderboard built from saved games, with win rate, accuracy,
   blunder counts, bluff rate, response time, tokens and cost;
 - settings for model, persona, response mode, colour, theme, font size
@@ -74,9 +76,8 @@ What works now:
   dialogs, reduced-motion support and custom-theme contrast warnings;
 - desktop and terminal builds share the same Rust core, engine and agent layers.
 
-Not yet: MCP tools for chat, draw offers and analysis, the local Axum API,
-Director's Cut, leaderboards and broadcast mode. Those are the next phases in
-`PLAN.md`.
+Not yet: MCP tools for chat, draw offers and analysis, the local Axum API and
+broadcast mode. Those are the next phases in `PLAN.md`.
 
 ## Run the desktop app
 
@@ -210,6 +211,14 @@ The analysis runs on a separate Stockfish process, so it does not disturb the
 opponent engine. A short game takes a few seconds; a long game at depth 16 can
 take a minute. The board remains the source of truth: a flag says the agent's
 claim did not match the engine, not that the move was illegal.
+
+After an analysis, **Create Director's Cut** turns the report into a three-act
+theatrical recap. The story is written by one optional model call in the UI
+language; it is labeled as theater, not objective analysis. Each act has a
+mini board, the verified move and evaluation, a quote from the opponent when one
+exists, and any Truth Lens notes from that part of the game. The cut requires
+at least eight plies. Regenerating produces a new version; re-running the
+analysis clears the old cut.
 
 ## Bluff intensity
 

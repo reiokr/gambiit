@@ -4,6 +4,7 @@ mod analysis;
 mod bluff;
 mod coach;
 mod credentials;
+mod director;
 mod leaderboard;
 mod mcp;
 mod pgn;
@@ -1280,6 +1281,97 @@ fn coach_clear(state: State<'_, AppState>) -> Result<GameSnapshot, String> {
 }
 
 #[tauri::command]
+async fn director_cut(
+    state: State<'_, AppState>,
+    report: analysis::AnalysisReport,
+) -> Result<director::DirectorCut, String> {
+    let (context, settings, game_id, history_len) = {
+        let session = state.session.lock();
+        let settings = session.settings.clone();
+        let context = director::Context {
+            game: session.game.clone(),
+            quotes: session
+                .commentary
+                .iter()
+                .map(|card| director::Quote {
+                    uci: card.uci.clone(),
+                    text: card.comment.clone(),
+                })
+                .collect(),
+            chat: session
+                .chat
+                .iter()
+                .filter(|line| line.role != "system")
+                .map(|line| director::ChatLine {
+                    role: line.role.clone(),
+                    text: line.text.clone(),
+                })
+                .collect(),
+            persona: settings.persona_name(),
+            model: settings.model.clone(),
+            ui_language: ui_language_name(&settings.ui_language).to_string(),
+        };
+        (
+            context,
+            settings,
+            session.game_id.clone(),
+            session.game.history().len(),
+        )
+    };
+
+    let plan = director::prepare(&context, &report)?;
+    let config = director_agent_config(&settings, credential_env_for_model(&settings.model));
+    let worker_plan = plan.clone();
+    let worker_config = config.clone();
+    let worker_model = settings.model.clone();
+    let cut = tauri::async_runtime::spawn_blocking(move || {
+        let mut agent = AgentSession::new(worker_config).map_err(|error| error.to_string())?;
+        let mut total_tokens = 0u64;
+        let mut total_cost = 0f64;
+        let mut last_error = String::new();
+        for attempt in 0..2 {
+            let prompt = if attempt == 0 {
+                worker_plan.prompt.clone()
+            } else {
+                director::retry_prompt(&last_error)
+            };
+            let (text, output) = agent
+                .request_text(&prompt)
+                .map_err(|error| error.to_string())?;
+            total_tokens += output.tokens.unwrap_or(0);
+            total_cost += output.cost.unwrap_or(0.0);
+            match director::finish(
+                &worker_plan,
+                &text,
+                &worker_model,
+                (total_tokens > 0).then_some(total_tokens),
+                (total_cost > 0.0).then_some(total_cost),
+            ) {
+                Ok(cut) => return Ok(cut),
+                Err(error) => last_error = error,
+            }
+        }
+        Err(format!(
+            "The Director's Cut could not be generated: {last_error}"
+        ))
+    })
+    .await
+    .map_err(|error| error.to_string())??;
+
+    let current = {
+        let session = state.session.lock();
+        (session.game_id.clone(), session.game.history().len())
+    };
+    if current.0 != game_id || current.1 != history_len {
+        return Err(
+            "The game changed while the Director's Cut was being written. Run it again."
+                .to_string(),
+        );
+    }
+    Ok(cut)
+}
+
+#[tauri::command]
 fn get_state(state: State<'_, AppState>) -> Result<GameSnapshot, String> {
     Ok(state.session.lock().snapshot())
 }
@@ -1715,6 +1807,28 @@ fn coach_context(
     Ok((coach::format_eval(eval_human), candidates))
 }
 
+fn director_agent_config(settings: &Settings, env: Vec<(String, String)>) -> AgentConfig {
+    AgentConfig {
+        model: settings.model.clone(),
+        persona: "Director".to_string(),
+        language: settings.ui_language.clone(),
+        language_name: ui_language_name(&settings.ui_language).to_string(),
+        timeout_secs: 180,
+        retries: 0,
+        env,
+        style_instruction: String::new(),
+        persona_prompt: String::new(),
+        bluff_instruction: String::new(),
+    }
+}
+
+fn ui_language_name(code: &str) -> &'static str {
+    match code {
+        "et" => "Estonian",
+        _ => "English",
+    }
+}
+
 fn coach_agent_config(settings: &Settings, env: Vec<(String, String)>) -> AgentConfig {
     AgentConfig {
         model: settings.model.clone(),
@@ -1864,6 +1978,7 @@ pub fn run() {
             export_pgn,
             import_pgn,
             analyze_game,
+            director_cut,
             get_leaderboard,
             list_piece_sets,
             load_piece_set,
@@ -2453,6 +2568,46 @@ mod tests {
                 snapshot.history[1].san, snapshot.commentary[0].comment
             );
         }
+    }
+
+    /// Real-model Director's Cut smoke test. Ignored because it spends tokens.
+    #[test]
+    #[ignore]
+    fn director_smoke() {
+        let mut game = Game::new();
+        for mv in [
+            "e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "Be7",
+        ] {
+            game.apply_san(mv).unwrap();
+        }
+        let report = analysis::analyze(&game, 10).unwrap();
+        let settings = Settings::default();
+        let context = director::Context {
+            game,
+            quotes: vec![director::Quote {
+                uci: "e7e5".to_string(),
+                text: "The centre is mine, and the theatre is open.".to_string(),
+            }],
+            chat: Vec::new(),
+            persona: "Trickster".to_string(),
+            model: settings.model.clone(),
+            ui_language: "English".to_string(),
+        };
+        let plan = director::prepare(&context, &report).unwrap();
+        let mut agent = AgentSession::new(director_agent_config(
+            &settings,
+            credential_env_for_model(&settings.model),
+        ))
+        .unwrap();
+        let (text, output) = agent.request_text(&plan.prompt).unwrap();
+        let cut =
+            director::finish(&plan, &text, &settings.model, output.tokens, output.cost).unwrap();
+        eprintln!(
+            "Director's Cut: {} — {}\n{}\n{}\n{}",
+            cut.title, cut.tagline, cut.acts[0].text, cut.acts[1].text, cut.acts[2].text
+        );
+        assert_eq!(cut.acts.len(), 3);
+        assert!(cut.acts.iter().all(|act| !act.text.trim().is_empty()));
     }
 
     /// Real-model coach smoke test: hint levels and a move review.

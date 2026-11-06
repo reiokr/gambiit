@@ -253,3 +253,47 @@ export interface AnalysisReport {
   blackInaccuracies: number;
   truthLensFlags: number;
 }
+
+export type DirectorActKind = "opening" | "turningPoint" | "finalAct";
+
+export interface DirectorMove {
+  san: string;
+  uci: string;
+  from: string;
+  to: string;
+  color: ColorKey;
+  ply: number;
+}
+
+export interface DirectorFlag {
+  san: string;
+  ply: number;
+  claimedEval: string;
+  gapCp: number;
+}
+
+export interface DirectorAct {
+  kind: DirectorActKind;
+  title: string;
+  text: string;
+  ply: number;
+  san: string;
+  color: ColorKey;
+  fen: string;
+  lastMove: DirectorMove | null;
+  evalCp: number;
+  classification: AnalysisClass | null;
+  quote: string | null;
+  quotePersona: string | null;
+  truthLens: DirectorFlag[];
+}
+
+export interface DirectorCut {
+  title: string;
+  tagline: string;
+  acts: DirectorAct[];
+  closing: string;
+  model: string;
+  tokens: number | null;
+  cost: number | null;
+}

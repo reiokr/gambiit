@@ -58,12 +58,12 @@ selge liialdusbudžeti. Bluff kehtib ainult hinnangutele ja plaanidele, mitte
 reeglitele ega käigu legaalsusele; viigipakkumise otsus jääb ausaks. Edetabel
 näitab sellest tulenevat bluff rate’i.
 
-### Režissööri lõige
+### Režissööri lõige (valmis)
 Pärastmängu narratiiv, mis luuakse analüüsi, kommentaaride ja vestluse põhjal.
-Liigendatud vaatusteks (avang, pöördepunkt, finaal), valib eval-kõikumiste järgi
-võtmehetked, näitab väikeseid laudu ja tsitaate ning lisab Tõeobjektiivi märkused.
-Üks valikuline LLM-kutse pärast analüüsi, mitte live-režiim. Selgelt teater,
-objektiivsest analüüsist eraldi.
+Liigendatud kolmeks vaatuseks (avang, pöördepunkt, finaal), valib eval-kõikumiste
+järgi võtmehetked, näitab väikeseid laudu ja kontrollitud tsitaate ning lisab
+Tõeobjektiivi märkused. Üks valikuline LLM-kutse pärast analüüsi, mitte
+live-režiim. Selgelt teater, objektiivsest analüüsist eraldi.
 
 ---
 
@@ -196,10 +196,10 @@ Valmis:
 
 Testid:
 
-- **81 Rust testi** rohelised (core 10, engine 2, agent 15, Tauri app 54) +
-  11 ignored testi (päris-mudeli käigu-, isiksusestiili-, bluff-intensiivsuse-,
-  treeneri-, vestluse/viigi-, MCP kahe käigu- ja eestikeelne smoke-test ning
-  neli Stockfishi testi).
+- **86 Rust testi** rohelised (core 10, engine 2, agent 15, Tauri app 59) +
+  12 ignored testi (päris-mudeli käigu-, eestikeelne, isiksusestiili-,
+  bluff-intensiivsuse-, treeneri-, režissööri-, MCP kahe käigu- ja
+  vestluse/viigi-smoke-test ning neli Stockfishi testi).
 - 1 ignored **agent_smoke** test: `e4` → `...c5` 8,9 sekundiga, 522 tokenit.
 - `cargo clippy --all-targets -- -D warnings` puhas.
 - `pnpm check` — 0 viga, 0 hoiatust.
@@ -209,9 +209,7 @@ Testid:
 
 - rohkem sisseehitatud teemasid ja kureeritud malendikomplekte;
 - forced-colors/high-contrast režiim ja täielik ekraanilugeja audit;
-- MCP-režiim ja lokaalne Axum API;
-- vestlus (chat) agendiga;
-- Director's Cut, mudelite edetabel, broadcast-režiim.
+- lokaalne Axum API ja broadcast-režiim.
 
 ---
 
@@ -468,7 +466,7 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 - tögamine ja psühholoogiline sõda;
 - lõputribuudid;
 - pressikonverents (stretch);
-- Director's Cut (stretch);
+- Režissööri lõige (nõudmisel pärast analüüsi);
 - Truth Lens (pärast mängu);
 - keel: UI ja agent samast `src/locales/*.json` kataloogist (en/et; uued keeled ilma koodimuudatusteta).
 
@@ -519,9 +517,8 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 
 - pärastmängu analüüs (accuracy, blunderid, eval-graaf);
 - teemaredaktor + kohandatud malendikomplektid;
-- MCP + lokaalne Axum API;
-- vestlus;
-- Truth Lens, Director's Cut, mudelite edetabel, broadcast.
+- lokaalne Axum API;
+- Broadcast-režiim.
 
 ### Stretch
 
@@ -541,14 +538,14 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 | **3. Agent UI-s** | Auto/Button, mudel, isiksus, kommentaarid | ✅ valmis |
 | **4. Disainisüsteem** | 4 teemat ✅, teemaredaktor ✅, 5 sisseehitatud malendikomplekti ✅, kohandatud komplektid ✅, animatsioonid, helid, klaviatuuri/ekraanilugeja põhjad ✅ | ✅ valmis; rohkem teemasid hiljem |
 | **5. Mängu täiuslikkus** | PGN ✅, salvestus ✅, analüüs ✅, kellad ✅, viik/alistumine ✅; tulemus | osaliselt |
-| **6. Teater ja ekstra** | Vestlus ✅, viigipakkumised ✅, MCP-käigud ✅, mudelite edetabel ✅; MCP vestlus/analüüs, Director's Cut | osaliselt |
+| **6. Teater ja ekstra** | Vestlus ✅, viigipakkumised ✅, MCP-käigud ✅, mudelite edetabel ✅, režissööri lõige ✅; MCP vestlus/analüüs, broadcast | osaliselt |
 | **7. Pakend** | PKGBUILD, `.desktop`, release, docs | hiljem |
 
 Soovitatud järjekord:
 
 1. **Rohkem teemasid ja malendikomplekte** — disainipolish.
 2. **MCP tööriistad vestlusele, viigile ja analüüsile** — MCP-režiimi laiendus.
-3. **Director's Cut / edetabel / broadcast** — teatriekstra.
+3. **Broadcast-režiim** — teatriekstra.
 4. **Pakend** — release, PKGBUILD.
 
 ---
@@ -644,8 +641,7 @@ $XDG_RUNTIME_DIR/gambiit/session.json   # port + token, 0600
 1. **Tõeobjektiiv (Truth Lens)** — pärast mängu kõrvutab rakendus agendi
    väidetud hinnangud Stockfishi tegelike hinnangutega. Ainult objektiivselt
    kontrollitavad väited; tulevikuplaanid on lubatud bluff.
-2. **Režissööri lõige (Director's Cut)** — pärast mängu genereerib agent PGN-i +
-   pöördepunktide põhjal jutustuse; laudadega ajajoon, eksport Markdown/HTML.
+2. **Režissööri lõige (Director's Cut)** — valmis: kolmevaatuseline narratiiv võtmehetkede, laudade, kontrollitud tsitaatide ja Tõeobjektiivi märkustega; üks valikuline LLM-kutse pärast analüüsi.
 3. **Mudelite edetabel** — kohalik W/L/D, täpsus, keskmine mõtlemisaeg,
    “trash-talk score” mudelite/isiksuste kaupa.
 4. **Isiksusemikser** — liugurid: agressiivsus, pettus, sõnavõtt, draama,
@@ -669,9 +665,9 @@ broadcast-režiim.
 
 1. **Rohkem teemasid ja malendikomplekte**.
 2. **MCP tööriistad vestlusele, viigile ja analüüsile**.
-3. **Director's Cut / edetabel / broadcast**.
+3. **Broadcast-režiim**.
 4. **Pakend** (PKGBUILD, `.desktop`, release).
 
 Salvestamine, jätkamine, mängude raamatukogu, PGN eksport/import, pärastmängu
 analüüs, teemaredaktor, kohandatud malendikomplektid, vestlus, viigipakkumised,
-malekellad ja MCP-käigud on nüüd valmis.
+malekellad, MCP-käigud, treener ja režissööri lõige on nüüd valmis.

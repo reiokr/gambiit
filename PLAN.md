@@ -116,13 +116,12 @@ Not yet:
 - MCP tools for chat, draw offers and analysis;
 - additional built-in themes and curated piece sets;
 - forced-colors/high-contrast mode and a full screen-reader audit;
-- personas beyond the prompt presets, Director's Cut, leaderboard and broadcast
-  mode.
+- personas beyond the prompt presets and broadcast mode.
 
 Next:
 
 - Add more bundled themes and piece sets.
-- Then packaging and Director's Cut.
+- Then packaging.
 
 ---
 
@@ -172,12 +171,12 @@ sets an explicit exaggeration budget. Bluffing applies only to evaluations and
 plans, never to rules or move legality; draw decisions remain honest. The
 leaderboard reports the resulting bluff rate.
 
-### Director’s Cut
+### Director’s Cut (implemented)
 A post-game narrative generated from the analysis report, commentary and chat.
-It is organised into acts (opening, turning point, final act), selects key
-moments by evaluation swing, shows mini boards and quotes, and overlays Truth
-Lens notes. It is one optional LLM call after analysis, not a live mode. It is
-labeled as theater, separate from objective analysis.
+It is organised into three acts (opening, turning point, final act), selects key
+moments by evaluation swing, shows mini boards and verified quotes, and overlays
+Truth Lens notes. It is one optional LLM call after analysis, not a live mode,
+and is labeled as theater, separate from objective analysis.
 
 ---
 
@@ -465,7 +464,7 @@ Settings must expose game properties and theater features without code edits.
 - Taunts and psychological warfare: on/off.
 - Post-game tribute lines: on/off.
 - Post-game press conference: on/off (stretch).
-- Director’s Cut narrative: on/off (stretch).
+- Director’s Cut narrative: on demand after analysis.
 - Truth Lens (claimed eval vs engine): on/off (post-game only).
 - Agent language: English (default) / Estonian.
 
@@ -522,7 +521,7 @@ Settings must expose game properties and theater features without code edits.
 
 ### Stretch — “full theater”
 
-- Truth Lens, Director’s Cut, broadcast mode.
+- Broadcast mode.
 - Opening roulette, handicaps, press conference, grudge-match memory.
 - Local TTS, puzzles, online play (separate large project).
 
@@ -538,7 +537,7 @@ Settings must expose game properties and theater features without code edits.
 | **3. Agent in UI** | Prompt transport, Auto/Button modes, model/persona selection, commentary, error handling. | Full game vs OpenCode model without terminal typing; illegal move recovers. |
 | **4. Design system** | 4 themes ✅, theme editor ✅, 5 built-in piece sets ✅, custom sets ✅, animations, sounds, keyboard/screen-reader basics ✅; more themes planned. | Theme switches live and persists; palette and pieces load from disk. |
 | **5. Game completeness** | PGN ✅, persistence ✅, analysis ✅, clocks ✅, draw/resign ✅; takebacks, result screen, tribute lines. | PGN round-trip; takeback rules enforced; analysis and flags work. |
-| **6. Theater extras** | Personas ✅, chat ✅, Truth Lens ✅, draw offers ✅, MCP move transport ✅, model leaderboard ✅; Director’s Cut, broadcast. | Toggleable and non-intrusive. |
+| **6. Theater extras** | Personas ✅, chat ✅, Truth Lens ✅, draw offers ✅, MCP move transport ✅, model leaderboard ✅, Director’s Cut ✅; broadcast. | Toggleable and non-intrusive. |
 | **7. Packaging** | PKGBUILD, `.desktop`, icon, docs, tests, performance. | Installable on CachyOS; starts <2 s; README. |
 
 Start with Phase 0. The biggest risk is the agent loop, not the board or themes.
@@ -621,7 +620,7 @@ Atomic writes (temp + rename), PGN export always available.
 ## 12. Additional ideas
 
 1. **Truth Lens** — after the game, compare the agent’s claimed evaluations with Stockfish; flag large discrepancies. Only objective claims; plans are allowed to be lies. Fun and instructive.
-2. **Director’s Cut** — generate a narrative recap with key moments, board snapshots, and the agent’s tribute; export Markdown/HTML.
+2. **Director’s Cut** — implemented: a three-act narrative with key moments, board snapshots, quotes and Truth Lens notes.
 3. **Model leaderboard** — local W/L/D, accuracy, average thinking time, “trash-talk score” per model/persona; weekly/season view.
 4. **Persona mixer** — sliders for aggression, deception, verbosity, drama, humor, language; presets with avatars/accents.
 5. **Broadcast mode** — large board, commentary ticker, hidden side panels; OBS-friendly.
