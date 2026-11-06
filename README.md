@@ -79,8 +79,7 @@ What works now:
 - desktop and terminal builds share the same Rust core, engine and agent layers;
 - a native Arch/CachyOS package recipe with a desktop entry and hicolor icons.
 
-Not yet: MCP tools for chat, draw offers and analysis, and the local Axum API.
-Those are the next phases in `PLAN.md`.
+Not yet: the local Axum API. That is the next phase in `PLAN.md`.
 
 ## Run the desktop app
 
@@ -354,17 +353,22 @@ the game:
 
 - **Prompt** (default): Gambiit sends one structured prompt per move and validates
   the JSON response. This is the fastest and most predictable transport.
-- **MCP**: OpenCode connects to a local MCP server. The model can call
-  `get_state`, `get_legal_moves`, `get_candidates` and `get_clock`, then submits
-  its move through `submit_move`. Gambiit still validates the turn and the
-  Stockfish candidate pool.
+- **MCP**: OpenCode connects to a local MCP server. During a move turn the
+  model can call `get_state`, `get_legal_moves`, `get_candidates`, `get_clock`
+  and `get_analysis`, then submits its move through `submit_move`. In a chat turn
+  it uses `submit_chat`; in a draw-offer turn it uses `submit_draw`. Gambiit
+  still validates the turn and the Stockfish candidate pool.
+
+`get_analysis` returns the latest saved post-game analysis summary (if one has
+been run) plus the current position evaluation, best move and candidate list.
+It never changes the board and does not run a new analysis.
 
 The MCP bridge listens only on `127.0.0.1` with a random token. Gambiit uses a
 private temporary OpenCode project config for the bridge; the model never gets
 shell or file access. MCP can be slower because the model may make tool calls;
 the fast path includes the board and candidate list in the first prompt and
-usually needs only `submit_move`. Prompt mode remains the fallback if MCP is
-unavailable or a model does not use tools well.
+usually needs only the relevant submission tool. Prompt mode remains the
+fallback if MCP is unavailable or a model does not use tools well.
 
 ## Personas and move style
 

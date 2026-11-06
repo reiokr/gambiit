@@ -113,15 +113,14 @@ Completed:
 Not yet:
 
 - local Axum API;
-- MCP tools for chat, draw offers and analysis;
 - additional built-in themes and curated piece sets;
 - forced-colors/high-contrast mode and a full screen-reader audit;
 - personas beyond the prompt presets.
 
 Next:
 
-- Add more bundled themes and piece sets.
-- Then packaging.
+- Local Axum API.
+- More bundled themes, piece sets and a forced-colors/screen-reader audit.
 
 ---
 
@@ -304,21 +303,20 @@ Flow:
 
 **No terminal typing:** the UI triggers everything. A “Cancel thinking” button is available. In Button mode the trigger is an explicit “Agent move” button; in Auto mode it happens after every human move.
 
-### 4.2 Manual MCP mode (later, for the agentchess experience)
+### 4.2 MCP mode (implemented)
 
-- A small `gambiit-mcp` stdio bridge exposes:
-  - `chess_state()`
-  - `chess_play_move(move, comment?)`
-  - `chess_comment(text, structured?)`
-  - `chess_chat(text)`
-  - `chess_new_game(human_color?)`
-  - `chess_offer_takeback()` / `chess_accept_takeback()` / `chess_decline_takeback()`
-  - `chess_offer_draw()` / `chess_accept_draw()` / `chess_resign()`
-  - `chess_get_pgn()`
-- The bridge reads the app’s discovery file (port + token) and forwards calls to the HTTP API.
-- OpenCode gets a dedicated workspace with `AGENTS.md` and `opencode.json`; the agent is allowed only `gambiit_*` tools (bash/edit/webfetch denied).
-- The user can talk to the agent in OpenCode and say “your move”; the game updates. This is the closest to the original agentchess flow.
-- If automatic MCP play works reliably (tested in Phase 0), it can become an alternative default; otherwise prompt mode stays primary.
+- The app starts a local TCP bridge on `127.0.0.1` with a random token; the same
+  binary runs as a stdio MCP server with `--mcp-server`.
+- Tools: `get_state`, `get_legal_moves`, `get_candidates`, `get_clock`,
+  `get_analysis`, `submit_move`, `submit_chat`, `submit_draw`.
+- Each turn is typed as move, chat or draw. A submission for the wrong turn type
+  is rejected, and the bridge never mutates the game directly.
+- `get_analysis` returns the latest post-game analysis summary plus the current
+  engine evaluation, best move and candidates.
+- The model gets a temporary private OpenCode project config with only the
+  Gambiit MCP server; bash/edit/webfetch are unavailable.
+- MCP chat and draw offers use the same bridge. Prompt mode remains the fallback
+  if MCP is unavailable or a model does not use tools well.
 
 ### 4.3 Stockfish hybrid (required for a decent game)
 

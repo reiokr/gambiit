@@ -21,15 +21,35 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TurnKind {
+    Move,
+    Chat,
+    Draw,
+}
+
+impl TurnKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Move => "move",
+            Self::Chat => "chat",
+            Self::Draw => "draw",
+        }
+    }
+}
+
 pub struct TurnContext {
+    pub kind: TurnKind,
     pub game: Game,
     pub legal: Vec<MoveInfo>,
     pub candidates: Vec<Candidate>,
     pub clock: Option<Value>,
+    /// Latest post-game analysis summary, when the game has been analyzed.
+    pub analysis: Option<Value>,
 }
 
 #[derive(Debug, Clone)]
-pub struct Submission {
+pub struct MoveSubmission {
     pub mv: String,
     pub comment: String,
     pub eval: Option<String>,
@@ -37,9 +57,47 @@ pub struct Submission {
     pub plan: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+pub struct ChatSubmission {
+    pub message: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct DrawSubmission {
+    pub accept: bool,
+    pub comment: String,
+}
+
+#[derive(Debug, Clone)]
+pub enum Submission {
+    Move(MoveSubmission),
+    Chat(ChatSubmission),
+    Draw(DrawSubmission),
+}
+
 struct BridgeState {
     turn: Option<TurnContext>,
     submission: Option<Submission>,
+}
+
+fn candidate_values(turn: &TurnContext) -> Vec<Value> {
+    turn.candidates
+        .iter()
+        .map(|candidate| {
+            let san = turn
+                .legal
+                .iter()
+                .find(|mv| mv.uci == candidate.uci)
+                .map(|mv| mv.san.as_str())
+                .unwrap_or("?");
+            json!({
+                "uci": candidate.uci,
+                "san": san,
+                "score": candidate.score_text(),
+                "depth": candidate.depth,
+            })
+        })
+        .collect()
 }
 
 pub struct Bridge {
@@ -94,6 +152,7 @@ impl Bridge {
                     "turn": color_key(turn.game.turn()),
                     "humanColor": color_key(turn.game.human_color()),
                     "agentColor": color_key(!turn.game.human_color()),
+                    "turnKind": turn.kind.as_str(),
                     "status": turn.game.status_text(),
                     "gameOver": turn.game.status().is_over(),
                     "history": turn.game.pgn_moves(),
@@ -112,25 +171,27 @@ impl Bridge {
                     .turn
                     .as_ref()
                     .ok_or_else(|| "No active Gambiit turn.".to_string())?;
-                let candidates: Vec<Value> = turn
-                    .candidates
-                    .iter()
-                    .map(|candidate| {
-                        let san = turn
-                            .legal
-                            .iter()
-                            .find(|mv| mv.uci == candidate.uci)
-                            .map(|mv| mv.san.as_str())
-                            .unwrap_or("?");
-                        json!({
-                            "uci": candidate.uci,
-                            "san": san,
-                            "score": candidate.score_text(),
-                            "depth": candidate.depth,
-                        })
-                    })
-                    .collect();
-                Ok(Value::Array(candidates))
+                Ok(Value::Array(candidate_values(turn)))
+            }
+            "analysis" => {
+                let turn = state
+                    .turn
+                    .as_ref()
+                    .ok_or_else(|| "No active Gambiit turn.".to_string())?;
+                let best = candidate_values(turn).into_iter().next();
+                Ok(json!({
+                    "available": turn.analysis.is_some(),
+                    "summary": turn.analysis.clone().unwrap_or(Value::Null),
+                    "position": {
+                        "fen": turn.game.fen(),
+                        "turn": color_key(turn.game.turn()),
+                        "status": turn.game.status_text(),
+                        "score": turn.candidates.first().map(|candidate| candidate.score_text()),
+                        "perspective": color_key(turn.game.turn()),
+                        "best": best,
+                        "candidates": candidate_values(turn),
+                    }
+                }))
             }
             "clock" => {
                 let turn = state
@@ -144,8 +205,19 @@ impl Bridge {
                     .turn
                     .as_ref()
                     .ok_or_else(|| "No active Gambiit turn.".to_string())?;
+                if turn.kind != TurnKind::Move {
+                    return Err(format!(
+                        "This is a {} turn. Call {} instead.",
+                        turn.kind.as_str(),
+                        match turn.kind {
+                            TurnKind::Chat => "submit_chat",
+                            TurnKind::Draw => "submit_draw",
+                            TurnKind::Move => "submit_move",
+                        }
+                    ));
+                }
                 if state.submission.is_some() {
-                    return Err("A move has already been submitted for this turn.".to_string());
+                    return Err("A response has already been submitted for this turn.".to_string());
                 }
                 let raw_move = arguments
                     .get("move")
@@ -185,7 +257,7 @@ impl Bridge {
                     .transpose()
                     .map_err(|error| format!("Invalid candidates array: {error}"))?
                     .unwrap_or_default();
-                let submission = Submission {
+                let submission = Submission::Move(MoveSubmission {
                     mv: info.uci.clone(),
                     comment,
                     eval: arguments
@@ -197,9 +269,75 @@ impl Bridge {
                         .get("plan")
                         .and_then(Value::as_str)
                         .map(String::from),
-                };
+                });
                 state.submission = Some(submission);
                 Ok(json!({ "uci": info.uci, "san": info.san }))
+            }
+            "submit_chat" => {
+                let turn = state
+                    .turn
+                    .as_ref()
+                    .ok_or_else(|| "No active Gambiit turn.".to_string())?;
+                if turn.kind != TurnKind::Chat {
+                    return Err(format!(
+                        "This is a {} turn. Call {} instead.",
+                        turn.kind.as_str(),
+                        match turn.kind {
+                            TurnKind::Move => "submit_move",
+                            TurnKind::Draw => "submit_draw",
+                            TurnKind::Chat => "submit_chat",
+                        }
+                    ));
+                }
+                if state.submission.is_some() {
+                    return Err("A response has already been submitted for this turn.".to_string());
+                }
+                let message = arguments
+                    .get("message")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .ok_or_else(|| "submit_chat requires a non-empty `message`.".to_string())?
+                    .chars()
+                    .take(4_000)
+                    .collect::<String>();
+                state.submission = Some(Submission::Chat(ChatSubmission { message }));
+                Ok(json!({ "submitted": true }))
+            }
+            "submit_draw" => {
+                let turn = state
+                    .turn
+                    .as_ref()
+                    .ok_or_else(|| "No active Gambiit turn.".to_string())?;
+                if turn.kind != TurnKind::Draw {
+                    return Err(format!(
+                        "This is a {} turn. Call {} instead.",
+                        turn.kind.as_str(),
+                        match turn.kind {
+                            TurnKind::Move => "submit_move",
+                            TurnKind::Chat => "submit_chat",
+                            TurnKind::Draw => "submit_draw",
+                        }
+                    ));
+                }
+                if state.submission.is_some() {
+                    return Err("A response has already been submitted for this turn.".to_string());
+                }
+                let accept = arguments
+                    .get("accept")
+                    .and_then(Value::as_bool)
+                    .ok_or_else(|| "submit_draw requires a boolean `accept`.".to_string())?;
+                let comment = arguments
+                    .get("comment")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .ok_or_else(|| "submit_draw requires a non-empty `comment`.".to_string())?
+                    .chars()
+                    .take(800)
+                    .collect::<String>();
+                state.submission = Some(Submission::Draw(DrawSubmission { accept, comment }));
+                Ok(json!({ "accepted": accept }))
             }
             other => Err(format!("Unknown bridge method '{other}'.")),
         }
@@ -328,7 +466,10 @@ pub fn run_stdio() -> Result<(), String> {
                     "get_legal_moves" => Some("legal_moves"),
                     "get_candidates" => Some("candidates"),
                     "get_clock" => Some("clock"),
+                    "get_analysis" => Some("analysis"),
                     "submit_move" => Some("submit"),
+                    "submit_chat" => Some("submit_chat"),
+                    "submit_draw" => Some("submit_draw"),
                     _ => None,
                 };
                 let result = match method {
@@ -426,8 +567,13 @@ fn tool_definitions() -> Vec<Value> {
             "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
         }),
         json!({
+            "name": "get_analysis",
+            "description": "Read the latest post-game Stockfish analysis summary (if one has been run) plus the current position evaluation, best move and candidate list. The summary is unavailable until post-game analysis has been run.",
+            "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
+        }),
+        json!({
             "name": "submit_move",
-            "description": "Submit exactly one chess move plus theater commentary for this turn. Call this once, then stop.",
+            "description": "During a move turn only: submit exactly one chess move plus theater commentary. Call this once, then stop.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -453,6 +599,31 @@ fn tool_definitions() -> Vec<Value> {
                 "additionalProperties": false
             }
         }),
+        json!({
+            "name": "submit_chat",
+            "description": "During a chat turn only: send exactly one in-character chat reply to the human. Call this once, then stop.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "message": { "type": "string", "description": "The chat reply in the agent language." }
+                },
+                "required": ["message"],
+                "additionalProperties": false
+            }
+        }),
+        json!({
+            "name": "submit_draw",
+            "description": "During a draw-offer turn only: accept or decline the human's draw offer with a short in-character comment. Call this once, then stop.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "accept": { "type": "boolean", "description": "Whether to accept the draw." },
+                    "comment": { "type": "string", "description": "Short reply to the human in the agent language." }
+                },
+                "required": ["accept", "comment"],
+                "additionalProperties": false
+            }
+        }),
     ]
 }
 
@@ -473,19 +644,37 @@ mod tests {
     }
 
     #[test]
+    fn tool_definitions_expose_chat_draw_and_analysis() {
+        let definitions = tool_definitions();
+        let names = definitions
+            .iter()
+            .filter_map(|tool| tool.get("name").and_then(Value::as_str))
+            .collect::<Vec<_>>();
+        for expected in ["submit_move", "submit_chat", "submit_draw", "get_analysis"] {
+            assert!(
+                names.contains(&expected),
+                "missing MCP tool {expected}: {names:?}"
+            );
+        }
+    }
+
+    #[test]
     fn bridge_serves_state_and_accepts_a_valid_submission() {
         let bridge = start().unwrap();
         let game = Game::new();
         bridge.begin(TurnContext {
+            kind: TurnKind::Move,
             legal: game.legal_moves(),
             game,
             candidates: vec![candidate("e2e4"), candidate("d2d4")],
             clock: None,
+            analysis: None,
         });
         let url = bridge.url();
         let token = bridge.token();
         let state = call_bridge(&url, token, "state", &json!({})).unwrap();
         assert!(state.get("fen").and_then(Value::as_str).is_some());
+        assert_eq!(state.get("turnKind").and_then(Value::as_str), Some("move"));
         let candidates = call_bridge(&url, token, "candidates", &json!({})).unwrap();
         assert_eq!(candidates.as_array().unwrap().len(), 2);
 
@@ -502,10 +691,98 @@ mod tests {
         )
         .unwrap();
         assert_eq!(submitted.get("san").and_then(Value::as_str), Some("e4"));
-        let submission = bridge.take_submission().unwrap();
-        assert_eq!(submission.mv, "e2e4");
-        assert_eq!(submission.comment, "The center is mine.");
-        assert_eq!(submission.candidates.len(), 1);
+        match bridge.take_submission().unwrap() {
+            Submission::Move(submission) => {
+                assert_eq!(submission.mv, "e2e4");
+                assert_eq!(submission.comment, "The center is mine.");
+                assert_eq!(submission.candidates.len(), 1);
+            }
+            other => panic!("expected a move submission, got {other:?}"),
+        }
+        bridge.clear();
+    }
+
+    #[test]
+    fn bridge_supports_chat_draw_and_analysis() {
+        let bridge = start().unwrap();
+        let game = Game::new();
+        let legal = game.legal_moves();
+        bridge.begin(TurnContext {
+            kind: TurnKind::Chat,
+            game: game.clone(),
+            legal: legal.clone(),
+            candidates: vec![candidate("e2e4")],
+            clock: None,
+            analysis: Some(json!({ "agentAccuracy": 80.0, "truthLensFlags": 1 })),
+        });
+
+        let analysis = call_bridge(&bridge.url(), bridge.token(), "analysis", &json!({})).unwrap();
+        assert_eq!(
+            analysis.get("available").and_then(Value::as_bool),
+            Some(true)
+        );
+        assert_eq!(analysis["summary"]["agentAccuracy"], 80.0);
+        assert_eq!(analysis["position"]["best"]["san"], "e4");
+
+        let wrong = call_bridge(
+            &bridge.url(),
+            bridge.token(),
+            "submit",
+            &json!({ "move": "e2e4", "comment": "No." }),
+        )
+        .unwrap_err();
+        assert!(wrong.contains("chat turn"));
+
+        call_bridge(
+            &bridge.url(),
+            bridge.token(),
+            "submit_chat",
+            &json!({ "message": "Hello from the stage." }),
+        )
+        .unwrap();
+        match bridge.take_submission().unwrap() {
+            Submission::Chat(chat) => assert_eq!(chat.message, "Hello from the stage."),
+            other => panic!("expected a chat submission, got {other:?}"),
+        }
+
+        bridge.begin(TurnContext {
+            kind: TurnKind::Draw,
+            game: game.clone(),
+            legal: game.legal_moves(),
+            candidates: vec![candidate("e2e4")],
+            clock: None,
+            analysis: None,
+        });
+        let analysis = call_bridge(&bridge.url(), bridge.token(), "analysis", &json!({})).unwrap();
+        assert_eq!(
+            analysis.get("available").and_then(Value::as_bool),
+            Some(false)
+        );
+        assert!(analysis["summary"].is_null());
+
+        let wrong = call_bridge(
+            &bridge.url(),
+            bridge.token(),
+            "submit_chat",
+            &json!({ "message": "No." }),
+        )
+        .unwrap_err();
+        assert!(wrong.contains("draw turn"));
+
+        call_bridge(
+            &bridge.url(),
+            bridge.token(),
+            "submit_draw",
+            &json!({ "accept": false, "comment": "I decline." }),
+        )
+        .unwrap();
+        match bridge.take_submission().unwrap() {
+            Submission::Draw(draw) => {
+                assert!(!draw.accept);
+                assert_eq!(draw.comment, "I decline.");
+            }
+            other => panic!("expected a draw submission, got {other:?}"),
+        }
         bridge.clear();
     }
 
@@ -514,10 +791,12 @@ mod tests {
         let bridge = start().unwrap();
         let game = Game::new();
         bridge.begin(TurnContext {
+            kind: TurnKind::Move,
             legal: game.legal_moves(),
             game,
             candidates: vec![candidate("e2e4")],
             clock: None,
+            analysis: None,
         });
         let error = call_bridge(
             &bridge.url(),

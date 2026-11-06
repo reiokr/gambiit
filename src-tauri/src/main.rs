@@ -12,7 +12,7 @@ mod pieces;
 mod storage;
 mod style;
 
-use gambiit_agent::{AgentConfig, AgentSession, AgentTurn, OpenCodeClient};
+use gambiit_agent::{AgentConfig, AgentSession, AgentTurn, DrawDecision, OpenCodeClient};
 use gambiit_core::{Game, GameStatus, MoveInfo, MoveRecord, color_key};
 use gambiit_engine::{Candidate, Stockfish};
 use parking_lot::Mutex;
@@ -753,7 +753,16 @@ impl Session {
         Ok(self.snapshot())
     }
 
+    #[cfg(test)]
     fn chat_send(&mut self, message: &str) -> Result<GameSnapshot, String> {
+        self.chat_send_with_mcp(message, None)
+    }
+
+    fn chat_send_with_mcp(
+        &mut self,
+        message: &str,
+        bridge: Option<Arc<mcp::Bridge>>,
+    ) -> Result<GameSnapshot, String> {
         if !self.settings.chat_enabled {
             return Err("Opponent chat is disabled in settings.".to_string());
         }
@@ -771,7 +780,11 @@ impl Session {
             .filter(|entry| entry.role != "system")
             .map(|entry| (entry.role.clone(), entry.text.clone()))
             .collect();
-        let result = if let Some(agent) = self.agent.as_mut() {
+        let use_mcp = self.settings.agent_mode == "mcp" && bridge.is_some();
+        let result = if use_mcp {
+            self.request_mcp_chat(text, bridge.as_ref().expect("checked above"))
+                .map(|(reply, _)| reply)
+        } else if let Some(agent) = self.agent.as_mut() {
             agent
                 .request_chat(&self.game, &history, text)
                 .map(|(reply, _)| reply)
@@ -814,7 +827,15 @@ impl Session {
         Ok(self.snapshot())
     }
 
+    #[cfg(test)]
     fn offer_draw(&mut self) -> Result<DrawOfferOutcome, String> {
+        self.offer_draw_with_mcp(None)
+    }
+
+    fn offer_draw_with_mcp(
+        &mut self,
+        bridge: Option<Arc<mcp::Bridge>>,
+    ) -> Result<DrawOfferOutcome, String> {
         self.tick_clock();
         if !self.settings.draw_offers_enabled {
             return Err("Draw offers are disabled in settings.".to_string());
@@ -823,7 +844,10 @@ impl Session {
             return Err("The game is over.".to_string());
         }
 
-        let result = if let Some(agent) = self.agent.as_mut() {
+        let use_mcp = self.settings.agent_mode == "mcp" && bridge.is_some();
+        let result = if use_mcp {
+            self.request_mcp_draw(bridge.as_ref().expect("checked above"))
+        } else if let Some(agent) = self.agent.as_mut() {
             agent
                 .request_draw_decision(&self.game)
                 .map(|(decision, _)| decision)
@@ -1148,19 +1172,48 @@ impl Session {
         Ok(self.snapshot())
     }
 
+    fn analysis_value(&self) -> Option<serde_json::Value> {
+        self.analysis
+            .as_ref()
+            .and_then(|summary| serde_json::to_value(summary).ok())
+    }
+
+    fn mcp_candidates(&mut self) -> Vec<Candidate> {
+        let (multipv, depth, skill) = engine_params(&self.settings);
+        let fen = self.game.fen();
+        let Some(engine) = self.stockfish.as_mut() else {
+            return Vec::new();
+        };
+        if let Err(error) = engine.set_skill(skill) {
+            eprintln!("Stockfish skill warning: {error}");
+        }
+        engine.candidates(&fen, multipv, depth).unwrap_or_default()
+    }
+
+    fn begin_mcp_turn(
+        &self,
+        kind: mcp::TurnKind,
+        candidates: Vec<Candidate>,
+        bridge: &Arc<mcp::Bridge>,
+    ) {
+        let clock = serde_json::to_value(self.clock_view()).ok();
+        bridge.begin(mcp::TurnContext {
+            kind,
+            game: self.game.clone(),
+            legal: self.game.legal_moves(),
+            candidates,
+            clock,
+            analysis: self.analysis_value(),
+        });
+    }
+
     fn request_mcp_turn(
         &mut self,
         game: &Game,
         candidates: &[gambiit_engine::Candidate],
         bridge: &Arc<mcp::Bridge>,
     ) -> Result<(AgentTurn, gambiit_agent::OpenCodeOutput), String> {
-        let clock = serde_json::to_value(self.clock_view()).ok();
-        bridge.begin(mcp::TurnContext {
-            game: game.clone(),
-            legal: game.legal_moves(),
-            candidates: candidates.to_vec(),
-            clock,
-        });
+        self.begin_mcp_turn(mcp::TurnKind::Move, candidates.to_vec(), bridge);
         let config_path = match write_mcp_config(bridge) {
             Ok(path) => path,
             Err(error) => {
@@ -1175,7 +1228,7 @@ impl Session {
         let prompt = gambiit_agent::build_mcp_move_prompt(game, &config, candidates);
         let result = if let Some(agent) = self.agent.as_mut() {
             agent
-                .request_mcp_move(&prompt, &config_path)
+                .request_mcp(&prompt, &config_path)
                 .map_err(|error| error.to_string())
         } else {
             Err(self
@@ -1186,8 +1239,13 @@ impl Session {
         let submission = bridge.take_submission();
         bridge.clear();
         let output = result?;
-        let submission =
-            submission.ok_or_else(|| "The agent did not call submit_move.".to_string())?;
+        let submission = match submission {
+            Some(mcp::Submission::Move(submission)) => submission,
+            Some(_) => {
+                return Err("The agent submitted the wrong response type for a move turn.".into());
+            }
+            None => return Err("The agent did not call submit_move.".into()),
+        };
         Ok((
             AgentTurn {
                 mv: submission.mv,
@@ -1198,6 +1256,89 @@ impl Session {
             },
             output,
         ))
+    }
+
+    fn request_mcp_chat(
+        &mut self,
+        message: &str,
+        bridge: &Arc<mcp::Bridge>,
+    ) -> Result<(String, gambiit_agent::OpenCodeOutput), String> {
+        let candidates = self.mcp_candidates();
+        self.begin_mcp_turn(mcp::TurnKind::Chat, candidates, bridge);
+        let config_path = match write_mcp_config(bridge) {
+            Ok(path) => path,
+            Err(error) => {
+                bridge.clear();
+                return Err(error);
+            }
+        };
+        let config = agent_config(
+            &self.settings,
+            credential_env_for_model(&self.settings.model),
+        );
+        let history: Vec<(String, String)> = self
+            .chat
+            .iter()
+            .filter(|entry| entry.role != "system")
+            .map(|entry| (entry.role.clone(), entry.text.clone()))
+            .collect();
+        let prompt = gambiit_agent::build_mcp_chat_prompt(&self.game, &config, &history, message);
+        let result = if let Some(agent) = self.agent.as_mut() {
+            agent
+                .request_mcp(&prompt, &config_path)
+                .map_err(|error| error.to_string())
+        } else {
+            Err(self
+                .agent_error
+                .clone()
+                .unwrap_or_else(|| "Agent is unavailable.".into()))
+        };
+        let submission = bridge.take_submission();
+        bridge.clear();
+        let output = result?;
+        match submission {
+            Some(mcp::Submission::Chat(chat)) => Ok((chat.message, output)),
+            Some(_) => Err("The agent submitted the wrong response type for a chat turn.".into()),
+            None => Err("The agent did not call submit_chat.".into()),
+        }
+    }
+
+    fn request_mcp_draw(&mut self, bridge: &Arc<mcp::Bridge>) -> Result<DrawDecision, String> {
+        let candidates = self.mcp_candidates();
+        self.begin_mcp_turn(mcp::TurnKind::Draw, candidates, bridge);
+        let config_path = match write_mcp_config(bridge) {
+            Ok(path) => path,
+            Err(error) => {
+                bridge.clear();
+                return Err(error);
+            }
+        };
+        let config = agent_config(
+            &self.settings,
+            credential_env_for_model(&self.settings.model),
+        );
+        let prompt = gambiit_agent::build_mcp_draw_prompt(&self.game, &config);
+        let result = if let Some(agent) = self.agent.as_mut() {
+            agent
+                .request_mcp(&prompt, &config_path)
+                .map_err(|error| error.to_string())
+        } else {
+            Err(self
+                .agent_error
+                .clone()
+                .unwrap_or_else(|| "Agent is unavailable.".into()))
+        };
+        let submission = bridge.take_submission();
+        bridge.clear();
+        result?;
+        match submission {
+            Some(mcp::Submission::Draw(draw)) => Ok(DrawDecision {
+                accept: draw.accept,
+                comment: draw.comment,
+            }),
+            Some(_) => Err("The agent submitted the wrong response type for a draw turn.".into()),
+            None => Err("The agent did not call submit_draw.".into()),
+        }
     }
 
     fn takeback(&mut self) -> Result<GameSnapshot, String> {
@@ -1422,9 +1563,12 @@ async fn agent_move(state: State<'_, AppState>) -> Result<GameSnapshot, String> 
 #[tauri::command]
 async fn chat_send(state: State<'_, AppState>, message: String) -> Result<GameSnapshot, String> {
     let session = state.session.clone();
-    tauri::async_runtime::spawn_blocking(move || session.lock().chat_send(&message))
-        .await
-        .map_err(|error| error.to_string())?
+    let bridge = state.mcp.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        session.lock().chat_send_with_mcp(&message, bridge)
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]
@@ -1435,7 +1579,8 @@ fn clear_chat(state: State<'_, AppState>) -> Result<GameSnapshot, String> {
 #[tauri::command]
 async fn offer_draw(state: State<'_, AppState>) -> Result<DrawOfferOutcome, String> {
     let session = state.session.clone();
-    tauri::async_runtime::spawn_blocking(move || session.lock().offer_draw())
+    let bridge = state.mcp.clone();
+    tauri::async_runtime::spawn_blocking(move || session.lock().offer_draw_with_mcp(bridge))
         .await
         .map_err(|error| error.to_string())?
 }
@@ -2698,6 +2843,54 @@ mod tests {
         assert_eq!(second.commentary.len(), 2);
         assert!(!second.commentary[1].comment.is_empty());
         eprintln!("MCP move 2: {}", second.history[3].san);
+    }
+
+    /// MCP chat and draw-offer smoke test through the built app binary.
+    /// Ignored because it spends provider tokens.
+    #[test]
+    #[ignore]
+    fn mcp_chat_draw_smoke() {
+        let executable = std::env::current_exe()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("gambiit-app");
+        // SAFETY: this ignored test is intended to run alone.
+        unsafe {
+            std::env::set_var("GAMBIIT_MCP_EXE", &executable);
+        }
+        let bridge = mcp::start().unwrap();
+        let settings = Settings {
+            agent_mode: "mcp".to_string(),
+            ..Default::default()
+        };
+        let mut session = Session::new_with_persist(settings, Color::White, false);
+        session.make_move("e2e4").unwrap();
+        let after_move = session.agent_move_with_mcp(Some(bridge.clone())).unwrap();
+        assert_eq!(after_move.history.len(), 2);
+
+        let after_chat = session
+            .chat_send_with_mcp("How is the position?", Some(bridge.clone()))
+            .unwrap();
+        assert_eq!(after_chat.chat.len(), 2);
+        assert_eq!(after_chat.chat[0].role, "user");
+        assert_eq!(after_chat.chat[1].role, "agent");
+        assert!(!after_chat.chat[1].text.is_empty());
+        eprintln!("MCP chat: {}", after_chat.chat[1].text);
+
+        let outcome = session.offer_draw_with_mcp(Some(bridge)).unwrap();
+        assert!(!outcome.comment.is_empty());
+        eprintln!(
+            "MCP draw {}: {}",
+            if outcome.accepted {
+                "accepted"
+            } else {
+                "declined"
+            },
+            outcome.comment
+        );
     }
 
     /// Live chat and draw-offer smoke test against the configured model.

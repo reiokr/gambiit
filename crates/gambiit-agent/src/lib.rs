@@ -472,8 +472,8 @@ impl AgentSession {
     }
 
     /// Run one prompt with a temporary OpenCode config that registers the
-    /// Gambiit MCP server. The model is expected to call `submit_move`.
-    pub fn request_mcp_move(
+    /// Gambiit MCP server. The model is expected to call the relevant tool.
+    pub fn request_mcp(
         &mut self,
         prompt: &str,
         working_dir: &Path,
@@ -810,7 +810,7 @@ Stockfish candidate moves (the first is your persona's style preference; all are
 
 {bluff_section}Fast path:
 1. The board state and candidate moves are already included above. Do not call `get_state` or `get_candidates` mechanically.
-2. If you need to re-check something, you may call `get_state`, `get_candidates`, or `get_clock`.
+2. If you need to re-check something, you may call `get_state`, `get_candidates`, `get_clock`, or `get_analysis` (the latest post-game summary plus the current engine read).
 3. Call `submit_move` exactly once with:
    - `move`: UCI (preferred) or SAN, chosen from the candidates and played for strength;
    - `comment`: non-empty Theater commentary in {language};
@@ -832,6 +832,123 @@ Rules:
         status = game.status_text(),
         style_section = style_section,
         candidates = candidates_text,
+        persona = persona,
+        bluff_section = bluff_section,
+        language = language,
+    )
+}
+
+pub fn build_mcp_chat_prompt(
+    game: &Game,
+    config: &AgentConfig,
+    history: &[(String, String)],
+    message: &str,
+) -> String {
+    let agent_color = !game.human_color();
+    let human_color = game.human_color();
+    let language = if config.language_name.trim().is_empty() {
+        "English"
+    } else {
+        config.language_name.as_str()
+    };
+    let persona = persona_instruction_for(config);
+    let bluff_section = bluff_section(config);
+    let conversation = history
+        .iter()
+        .rev()
+        .take(8)
+        .rev()
+        .map(|(role, text)| {
+            let speaker = if role == "user" { "Human" } else { "You" };
+            format!("{speaker}: {}", truncate(text, 600))
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let conversation = if conversation.is_empty() {
+        "(no previous chat)".to_string()
+    } else {
+        conversation
+    };
+    let message = truncate(message, 2_000);
+
+    format!(
+        r#"You are in a live chat with the human during a chess game.
+You play {agent_color}; the human plays {human_color}.
+Use the Gambiit MCP tools instead of replying with JSON or prose as your final answer.
+
+FEN: {fen}
+Move history (SAN): {history}
+Game status: {status}
+
+Recent conversation:
+{conversation}
+
+The human says: "{message}"
+
+{persona}
+
+{bluff_section}Fast path:
+1. The board state and conversation are already above. Do not call `get_state` mechanically.
+2. If you need an honest engine read, call `get_analysis` once. You may call `get_state` or `get_clock` if needed.
+3. Call `submit_chat` exactly once with `message`: your in-character reply in {language}, 1-3 short sentences.
+4. After `submit_chat` succeeds, stop. Do not call it twice. Do not call `submit_move` or `submit_draw`.
+
+Rules:
+- The board is truth; never claim false board facts or rules.
+- Chat never changes the board. A formal draw offer is handled separately.
+- Stay in character. Bluffing follows the bluff instruction and never extends to rules or board facts.
+"#,
+        agent_color = color_name(agent_color),
+        human_color = color_name(human_color),
+        fen = game.fen(),
+        history = game.pgn_moves(),
+        status = game.status_text(),
+        conversation = conversation,
+        message = message,
+        persona = persona,
+        bluff_section = bluff_section,
+        language = language,
+    )
+}
+
+pub fn build_mcp_draw_prompt(game: &Game, config: &AgentConfig) -> String {
+    let agent_color = !game.human_color();
+    let human_color = game.human_color();
+    let language = if config.language_name.trim().is_empty() {
+        "English"
+    } else {
+        config.language_name.as_str()
+    };
+    let persona = persona_instruction_for(config);
+    let bluff_section = bluff_section(config);
+
+    format!(
+        r#"You are playing chess as {agent_color} against a human ({human_color}).
+The human offers a draw.
+Use the Gambiit MCP tools instead of replying with JSON or prose as your final answer.
+
+FEN: {fen}
+Move history (SAN): {history}
+Game status: {status}
+
+{persona}
+
+{bluff_section}Fast path:
+1. The board state is already above. Call `get_analysis` once if you want an honest engine read of the position.
+2. Decide whether to accept the draw. Accept if the position is clearly drawn or you are worse; decline if you have real winning chances or counterplay. The board is the truth.
+3. Call `submit_draw` exactly once with `accept` (boolean) and `comment` (short reply in {language}).
+4. After `submit_draw` succeeds, stop. Do not call it twice. Do not call `submit_move` or `submit_chat`.
+
+Rules:
+- The draw decision itself is not a bluff; only the comment may be in character.
+- Never claim false board facts or rules.
+- The board is truth; the opponent's draw offer is handled by the interface.
+"#,
+        agent_color = color_name(agent_color),
+        human_color = color_name(human_color),
+        fen = game.fen(),
+        history = game.pgn_moves(),
+        status = game.status_text(),
         persona = persona,
         bluff_section = bluff_section,
         language = language,
@@ -1224,6 +1341,30 @@ mod tests {
         assert!(prompt.contains("e2e4"));
         assert!(prompt.contains("Fast path"));
         assert!(prompt.contains("Do not call `get_state` or `get_candidates` mechanically"));
+    }
+
+    #[test]
+    fn mcp_chat_prompt_uses_submit_chat() {
+        let game = Game::new();
+        let config = AgentConfig::default();
+        let history = vec![
+            ("user".to_string(), "Hello.".to_string()),
+            ("agent".to_string(), "Welcome.".to_string()),
+        ];
+        let prompt = build_mcp_chat_prompt(&game, &config, &history, "How is the position?");
+        assert!(prompt.contains("submit_chat"));
+        assert!(prompt.contains("Do not call `submit_move` or `submit_draw`"));
+        assert!(prompt.contains("get_analysis"));
+        assert!(prompt.contains("How is the position?"));
+    }
+
+    #[test]
+    fn mcp_draw_prompt_uses_submit_draw() {
+        let game = Game::new();
+        let prompt = build_mcp_draw_prompt(&game, &AgentConfig::default());
+        assert!(prompt.contains("submit_draw"));
+        assert!(prompt.contains("The draw decision itself is not a bluff"));
+        assert!(prompt.contains("get_analysis"));
     }
 
     #[test]

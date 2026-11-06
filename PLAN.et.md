@@ -208,9 +208,9 @@ Valmis:
 
 Testid:
 
-- **86 Rust testi** rohelised (core 10, engine 2, agent 15, Tauri app 59) +
-  12 ignored testi (päris-mudeli käigu-, eestikeelne, isiksusestiili-,
-  bluff-intensiivsuse-, treeneri-, režissööri-, MCP kahe käigu- ja
+- **90 Rust testi** rohelised (core 10, engine 2, agent 17, Tauri app 61) +
+  13 ignored testi (päris-mudeli käigu-, eestikeelne, isiksusestiili-,
+  bluff-intensiivsuse-, treeneri-, režissööri-, MCP kahe käigu- ja MCP
   vestluse/viigi-smoke-test ning neli Stockfishi testi).
 - 1 ignored **agent_smoke** test: `e4` → `...c5` 8,9 sekundiga, 522 tokenit.
 - `cargo clippy --all-targets -- -D warnings` puhas.
@@ -333,25 +333,24 @@ OpenCode 2 ───────────────────────
 
 - **Auto** — pärast sinu käiku käivitub agent automaatselt.
 - **Button** — agent käivitub “Agent move” nupust.
-- **Manual chat** (MCP, hiljem) — sina suhtled OpenCode'is, agent kasutab
-  `chess_*` tööriistu.
+- **Manual chat** (MCP) — sina suhtled OpenCode'is, agent kasutab Gambiiti
+  MCP tööriistu.
 
-### 7.3 MCP-režiim (järgmine suurem integratsioon)
+### 7.3 MCP-režiim (valmis)
 
 Tööriistad:
 
-- `chess_state()`
-- `chess_play_move(move, comment?)`
-- `chess_comment(text, structured?)`
-- `chess_chat(text)`
-- `chess_new_game(human_color?)`
-- `chess_offer_takeback()`, `chess_accept_takeback()`, `chess_decline_takeback()`
-- `chess_offer_draw()`, `chess_accept_draw()`, `chess_resign()`
-- `chess_get_pgn()`
+- `get_state`, `get_legal_moves`, `get_candidates`, `get_clock`
+- `get_analysis` — viimane pärastmängu analüüsi kokkuvõte + praeguse seisu
+  mootorihinnang, parim käik ja kandidaadid
+- `submit_move` — käiguturnil
+- `submit_chat` — vestlusturnil
+- `submit_draw` — viigipakkumise turnil
 
-MCP sild loeb discovery-failist pordi ja tokeni ning forwardib kutsed lokaalsele
-HTTP API-le. OpenCode'i agent saab ainult `gambiit_*` tööriistad; bash/edit/webfetch
-keelatakse.
+MCP sild loeb lokaalsest sillast pordi ja tokeni ning forwardib tööriistakutsed
+sellele. OpenCode'i agent saab ainult Gambiiti tööriistad; bash/edit/webfetch
+keelatakse. Iga turn on tüübistatud (move/chat/draw) ja valet tüüpi vastus
+lükatakse tagasi.
 
 ### 7.4 Stockfish hübriid
 
@@ -554,9 +553,9 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 
 Soovitatud järjekord:
 
-1. **MCP tööriistad vestlusele, viigile ja analüüsile** — MCP-režiimi laiendus.
+1. **Lokaalne Axum API** — HTTP/SSE liides välistele klientidele.
 2. **Rohkem teemasid ja malendikomplekte** — disainipolish.
-3. **Lokaalne Axum API** — HTTP/SSE liides välistele klientidele.
+3. **Forced-colors ja ekraanilugeja audit**.
 
 ---
 
@@ -672,9 +671,9 @@ broadcast-režiim.
 
 ## 16. Järgmised sammud
 
-1. **MCP tööriistad vestlusele, viigile ja analüüsile**.
+1. **Lokaalne Axum API**.
 2. **Rohkem teemasid ja malendikomplekte**.
-3. **Lokaalne Axum API**.
+3. **Forced-colors ja ekraanilugeja audit**.
 
 Salvestamine, jätkamine, mängude raamatukogu, PGN eksport/import, pärastmängu
 analüüs, teemaredaktor, kohandatud malendikomplektid, vestlus, viigipakkumised,
