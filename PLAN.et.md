@@ -133,9 +133,9 @@ Valmis:
 
 Testid:
 
-- **52 Rust testi** rohelised (core 10, engine 2, agent 10, Tauri app 30) +
-  5 ignored testi (päris-mudeli käigu-, vestluse/viigi- ja eestikeelne smoke-test
-  ning kaks Stockfishi analüüsi testi).
+- **54 Rust testi** rohelised (core 10, engine 2, agent 10, Tauri app 32) +
+  6 ignored testi (päris-mudeli käigu-, vestluse/viigi-, MCP kahe käigu- ja
+  eestikeelne smoke-test ning kaks Stockfishi analüüsi testi).
 - 1 ignored **agent_smoke** test: `e4` → `...c5` 8,9 sekundiga, 522 tokenit.
 - `cargo clippy --all-targets -- -D warnings` puhas.
 - `pnpm check` — 0 viga, 0 hoiatust.
@@ -476,13 +476,13 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 | **3. Agent UI-s** | Auto/Button, mudel, isiksus, kommentaarid | ✅ valmis |
 | **4. Disainisüsteem** | 4 teemat ✅, teemaredaktor ✅, 5 sisseehitatud malendikomplekti ✅, kohandatud komplektid ✅, animatsioonid, helid | ✅ valmis; rohkem teemasid hiljem |
 | **5. Mängu täiuslikkus** | PGN ✅, salvestus ✅, analüüs ✅, kellad ✅, viik/alistumine ✅; tulemus | osaliselt |
-| **6. Teater ja ekstra** | Vestlus ✅ ja viigipakkumised ✅; MCP, Director's Cut, edetabel | osaliselt |
+| **6. Teater ja ekstra** | Vestlus ✅, viigipakkumised ✅, MCP-käigud ✅; MCP vestlus/analüüs, Director's Cut, edetabel | osaliselt |
 | **7. Pakend** | PKGBUILD, `.desktop`, release, docs | hiljem |
 
 Soovitatud järjekord:
 
-1. **MCP-režiim** — agent saab ise tööriistu kutsuda.
-2. **Rohkem teemasid ja malendikomplekte** — disainipolish.
+1. **Rohkem teemasid ja malendikomplekte** — disainipolish.
+2. **MCP tööriistad vestlusele, viigile ja analüüsile** — MCP-režiimi laiendus.
 3. **Director's Cut / edetabel / broadcast** — teatriekstra.
 4. **Pakend** — release, PKGBUILD.
 
@@ -602,11 +602,11 @@ broadcast-režiim.
 
 ## 16. Järgmised sammud
 
-1. **MCP-režiim**.
-2. **Rohkem teemasid ja malendikomplekte**.
+1. **Rohkem teemasid ja malendikomplekte**.
+2. **MCP tööriistad vestlusele, viigile ja analüüsile**.
 3. **Director's Cut / edetabel / broadcast**.
 4. **Pakend** (PKGBUILD, `.desktop`, release).
 
 Salvestamine, jätkamine, mängude raamatukogu, PGN eksport/import, pärastmängu
-analüüs, teemaredaktor, kohandatud malendikomplektid, vestlus, viigipakkumised
-ja malekellad on nüüd valmis.
+analüüs, teemaredaktor, kohandatud malendikomplektid, vestlus, viigipakkumised,
+malekellad ja MCP-käigud on nüüd valmis.

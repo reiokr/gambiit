@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
     io::Read,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
     thread,
     time::{Duration, Instant, SystemTime},
@@ -129,8 +129,26 @@ impl OpenCodeClient {
         prompt: &str,
         session: Option<&str>,
     ) -> Result<OpenCodeOutput, AgentError> {
+        self.run_with_env(config, prompt, session, &[], None)
+    }
+
+    pub fn run_with_env(
+        &self,
+        config: &AgentConfig,
+        prompt: &str,
+        session: Option<&str>,
+        extra_env: &[(String, String)],
+        working_dir: Option<&Path>,
+    ) -> Result<OpenCodeOutput, AgentError> {
         let mut command = Command::new(&self.binary);
+        if let Some(directory) = working_dir {
+            command.current_dir(directory);
+            command.env("PWD", directory);
+        }
         for (name, value) in &config.env {
+            command.env(name, value);
+        }
+        for (name, value) in extra_env {
             command.env(name, value);
         }
         // The desktop CLI talks to its background service by default. A custom
@@ -149,7 +167,6 @@ impl OpenCodeClient {
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
-
         if let Some(session) = session {
             command.arg("-s").arg(session);
         }
@@ -428,6 +445,27 @@ impl AgentSession {
         Ok((reply, output))
     }
 
+    /// Run one prompt with a temporary OpenCode config that registers the
+    /// Gambiit MCP server. The model is expected to call `submit_move`.
+    pub fn request_mcp_move(
+        &mut self,
+        prompt: &str,
+        working_dir: &Path,
+    ) -> Result<OpenCodeOutput, AgentError> {
+        let output = self.client.run_with_env(
+            &self.config,
+            prompt,
+            self.session_id.as_deref(),
+            &[],
+            Some(working_dir),
+        )?;
+        if output.session_id.is_some() {
+            self.session_id = output.session_id.clone();
+        }
+        self.last_raw = Some(output.text.clone());
+        Ok(output)
+    }
+
     /// Ask the agent whether to accept a draw offer. The response is a small
     /// JSON object; the caller decides how to apply it to the game.
     pub fn request_draw_decision(
@@ -658,6 +696,57 @@ fn fallback_comment(game: &Game, config: &AgentConfig, mv: &str) -> String {
         "et" | "est" | "estonian" => format!("Mängin {san}. Ülejäänu räägib laud."),
         _ => format!("I play {san}. The board will tell the rest."),
     }
+}
+
+pub fn build_mcp_move_prompt(game: &Game, config: &AgentConfig) -> String {
+    let agent_color = game.turn();
+    let human_color = !agent_color;
+    let language = if config.language_name.trim().is_empty() {
+        "English"
+    } else {
+        config.language_name.as_str()
+    };
+    let persona = persona_instruction(&config.persona);
+    let history = game.pgn_moves();
+    let history = if history.is_empty() {
+        "(no moves yet)"
+    } else {
+        &history
+    };
+
+    format!(
+        r#"You are playing chess as {agent_color} against a human ({human_color}).
+It is your turn. Use the Gambiit MCP tools instead of replying with JSON in text.
+
+FEN: {fen}
+Move history (SAN): {history}
+Game status: {status}
+
+{persona}
+
+Workflow:
+1. Call `get_state` to inspect the board.
+2. Call `get_candidates` to see the Stockfish candidate moves for this turn.
+3. Call `submit_move` exactly once with:
+   - `move`: UCI (preferred) or SAN, chosen from the candidates and played for strength;
+   - `comment`: non-empty Theater commentary in {language};
+   - optional `eval`, `plan`, and `candidates` array.
+4. After `submit_move` succeeds, stop. Do not call it twice.
+
+Rules:
+- The board is truth; never claim false board facts or rules.
+- The chosen move must be legal and from the Stockfish candidate pool.
+- You may bluff about plans and evaluations, but the move itself must be sound.
+- The persona affects commentary only.
+"#,
+        agent_color = color_name(agent_color),
+        human_color = color_name(human_color),
+        fen = game.fen(),
+        history = history,
+        status = game.status_text(),
+        persona = persona,
+        language = language,
+    )
 }
 
 fn build_retry_prompt(

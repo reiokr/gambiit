@@ -2,6 +2,7 @@
 
 mod analysis;
 mod credentials;
+mod mcp;
 mod pgn;
 mod pieces;
 mod storage;
@@ -56,6 +57,10 @@ fn default_true() -> bool {
     true
 }
 
+fn default_agent_mode() -> String {
+    "prompt".to_string()
+}
+
 fn default_time_control() -> String {
     "rapid".to_string()
 }
@@ -77,6 +82,8 @@ pub(crate) struct Settings {
     agent_language: String,
     agent_language_name: String,
     response_mode: String,
+    #[serde(default = "default_agent_mode")]
+    agent_mode: String,
     stockfish_depth: u32,
     multipv: usize,
     difficulty: String,
@@ -111,6 +118,7 @@ impl Default for Settings {
             agent_language: "en".to_string(),
             agent_language_name: "English".to_string(),
             response_mode: "auto".to_string(),
+            agent_mode: default_agent_mode(),
             stockfish_depth: 11,
             multipv: 4,
             difficulty: "intermediate".to_string(),
@@ -750,17 +758,28 @@ impl Session {
         Ok(self.snapshot())
     }
 
+    #[cfg(test)]
     fn agent_move(&mut self) -> Result<GameSnapshot, String> {
+        self.agent_move_with_mcp(None)
+    }
+
+    fn agent_move_with_mcp(
+        &mut self,
+        bridge: Option<Arc<mcp::Bridge>>,
+    ) -> Result<GameSnapshot, String> {
         if self.thinking {
             return Err("The agent is already thinking.".into());
         }
         self.thinking = true;
-        let result = self.agent_move_inner();
+        let result = self.agent_move_inner(bridge);
         self.thinking = false;
         result
     }
 
-    fn agent_move_inner(&mut self) -> Result<GameSnapshot, String> {
+    fn agent_move_inner(
+        &mut self,
+        bridge: Option<Arc<mcp::Bridge>>,
+    ) -> Result<GameSnapshot, String> {
         self.tick_clock();
         if self.game.status().is_over() {
             return Err("The game is over.".into());
@@ -814,7 +833,14 @@ impl Session {
         };
 
         let started = Instant::now();
-        let result = if let Some(agent) = self.agent.as_mut() {
+        let use_mcp = self.settings.agent_mode == "mcp" && bridge.is_some();
+        let result = if use_mcp {
+            self.request_mcp_turn(
+                &prompt_game,
+                &candidates,
+                bridge.as_ref().expect("checked above"),
+            )
+        } else if let Some(agent) = self.agent.as_mut() {
             agent
                 .request_move(&prompt_game, &candidates, validate)
                 .map_err(|error| error.to_string())
@@ -880,6 +906,58 @@ impl Session {
         Ok(self.snapshot())
     }
 
+    fn request_mcp_turn(
+        &mut self,
+        game: &Game,
+        candidates: &[gambiit_engine::Candidate],
+        bridge: &Arc<mcp::Bridge>,
+    ) -> Result<(AgentTurn, gambiit_agent::OpenCodeOutput), String> {
+        let clock = serde_json::to_value(self.clock_view()).ok();
+        bridge.begin(mcp::TurnContext {
+            game: game.clone(),
+            legal: game.legal_moves(),
+            candidates: candidates.to_vec(),
+            clock,
+        });
+        let config_path = match write_mcp_config(bridge) {
+            Ok(path) => path,
+            Err(error) => {
+                bridge.clear();
+                return Err(error);
+            }
+        };
+        let config = agent_config(
+            &self.settings,
+            credential_env_for_model(&self.settings.model),
+        );
+        let prompt = gambiit_agent::build_mcp_move_prompt(game, &config);
+        let result = if let Some(agent) = self.agent.as_mut() {
+            agent
+                .request_mcp_move(&prompt, &config_path)
+                .map_err(|error| error.to_string())
+        } else {
+            Err(self
+                .agent_error
+                .clone()
+                .unwrap_or_else(|| "Agent is unavailable.".into()))
+        };
+        let submission = bridge.take_submission();
+        bridge.clear();
+        let output = result?;
+        let submission =
+            submission.ok_or_else(|| "The agent did not call submit_move.".to_string())?;
+        Ok((
+            AgentTurn {
+                mv: submission.mv,
+                comment: submission.comment,
+                eval: submission.eval,
+                candidates: submission.candidates,
+                plan: submission.plan,
+            },
+            output,
+        ))
+    }
+
     fn takeback(&mut self) -> Result<GameSnapshot, String> {
         self.tick_clock();
         if self.game.status().is_over() {
@@ -911,6 +989,7 @@ impl Session {
 
 struct AppState {
     session: Arc<Mutex<Session>>,
+    mcp: Option<Arc<mcp::Bridge>>,
 }
 
 #[tauri::command]
@@ -955,7 +1034,8 @@ fn make_move(state: State<'_, AppState>, mv: String) -> Result<GameSnapshot, Str
 #[tauri::command]
 async fn agent_move(state: State<'_, AppState>) -> Result<GameSnapshot, String> {
     let session = state.session.clone();
-    tauri::async_runtime::spawn_blocking(move || session.lock().agent_move())
+    let bridge = state.mcp.clone();
+    tauri::async_runtime::spawn_blocking(move || session.lock().agent_move_with_mcp(bridge))
         .await
         .map_err(|error| error.to_string())?
 }
@@ -1187,6 +1267,9 @@ fn normalize_settings(mut settings: Settings) -> Settings {
     if settings.piece_set.trim().is_empty() {
         settings.piece_set = default_piece_set();
     }
+    if !matches!(settings.agent_mode.as_str(), "prompt" | "mcp") {
+        settings.agent_mode = default_agent_mode();
+    }
     if let Some((initial, increment)) = clock_preset(&settings.time_control) {
         settings.clock_initial_ms = initial;
         settings.clock_increment_ms = increment;
@@ -1225,6 +1308,51 @@ fn engine_params(settings: &Settings) -> (usize, u32, u8) {
         settings.stockfish_depth.clamp(5, 20),
         20,
     ))
+}
+
+fn write_mcp_config(bridge: &mcp::Bridge) -> Result<std::path::PathBuf, String> {
+    let executable = std::env::var_os("GAMBIIT_MCP_EXE")
+        .map(std::path::PathBuf::from)
+        .map(Ok)
+        .unwrap_or_else(|| std::env::current_exe().map_err(|error| error.to_string()))?;
+    if !executable.is_file() {
+        return Err(format!(
+            "MCP server executable was not found at {}",
+            executable.display()
+        ));
+    }
+    let directory = std::env::temp_dir().join(format!("gambiit-mcp-{}", std::process::id()));
+    std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&directory, std::fs::Permissions::from_mode(0o700));
+    }
+    let path = directory.join("opencode.json");
+    let config = serde_json::json!({
+        "mcp": {
+            "gambiit": {
+                "type": "local",
+                "command": [executable, "--mcp-server"],
+                "environment": {
+                    "GAMBIIT_MCP_URL": bridge.url(),
+                    "GAMBIIT_MCP_TOKEN": bridge.token()
+                },
+                "enabled": true
+            }
+        }
+    });
+    std::fs::write(
+        &path,
+        serde_json::to_string_pretty(&config).map_err(|error| error.to_string())?,
+    )
+    .map_err(|error| error.to_string())?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+    }
+    Ok(directory)
 }
 
 fn agent_config(settings: &Settings, env: Vec<(String, String)>) -> AgentConfig {
@@ -1293,6 +1421,13 @@ fn status_parts(status: GameStatus, turn: Color) -> (String, Option<String>) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let bridge = match mcp::start() {
+        Ok(bridge) => Some(bridge),
+        Err(error) => {
+            eprintln!("MCP bridge unavailable: {error}");
+            None
+        }
+    };
     tauri::Builder::default()
         .manage(AppState {
             session: Arc::new(Mutex::new(Session::new_with_persist(
@@ -1300,6 +1435,7 @@ pub fn run() {
                 Color::White,
                 false,
             ))),
+            mcp: bridge,
         })
         .invoke_handler(tauri::generate_handler![
             get_state,
@@ -1334,6 +1470,13 @@ pub fn run() {
 }
 
 fn main() {
+    if std::env::args().any(|argument| argument == "--mcp-server") {
+        if let Err(error) = mcp::run_stdio() {
+            eprintln!("Gambiit MCP server failed: {error}");
+            std::process::exit(1);
+        }
+        return;
+    }
     run();
 }
 
@@ -1516,6 +1659,7 @@ mod tests {
         object.remove("pieceSet");
         object.remove("chatEnabled");
         object.remove("drawOffersEnabled");
+        object.remove("agentMode");
         object.remove("clockEnabled");
         object.remove("timeControl");
         object.remove("clockInitialMs");
@@ -1526,6 +1670,7 @@ mod tests {
         assert_eq!(restored.theme, "salon");
         assert!(restored.chat_enabled);
         assert!(restored.draw_offers_enabled);
+        assert_eq!(restored.agent_mode, "prompt");
         assert!(!restored.clock_enabled);
         assert_eq!(restored.time_control, "rapid");
         assert_eq!(restored.clock_initial_ms, 600_000);
@@ -1726,6 +1871,43 @@ mod tests {
         assert_eq!(snapshot.history.len(), 2);
         assert!(!snapshot.commentary[0].comment.is_empty());
         eprintln!("ET comment: {}", snapshot.commentary[0].comment);
+    }
+
+    /// Two consecutive MCP turns in one session, using the built app binary as
+    /// the MCP server. Ignored because it spends provider tokens.
+    #[test]
+    #[ignore]
+    fn mcp_two_turns_smoke() {
+        let executable = std::env::current_exe()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("gambiit-app");
+        // SAFETY: this ignored test is intended to run alone.
+        unsafe {
+            std::env::set_var("GAMBIIT_MCP_EXE", &executable);
+        }
+        let bridge = mcp::start().unwrap();
+        let settings = Settings {
+            agent_mode: "mcp".to_string(),
+            ..Default::default()
+        };
+        let mut session = Session::new_with_persist(settings, Color::White, false);
+        session.make_move("e2e4").unwrap();
+        let first = session.agent_move_with_mcp(Some(bridge.clone())).unwrap();
+        assert_eq!(first.history.len(), 2);
+        assert_eq!(first.commentary.len(), 1);
+        assert!(!first.commentary[0].comment.is_empty());
+        eprintln!("MCP move 1: {}", first.history[1].san);
+
+        session.make_move("d2d4").unwrap();
+        let second = session.agent_move_with_mcp(Some(bridge)).unwrap();
+        assert_eq!(second.history.len(), 4);
+        assert_eq!(second.commentary.len(), 2);
+        assert!(!second.commentary[1].comment.is_empty());
+        eprintln!("MCP move 2: {}", second.history[3].san);
     }
 
     /// Live chat and draw-offer smoke test against the configured model.

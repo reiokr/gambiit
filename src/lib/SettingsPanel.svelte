@@ -84,6 +84,7 @@
   $: opponentChanged =
     draft.model !== settings.model ||
     draft.persona !== settings.persona ||
+    draft.agentMode !== settings.agentMode ||
     draft.difficulty !== settings.difficulty ||
     draft.stockfishDepth !== settings.stockfishDepth ||
     draft.multipv !== settings.multipv ||
@@ -825,6 +826,28 @@
             <h3>{$i18n("settings.connections")}</h3>
             <span>{$i18n("settings.connectionsHint")}</span>
           </div>
+          <div class="field agent-mode-field">
+            <span>{$i18n("settings.agentMode")}</span>
+            <div class="segmented">
+              <button
+                type="button"
+                class:active={draft.agentMode === "prompt"}
+                on:click={() => (draft.agentMode = "prompt")}
+              >
+                <strong>{$i18n("settings.agentModePrompt")}</strong>
+                <small>{$i18n("settings.agentModePromptHint")}</small>
+              </button>
+              <button
+                type="button"
+                class:active={draft.agentMode === "mcp"}
+                on:click={() => (draft.agentMode = "mcp")}
+              >
+                <strong>{$i18n("settings.agentModeMcp")}</strong>
+                <small>{$i18n("settings.agentModeMcpHint")}</small>
+              </button>
+            </div>
+            <small>{$i18n("settings.agentModeHint")}</small>
+          </div>
 <div class="field model-field">
           <span>{$i18n("settings.model")}</span>
           <div class="model-row">
@@ -1137,6 +1160,10 @@
     min-height: 0;
     overflow-y: auto;
     padding: 22px 26px;
+  }
+
+  .agent-mode-field {
+    margin-bottom: 16px;
   }
 
   .model-row {

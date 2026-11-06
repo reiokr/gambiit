@@ -30,6 +30,8 @@ What works now:
   the strongest and explains; the Theater list is shuffled so it does not read
   like a fixed ranking;
 - OpenCode prompt transport with strict JSON validation and retries;
+- optional MCP agent transport: the model queries the board and candidates and
+  submits its move through local tools; prompt mode remains the fallback;
 - automatic agent replies after the human move, or an “Agent move” button;
 - session reuse across moves, so the opponent remembers the game;
 - commentary cards with evaluations, candidate moves, rejection reasons, plan,
@@ -61,8 +63,9 @@ What works now:
   Estonian included, new languages are added by dropping in a JSON catalog;
 - desktop and terminal builds share the same Rust core, engine and agent layers.
 
-Not yet: MCP mode, Director's Cut, leaderboards and broadcast mode. Those are
-the next phases in `PLAN.md`.
+Not yet: MCP tools for chat, draw offers and analysis, the local Axum API,
+Director's Cut, leaderboards and broadcast mode. Those are the next phases in
+`PLAN.md`.
 
 ## Run the desktop app
 
@@ -238,6 +241,23 @@ back to the UI. Leaving the key empty uses OpenCode’s existing authentication.
 See [`docs/CREDENTIALS.md`](docs/CREDENTIALS.md) for the environment-variable
 mapping, storage details and OpenCode Go/Copilot caveats.
 
+## Agent connection: Prompt and MCP
+
+**Settings → Connection → Agent connection** selects how the opponent reaches
+the game:
+
+- **Prompt** (default): Gambiit sends one structured prompt per move and validates
+  the JSON response. This is the fastest and most predictable transport.
+- **MCP**: OpenCode connects to a local MCP server. The model can call
+  `get_state`, `get_legal_moves`, `get_candidates` and `get_clock`, then submits
+  its move through `submit_move`. Gambiit still validates the turn and the
+  Stockfish candidate pool.
+
+The MCP bridge listens only on `127.0.0.1` with a random token. Gambiit uses a
+private temporary OpenCode project config for the bridge; the model never gets
+shell or file access. Prompt mode remains the fallback if MCP is unavailable or
+a model does not use tools well.
+
 ## Requirements
 
 - Rust (stable, 1.85+; tested on 1.99)
@@ -344,8 +364,8 @@ the rules, Stockfish integration and OpenCode contract before the UI is built.
 - **Phase 5:** takeback rules, draw/resign, result screen.
   (PGN export/import, the saved-game library, post-game analysis and clocks are
   done.)
-- **Phase 6:** MCP mode, personas/chat, Truth Lens, Director's Cut, leaderboard,
-  broadcast mode.
+- **Phase 6:** personas/chat, Truth Lens, MCP move transport, Director's Cut,
+  leaderboard, broadcast mode. (MCP move mode is done.)
 - **Phase 7:** packaging (PKGBUILD, `.desktop`), docs, performance.
 
 ## License

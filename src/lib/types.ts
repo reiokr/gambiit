@@ -92,6 +92,7 @@ export interface Settings {
   agentLanguage: string;
   agentLanguageName: string;
   responseMode: "auto" | "button";
+  agentMode: "prompt" | "mcp";
   stockfishDepth: number;
   multipv: number;
   difficulty: string;

@@ -106,7 +106,8 @@ Completed:
 
 Not yet:
 
-- local Axum API and MCP bridge;
+- local Axum API;
+- MCP tools for chat, draw offers and analysis;
 - additional built-in themes and curated piece sets;
 - contrast warnings and the remaining accessibility pass;
 - personas beyond the prompt presets, Director's Cut, leaderboard and broadcast
@@ -115,7 +116,7 @@ Not yet:
 Next:
 
 - Add more bundled themes and piece sets.
-- Then MCP mode and Director's Cut.
+- Then packaging and Director's Cut.
 
 ---
 
@@ -475,7 +476,7 @@ Settings must expose game properties and theater features without code edits.
 | **3. Agent in UI** | Prompt transport, Auto/Button modes, model/persona selection, commentary, error handling. | Full game vs OpenCode model without terminal typing; illegal move recovers. |
 | **4. Design system** | 4 themes ✅, theme editor ✅, 5 built-in piece sets ✅, custom sets ✅, animations, sounds, accessibility; more themes planned. | Theme switches live and persists; palette and pieces load from disk. |
 | **5. Game completeness** | PGN ✅, persistence ✅, analysis ✅, clocks ✅, draw/resign ✅; takebacks, result screen, tribute lines. | PGN round-trip; takeback rules enforced; analysis and flags work. |
-| **6. Theater extras** | Personas ✅, chat ✅, Truth Lens ✅, draw offers ✅; Director’s Cut, leaderboard, MCP, broadcast. | Toggleable and non-intrusive. |
+| **6. Theater extras** | Personas ✅, chat ✅, Truth Lens ✅, draw offers ✅, MCP move transport ✅; Director’s Cut, leaderboard, broadcast. | Toggleable and non-intrusive. |
 | **7. Packaging** | PKGBUILD, `.desktop`, icon, docs, tests, performance. | Installable on CachyOS; starts <2 s; README. |
 
 Start with Phase 0. The biggest risk is the agent loop, not the board or themes.
