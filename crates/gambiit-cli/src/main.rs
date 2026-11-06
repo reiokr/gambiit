@@ -122,6 +122,7 @@ fn play(args: PlayArgs) -> Result<()> {
             env: Vec::new(),
             style_instruction: String::new(),
             persona_prompt: String::new(),
+            bluff_instruction: String::new(),
         };
         let mut session = AgentSession::new(config)?;
         session.set_session_id(args.session.clone());

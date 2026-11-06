@@ -193,15 +193,122 @@ fn classify(played: &str, best: Option<&str>, loss_cp: i32) -> &'static str {
     }
 }
 
-fn parse_claim(text: &str) -> Option<i32> {
-    let text = text.trim().trim_start_matches('+');
-    if let Some(mate) = text.strip_prefix('#') {
-        let value = mate.parse::<i32>().ok()?;
-        return Some(if value >= 0 { 10_000 } else { -10_000 });
-    }
-    text.parse::<f64>()
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Claim {
+    Numeric(i32),
+    Mate(i32),
+    Winning,
+    Losing,
+    Equal,
+    Better,
+    Worse,
+}
+
+fn parse_mate_value(text: &str) -> Option<i32> {
+    text.trim()
+        .trim_matches(|c: char| matches!(c, ',' | '.' | ';' | ':'))
+        .parse::<i32>()
         .ok()
-        .map(|value| (value * 100.0).round() as i32)
+}
+
+fn claim_from_text(text: &str) -> Option<Claim> {
+    let normalized = text.trim().replace('−', "-").to_ascii_lowercase();
+    let normalized = normalized
+        .trim()
+        .trim_matches(|c: char| matches!(c, '.' | ',' | '!' | '?' | ';' | ':'))
+        .trim();
+    if normalized.is_empty() {
+        return None;
+    }
+
+    if let Some(rest) = normalized.strip_prefix('#') {
+        return parse_mate_value(rest).map(Claim::Mate);
+    }
+    if let Some(rest) = normalized.strip_prefix('m')
+        && let Some(value) = parse_mate_value(rest)
+    {
+        return Some(Claim::Mate(value));
+    }
+    for marker in ["mate in ", "matt in ", "matt "] {
+        if let Some(index) = normalized.find(marker) {
+            let rest = &normalized[index + marker.len()..];
+            if let Some(value) = rest.split_whitespace().next().and_then(parse_mate_value) {
+                return Some(Claim::Mate(value));
+            }
+        }
+    }
+
+    let tokens = normalized.split_whitespace().collect::<Vec<_>>();
+    let mate_word = tokens.iter().any(|token| {
+        let token = token
+            .trim_matches(|c: char| matches!(c, ',' | '.' | '!' | '?' | ';' | ':' | '(' | ')'));
+        matches!(token, "mate" | "matt" | "checkmate")
+    });
+    if mate_word {
+        return Some(Claim::Mate(1));
+    }
+    for token in &tokens {
+        let raw = token.trim_matches(|c: char| matches!(c, ',' | ';' | ':' | '(' | ')'));
+        let cleaned = raw.replace(',', ".");
+        let cleaned = cleaned.trim_matches('.');
+        if let Ok(value) = cleaned.parse::<f64>() {
+            let bare_number = tokens.len() == 1 && value.abs() <= 30.0;
+            if raw.starts_with('+') || raw.starts_with('-') || cleaned.contains('.') || bare_number
+            {
+                return Some(Claim::Numeric((value * 100.0).round() as i32));
+            }
+        }
+    }
+
+    for (index, token) in tokens.iter().enumerate() {
+        if index > 0 && matches!(tokens[index - 1], "not" | "mitte" | "pole") {
+            continue;
+        }
+        let token = token.trim_matches(|c: char| matches!(c, ',' | '.' | '+' | ';' | ':'));
+        match token {
+            "winning" | "win" | "won" | "võidan" | "võit" | "võitmas" | "võidab" => {
+                return Some(Claim::Winning);
+            }
+            "losing" | "lost" | "loss" | "kaotan" | "kaotus" | "kaotamas" | "kaotab" => {
+                return Some(Claim::Losing);
+            }
+            "equal" | "draw" | "drawish" | "level" | "viik" | "viigis" | "võrdne" | "tasakaal" => {
+                return Some(Claim::Equal);
+            }
+            "better" | "advantage" | "eelis" | "parem" | "paremal" => {
+                return Some(Claim::Better);
+            }
+            "worse" | "disadvantage" | "puudujääk" | "halvem" | "halvemal" => {
+                return Some(Claim::Worse);
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn claim_gap(claim: Claim, actual_cp: i32) -> i32 {
+    match claim {
+        Claim::Numeric(value) => (value - actual_cp).abs(),
+        Claim::Mate(direction) => {
+            if actual_cp.abs() >= 9_000 && actual_cp.signum() == direction.signum() {
+                0
+            } else {
+                10_000
+            }
+        }
+        Claim::Winning => (200 - actual_cp).max(0),
+        Claim::Losing => (actual_cp + 200).max(0),
+        Claim::Equal => (actual_cp.abs() - 100).max(0),
+        Claim::Better => (50 - actual_cp).max(0),
+        Claim::Worse => (actual_cp + 50).max(0),
+    }
+}
+
+fn compare_claim(text: &str, actual_cp: i32) -> Option<(i32, bool)> {
+    let claim = claim_from_text(text)?;
+    let gap = claim_gap(claim, actual_cp);
+    Some((gap, gap >= 150))
 }
 
 pub fn analyze(game: &Game, depth: u32) -> Result<AnalysisReport, String> {
@@ -271,11 +378,11 @@ pub fn analyze(game: &Game, depth: u32) -> Result<AnalysisReport, String> {
         }
 
         let claimed_eval = record.eval.clone();
-        let claim_gap_cp = claimed_eval
+        let (claim_gap_cp, claim_mismatch) = claimed_eval
             .as_deref()
-            .and_then(parse_claim)
-            .map(|claim| (claim - after_mover).abs());
-        let claim_mismatch = claim_gap_cp.is_some_and(|gap| gap >= 150);
+            .and_then(|text| compare_claim(text, after_mover))
+            .map(|(gap, mismatch)| (Some(gap), mismatch))
+            .unwrap_or((None, false));
         if claim_mismatch {
             truth_lens_flags += 1;
         }
@@ -329,10 +436,59 @@ mod tests {
 
     #[test]
     fn parses_numeric_and_mate_claims() {
-        assert_eq!(parse_claim("+0.35"), Some(35));
-        assert_eq!(parse_claim("-1.2"), Some(-120));
-        assert_eq!(parse_claim("#3"), Some(10_000));
-        assert_eq!(parse_claim("equal"), None);
+        assert_eq!(claim_from_text("+0.35"), Some(Claim::Numeric(35)));
+        assert_eq!(claim_from_text("-1.2"), Some(Claim::Numeric(-120)));
+        assert_eq!(claim_from_text("−0,5"), Some(Claim::Numeric(-50)));
+        assert_eq!(claim_from_text("#3"), Some(Claim::Mate(3)));
+        assert_eq!(claim_from_text("mate in 3"), Some(Claim::Mate(3)));
+        assert_eq!(claim_from_text("M2"), Some(Claim::Mate(2)));
+        assert_eq!(claim_from_text("matt 4"), Some(Claim::Mate(4)));
+        assert_eq!(claim_from_text("checkmate"), Some(Claim::Mate(1)));
+        assert_eq!(claim_from_text("estimate"), None);
+        assert_eq!(claim_from_text("+1"), Some(Claim::Numeric(100)));
+        assert_eq!(claim_from_text("1"), Some(Claim::Numeric(100)));
+        assert_eq!(claim_from_text("nonsense"), None);
+    }
+
+    #[test]
+    fn parses_qualitative_claims() {
+        assert_eq!(claim_from_text("winning"), Some(Claim::Winning));
+        assert_eq!(claim_from_text("I am winning"), Some(Claim::Winning));
+        assert_eq!(claim_from_text("losing"), Some(Claim::Losing));
+        assert_eq!(claim_from_text("equal"), Some(Claim::Equal));
+        assert_eq!(claim_from_text("drawish"), Some(Claim::Equal));
+        assert_eq!(claim_from_text("slightly better"), Some(Claim::Better));
+        assert_eq!(claim_from_text("3 pawns better"), Some(Claim::Better));
+        assert_eq!(claim_from_text("worse"), Some(Claim::Worse));
+        assert_eq!(claim_from_text("võidan"), Some(Claim::Winning));
+        assert_eq!(claim_from_text("viik"), Some(Claim::Equal));
+        assert_eq!(claim_from_text("not winning"), None);
+        assert_eq!(claim_from_text("pole parem"), None);
+    }
+
+    #[test]
+    fn claim_gaps_respect_expected_ranges() {
+        assert_eq!(claim_gap(Claim::Winning, 300), 0);
+        assert_eq!(claim_gap(Claim::Winning, 0), 200);
+        assert_eq!(claim_gap(Claim::Losing, -300), 0);
+        assert_eq!(claim_gap(Claim::Losing, 0), 200);
+        assert_eq!(claim_gap(Claim::Equal, 50), 0);
+        assert_eq!(claim_gap(Claim::Equal, 300), 200);
+        assert_eq!(claim_gap(Claim::Better, 0), 50);
+        assert_eq!(claim_gap(Claim::Worse, 0), 50);
+        assert_eq!(claim_gap(Claim::Mate(3), 10_000), 0);
+        assert_eq!(claim_gap(Claim::Mate(3), -10_000), 10_000);
+        assert_eq!(claim_gap(Claim::Numeric(50), -100), 150);
+    }
+
+    #[test]
+    fn compare_claim_flags_only_large_gaps() {
+        assert_eq!(compare_claim("winning", -300), Some((500, true)));
+        assert_eq!(compare_claim("equal", 20), Some((0, false)));
+        assert_eq!(compare_claim("better", 100), Some((0, false)));
+        assert_eq!(compare_claim("mate in 2", 10_000), Some((0, false)));
+        assert_eq!(compare_claim("mate in 2", -10_000), Some((10_000, true)));
+        assert_eq!(compare_claim("nonsense", 0), None);
     }
 
     #[test]
@@ -378,6 +534,29 @@ mod tests {
         }));
         let last = report.positions.last().unwrap();
         assert!(last.claim_mismatch);
+        assert_eq!(report.truth_lens_flags, 1);
+    }
+
+    #[test]
+    #[ignore = "requires Stockfish"]
+    fn flags_qualitative_bluff() {
+        let mut game = Game::new();
+        for mv in ["f3", "e5", "g4"] {
+            game.apply_san(mv).unwrap();
+        }
+        game.annotate_last(
+            Some("I am completely winning.".to_string()),
+            Some("winning".to_string()),
+        );
+        game.apply_san("Qh4#").unwrap();
+        let report = analyze(&game, 10).unwrap();
+        let g4 = report
+            .positions
+            .iter()
+            .find(|position| position.san == "g4")
+            .unwrap();
+        assert!(g4.claim_mismatch);
+        assert!(g4.claim_gap_cp.unwrap() >= 150);
         assert_eq!(report.truth_lens_flags, 1);
     }
 

@@ -46,12 +46,15 @@ eraldi. Kasutab Stockfishi tõde ja ausat treeneri prompti. Tegevused: seisu
 selgitamine, järkjärguline vihje (idee → kandidaat → käik) ja viimase käigu
 ülevaade. Ainult nupuvajutusel, mitte automaatselt; ei muuda vastase käiku.
 
-### Tõeobjektiiv 2.0
-Praegune pärastmängu Tõeobjektiiv võrdleb numbrilisi hinnanguid Stockfishiga ja
-märgib ≥ 1,50 etturi erinevuse. Laiendus loeb ka väiteid „võidan/kaotan/viik/matt“
-ning lisab bluff-intensiivsuse liuguri: 0 aus, 50 teatraalne aga usutav, 100
-ebausaldusväärne jutustaja. Bluff kehtib ainult hinnangutele ja plaanidele, mitte
-reeglitele ega käigu legaalsusele. Edetabel näitab bluff rate’i.
+### Tõeobjektiiv 2.0 (valmis)
+Pärastmängu Tõeobjektiiv loeb nüüd numbrilisi hinnanguid (`+0,3`), mativäiteid
+(`#3`, `mate in 3`) ja hinnanguid (`winning`, `losing`, `equal`, `better`,
+`worse`, pluss eesti sünonüümid). See võrdleb iga väidet Stockfishiga ja märgib
+≥ 1,50 etturi erinevuse. Bluff-intensiivsuse liugur (0 aus, 50 teatraalne aga
+usutav, 100 ebausaldusväärne jutustaja) läheb igasse agendi prompti ja annab
+selge liialdusbudžeti. Bluff kehtib ainult hinnangutele ja plaanidele, mitte
+reeglitele ega käigu legaalsusele; viigipakkumise otsus jääb ausaks. Edetabel
+näitab sellest tulenevat bluff rate’i.
 
 ### Režissööri lõige
 Pärastmängu narratiiv, mis luuakse analüüsi, kommentaaride ja vestluse põhjal.
@@ -154,6 +157,8 @@ Valmis:
   raamatukogu, PGN eksport/import kommentaaridega ja tolerantne PGN-parser.
 - Pärastmängu Stockfishi analüüs: täpsus, käikude klassifikatsioon, eval-graaf,
   valitud käigu detailid ja Tõeobjektiiv.
+- Tõeobjektiiv 2.0 loeb numbrilisi, mati- ja seisuväiteid; bluff-intensiivsuse
+  liugur (0–100) läheb igasse agendi prompti ega luba kunagi reeglivalet.
 - Kohandatud teemaredaktor live-eelvaatega ja lokaalselt salvestatud paletiga.
 - Viis sisseehitatud malendikomplekti (Cburnett, Livius, Meridian, Meridian
   Shaded ja Letter) ning kohandatud kaustad `~/.local/share/gambiit/pieces/`
@@ -186,9 +191,10 @@ Valmis:
 
 Testid:
 
-- **67 Rust testi** rohelised (core 10, engine 2, agent 14, Tauri app 41) +
-  7 ignored testi (päris-mudeli käigu-, isiksusestiili-, vestluse/viigi-,
-  MCP kahe käigu- ja eestikeelne smoke-test ning kaks Stockfishi analüüsi testi).
+- **74 Rust testi** rohelised (core 10, engine 2, agent 15, Tauri app 47) +
+  9 ignored testi (päris-mudeli käigu-, isiksusestiili-, bluff-intensiivsuse-,
+  vestluse/viigi-, MCP kahe käigu- ja eestikeelne smoke-test ning kolm
+  Stockfishi analüüsi testi).
 - 1 ignored **agent_smoke** test: `e4` → `...c5` 8,9 sekundiga, 522 tokenit.
 - `cargo clippy --all-targets -- -D warnings` puhas.
 - `pnpm check` — 0 viga, 0 hoiatust.

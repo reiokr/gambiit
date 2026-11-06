@@ -46,12 +46,15 @@ What works now:
 - PGN export with tags/comments and tolerant PGN import;
 - post-game Stockfish analysis: accuracy for both sides, move classification,
   an evaluation graph, selected-move detail with a board, and the Truth Lens
-  comparing the agent's claimed evaluations with the engine;
+  comparing the agent's numeric, mate and verdict claims with the engine;
+- a bluff-intensity slider (0 honest, 50 theatrical but plausible, 100
+  unreliable narrator) that controls exaggeration without ever allowing lies
+  about the board or rules;
 - a local model leaderboard built from saved games, with win rate, accuracy,
   blunder counts, bluff rate, response time, tokens and cost;
 - settings for model, persona, response mode, colour, theme, font size
-  (90–150%, default 120%), language, sound, animations, Stockfish depth and
-  candidate count;
+  (90–150%, default 120%), language, sound, animations, bluff intensity,
+  Stockfish depth and candidate count;
 - searchable model picker grouped by provider, with a model-list refresh;
 - optional provider API keys stored locally with 0600 permissions and passed to
   OpenCode as environment variables; no key means OpenCode's own auth is used;
@@ -197,12 +200,34 @@ press **Analyze game**. Stockfish re-reads every position once and reports:
 - an evaluation graph from White's point of view;
 - the best move and centipawn loss for each move, with a small board;
 - the **Truth Lens**: the agent's claimed evaluation is compared with the
-  engine, and claims that differ by 1.50 pawns or more are flagged.
+  engine. It understands numbers (`+0.3`), mate claims (`#3`, `mate in 3`) and
+  verdicts such as `winning`, `losing`, `equal`, `better` and `worse`. Claims
+  that differ by 1.50 pawns or more are flagged.
 
 The analysis runs on a separate Stockfish process, so it does not disturb the
 opponent engine. A short game takes a few seconds; a long game at depth 16 can
 take a minute. The board remains the source of truth: a flag says the agent's
 claim did not match the engine, not that the move was illegal.
+
+## Bluff intensity
+
+**Settings → Game → Bluff intensity** controls how freely the opponent may
+exaggerate evaluations and plans:
+
+- **0–15, Honest** — state evaluations and plans as the model believes them.
+- **16–39, Mild showmanship** — light theatrical spin, roughly within 0.5 pawns.
+- **40–64, Theatrical but plausible** — bluff within about 1.2 pawns, below the
+  Truth Lens flag threshold most of the time.
+- **65–84, Bold liar** — exaggerate freely and claim large swings.
+- **85–100, Unreliable narrator** — almost anything goes about evaluations and
+  plans.
+
+The slider never permits lies about the board, rules, legality, captures,
+checks, mate or the result. It applies to move commentary, chat, draw-offer
+replies and the MCP path alike. The Truth Lens and the leaderboard's bluff rate
+then show how well the claims matched Stockfish. In a live smoke test the same
+opening move produced `-0.2` at intensity 0 and `+1.4` at 100 — exactly the kind
+of swing the Truth Lens is meant to catch.
 
 ## Chat and draw offers
 

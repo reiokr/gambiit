@@ -107,6 +107,7 @@ export interface Settings {
   agentMode: "prompt" | "mcp";
   personaStyle: "off" | "subtle" | "theatrical" | "strong";
   customPersona: CustomPersona;
+  bluffIntensity: number;
   stockfishDepth: number;
   multipv: number;
   difficulty: string;

@@ -80,6 +80,8 @@ Completed:
   saved-game library, PGN export/import with comments and tolerant PGN parsing.
 - Post-game Stockfish analysis with accuracy, move classification, evaluation
   graph, selected-move detail and the Truth Lens.
+- Truth Lens 2.0 parses numeric, mate and verdict claims; a bluff-intensity
+  slider (0–100) feeds every agent prompt and never permits rules lies.
 - Custom theme editor with live preview and a locally saved palette.
 - Five built-in piece sets (Cburnett, Livius, Meridian, Meridian Shaded and
   Letter) plus custom folders under `~/.local/share/gambiit/pieces/` with
@@ -158,13 +160,15 @@ agent session. It uses Stockfish truth plus an honest coach prompt. Actions:
 explain position, progressive hint (idea → candidate → move), and review the
 last move. It is on demand, not automatic, and never changes the opponent’s move.
 
-### Truth Lens 2.0
-The current post-game Truth Lens compares numeric evaluations with Stockfish and
-flags differences of at least 1.50 pawns. Extend it to parse more claims
-(winning/losing/equal/mate) and add a bluff-intensity slider: 0 honest, 50
-theatrical but plausible, 100 unreliable narrator. Bluffing applies only to
-evaluations and plans, never to rules or move legality. The leaderboard reports
-bluff rate.
+### Truth Lens 2.0 (implemented)
+The post-game Truth Lens now parses numeric evaluations (`+0.3`), mate claims
+(`#3`, `mate in 3`) and verdicts (`winning`, `losing`, `equal`, `better`,
+`worse`, plus Estonian synonyms). It compares each claim with Stockfish and
+flags a gap of at least 1.50 pawns. A bluff-intensity slider (0 honest, 50
+theatrical but plausible, 100 unreliable narrator) feeds every agent prompt and
+sets an explicit exaggeration budget. Bluffing applies only to evaluations and
+plans, never to rules or move legality; draw decisions remain honest. The
+leaderboard reports the resulting bluff rate.
 
 ### Director’s Cut
 A post-game narrative generated from the analysis report, commentary and chat.

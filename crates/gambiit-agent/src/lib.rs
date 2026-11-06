@@ -78,6 +78,8 @@ pub struct AgentConfig {
     pub style_instruction: String,
     /// Optional custom persona prompt; overrides the built-in persona text.
     pub persona_prompt: String,
+    /// Optional bluff-intensity guidance for evaluations and plans.
+    pub bluff_instruction: String,
 }
 
 impl Default for AgentConfig {
@@ -92,7 +94,17 @@ impl Default for AgentConfig {
             env: Vec::new(),
             style_instruction: String::new(),
             persona_prompt: String::new(),
+            bluff_instruction: String::new(),
         }
+    }
+}
+
+fn bluff_section(config: &AgentConfig) -> String {
+    let bluff = config.bluff_instruction.trim();
+    if bluff.is_empty() {
+        String::new()
+    } else {
+        format!("{bluff}\n\n")
     }
 }
 
@@ -552,6 +564,7 @@ pub fn build_move_prompt(game: &Game, config: &AgentConfig, candidates: &[Candid
     } else {
         "The first candidate is the persona's style preference and is within the chosen strength margin. Play it unless you have a concrete reason it is unsound. Do not choose a move outside the candidate pool."
     };
+    let bluff_section = bluff_section(config);
 
     format!(
         r#"You are playing chess as {agent_color} against a human ({human_color}).
@@ -571,11 +584,11 @@ MOVE SELECTION:
 
 {persona}
 
-COMMENTARY (stay in character):
+{bluff_section}COMMENTARY (stay in character):
 1. Briefly evaluate the position.
 2. Name 3-4 candidate moves and explain why each rejected candidate was rejected.
 3. Explain the chosen move and your plan.
-You may bluff about evaluations and future plans, but never about mechanics: the game validates legality, captures, check and checkmate. Do not claim a false rule fact.
+Never lie about mechanics: the game validates legality, captures, check and checkmate. Do not claim a false rule fact.
 
 Every JSON field below is required. `comment` must be a non-empty public sentence (or a few sentences) for the Theater panel; an empty comment is invalid. Include at least two candidate entries and a non-empty plan.
 
@@ -588,9 +601,10 @@ Reply with ONLY one JSON object, no markdown fences, no prose before or after:
     {{ "move": "e7e5", "why": "develops and keeps tension" }},
     {{ "move": "c7c5", "why_rejected": "too sharp in this position" }}
   ],
-  "plan": "Public plan; it may be misleading."
+  "plan": "Public plan; stay in character."
 }}
 
+`eval` may be a number (e.g. +0.3), a mate claim (#3), or one of: winning, losing, equal, better, worse. `eval` is from your side's perspective.
 Move must be UCI (preferred) or SAN. Commentary language: {language}.
 "#,
         agent_color = color_name(agent_color),
@@ -604,6 +618,7 @@ Move must be UCI (preferred) or SAN. Commentary language: {language}.
         candidates = candidates_text,
         selection_rules = selection_rules,
         persona = persona,
+        bluff_section = bluff_section,
         language = language,
     )
 }
@@ -622,6 +637,7 @@ fn build_chat_prompt(
         config.language_name.as_str()
     };
     let persona = persona_instruction_for(config);
+    let bluff_section = bluff_section(config);
     let conversation = history
         .iter()
         .rev()
@@ -655,9 +671,9 @@ The human says: "{message}"
 
 {persona}
 
-Reply in {language}, in character, in 1-3 short sentences. Do not output JSON.
+{bluff_section}Reply in {language}, in character, in 1-3 short sentences. Do not output JSON.
 Do not make or describe a move as if it were already played; the interface handles moves separately.
-You may bluff about plans and psychology, but never claim false board facts or rules.
+Never claim false board facts or rules.
 A formal draw offer is handled by the interface; do not accept or decline it in chat.
 "#,
         agent_color = color_name(agent_color),
@@ -668,6 +684,7 @@ A formal draw offer is handled by the interface; do not accept or decline it in 
         conversation = conversation,
         message = message,
         persona = persona,
+        bluff_section = bluff_section,
         language = language,
     )
 }
@@ -681,6 +698,7 @@ fn build_draw_prompt(game: &Game, config: &AgentConfig) -> String {
         config.language_name.as_str()
     };
     let persona = persona_instruction_for(config);
+    let bluff_section = bluff_section(config);
 
     format!(
         r#"You are playing chess as {agent_color} against a human ({human_color}).
@@ -692,8 +710,9 @@ Game status: {status}
 
 {persona}
 
-Decide whether to accept the draw. Accept if the position is clearly drawn or you are worse;
+{bluff_section}Decide whether to accept the draw. Accept if the position is clearly drawn or you are worse;
 decline if you have real winning chances or counterplay. The board is the truth.
+The draw decision itself is not a bluff; only the comment may be in character.
 
 Reply with ONLY one JSON object, no markdown fences, no prose before or after:
 {{
@@ -707,6 +726,7 @@ Reply with ONLY one JSON object, no markdown fences, no prose before or after:
         history = game.pgn_moves(),
         status = game.status_text(),
         persona = persona,
+        bluff_section = bluff_section,
         language = language,
     )
 }
@@ -752,6 +772,7 @@ pub fn build_mcp_move_prompt(
     } else {
         format!("{style}\n\n")
     };
+    let bluff_section = bluff_section(config);
     let history = game.pgn_moves();
     let history = if history.is_empty() {
         "(no moves yet)"
@@ -771,7 +792,7 @@ Stockfish candidate moves (the first is your persona's style preference; all are
 
 {style_section}{persona}
 
-Fast path:
+{bluff_section}Fast path:
 1. The board state and candidate moves are already included above. Do not call `get_state` or `get_candidates` mechanically.
 2. If you need to re-check something, you may call `get_state`, `get_candidates`, or `get_clock`.
 3. Call `submit_move` exactly once with:
@@ -784,7 +805,8 @@ Rules:
 - The board is truth; never claim false board facts or rules.
 - The chosen move must be legal and from the Stockfish candidate pool.
 - The first candidate is the persona's style preference; play it unless you have a concrete reason it is unsound.
-- You may bluff about plans and evaluations, but the move itself must be sound.
+- The move itself must be sound; bluffing never extends to board facts or rules.
+- `eval` may be a number (e.g. +0.3), a mate claim (#3), or one of: winning, losing, equal, better, worse. `eval` is from your side's perspective.
 - The persona affects bounded style and commentary only.
 "#,
         agent_color = color_name(agent_color),
@@ -795,6 +817,7 @@ Rules:
         style_section = style_section,
         candidates = candidates_text,
         persona = persona,
+        bluff_section = bluff_section,
         language = language,
     )
 }
@@ -1121,6 +1144,20 @@ mod tests {
         let mcp = build_mcp_move_prompt(&game, &config, &candidates);
         assert!(mcp.contains("Persona move style: trickster."));
         assert!(mcp.contains("style preference"));
+    }
+
+    #[test]
+    fn bluff_instruction_is_rendered_in_prompts() {
+        let game = Game::new();
+        let config = AgentConfig {
+            bluff_instruction: "BLUFF INTENSITY: 100/100 (unreliable narrator).".to_string(),
+            ..Default::default()
+        };
+        let marker = "BLUFF INTENSITY: 100/100";
+        assert!(build_move_prompt(&game, &config, &[]).contains(marker));
+        assert!(build_chat_prompt(&game, &config, &[], "Hello").contains(marker));
+        assert!(build_draw_prompt(&game, &config).contains(marker));
+        assert!(build_mcp_move_prompt(&game, &config, &[]).contains(marker));
     }
 
     #[test]

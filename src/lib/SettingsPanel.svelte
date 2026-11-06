@@ -106,6 +106,7 @@
     draft.responseMode !== settings.responseMode ||
     draft.chatEnabled !== settings.chatEnabled ||
     draft.drawOffersEnabled !== settings.drawOffersEnabled ||
+    draft.bluffIntensity !== settings.bluffIntensity ||
     Math.abs(draft.fontScale - settings.fontScale) > 0.001;
   $: clockChanged =
     draft.clockEnabled !== settings.clockEnabled ||
@@ -260,6 +261,14 @@
     const theme = { ...DEFAULT_CUSTOM_THEME };
     draft.customTheme = theme;
     applyTheme("custom", theme);
+  }
+
+  function bluffKey(value: number): string {
+    if (value <= 15) return "settings.bluffHonest";
+    if (value <= 39) return "settings.bluffMild";
+    if (value <= 64) return "settings.bluffTheatrical";
+    if (value <= 84) return "settings.bluffBold";
+    return "settings.bluffUnreliable";
   }
 
   function selectPieceSet(id: string) {
@@ -524,6 +533,27 @@
             <option value="strong">{$i18n("settings.personaStyleStrong")}</option>
           </select>
           <small>{$i18n("settings.personaStyleHint")}</small>
+        </label>
+
+        <label class="field bluff-field">
+          <span>
+            {$i18n("settings.bluffIntensity")}
+            <b>{draft.bluffIntensity} / 100</b>
+          </span>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="5"
+            value={draft.bluffIntensity}
+            aria-valuetext={`${draft.bluffIntensity} / 100`}
+            on:input={(event) =>
+              (draft.bluffIntensity = Number(event.currentTarget.value))}
+          />
+          <small>
+            {$i18n(bluffKey(draft.bluffIntensity))} ·
+            {$i18n("settings.bluffIntensityHint")}
+          </small>
         </label>
 
         <div class="field">
@@ -1737,6 +1767,10 @@
   }
 
   .persona-style-field {
+    margin-top: 12px;
+  }
+
+  .bluff-field {
     margin-top: 12px;
   }
 

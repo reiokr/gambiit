@@ -31,6 +31,7 @@ export const DEFAULT_SETTINGS: Settings = {
   agentMode: "prompt",
   personaStyle: "subtle",
   customPersona: { ...DEFAULT_CUSTOM_PERSONA },
+  bluffIntensity: 50,
   stockfishDepth: 11,
   multipv: 4,
   difficulty: "intermediate",

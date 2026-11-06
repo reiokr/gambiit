@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod analysis;
+mod bluff;
 mod credentials;
 mod leaderboard;
 mod mcp;
@@ -119,6 +120,10 @@ fn default_clock_increment() -> u64 {
     5_000
 }
 
+fn default_bluff_intensity() -> u8 {
+    50
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Settings {
@@ -134,6 +139,8 @@ pub(crate) struct Settings {
     persona_style: String,
     #[serde(default)]
     custom_persona: CustomPersona,
+    #[serde(default = "default_bluff_intensity")]
+    bluff_intensity: u8,
     stockfish_depth: u32,
     multipv: usize,
     difficulty: String,
@@ -171,6 +178,7 @@ impl Default for Settings {
             agent_mode: default_agent_mode(),
             persona_style: default_persona_style(),
             custom_persona: CustomPersona::default(),
+            bluff_intensity: default_bluff_intensity(),
             stockfish_depth: 11,
             multipv: 4,
             difficulty: "intermediate".to_string(),
@@ -1399,6 +1407,7 @@ fn normalize_settings(mut settings: Settings) -> Settings {
     settings.custom_persona.aggression = settings.custom_persona.aggression.min(10);
     settings.custom_persona.verbosity = settings.custom_persona.verbosity.min(10);
     settings.custom_persona.deception = settings.custom_persona.deception.min(10);
+    settings.bluff_intensity = settings.bluff_intensity.min(100);
     if let Some((initial, increment)) = clock_preset(&settings.time_control) {
         settings.clock_initial_ms = initial;
         settings.clock_increment_ms = increment;
@@ -1498,6 +1507,7 @@ fn agent_config(settings: &Settings, env: Vec<(String, String)>) -> AgentConfig 
         } else {
             String::new()
         },
+        bluff_instruction: bluff::instruction(settings.bluff_intensity),
         style_instruction: if settings.persona_style == "off" {
             String::new()
         } else if settings.persona == "Custom" {
@@ -1510,7 +1520,7 @@ fn agent_config(settings: &Settings, env: Vec<(String, String)>) -> AgentConfig 
 
 fn custom_persona_instruction(persona: &CustomPersona) -> String {
     format!(
-        "Persona: {name}. Theatricality {theatricality}/10, confidence {confidence}/10, warmth {warmth}/10, humor {humor}/10, aggression {aggression}/10, verbosity {verbosity}/10, deception {deception}/10. Stay in character. The persona affects commentary and bounded move style, never rules or move legality. With deception you may exaggerate evaluations and plans; never lie about the board or the rules.",
+        "Persona: {name}. Theatricality {theatricality}/10, confidence {confidence}/10, warmth {warmth}/10, humor {humor}/10, aggression {aggression}/10, verbosity {verbosity}/10, deception {deception}/10. Stay in character. The persona affects commentary and bounded move style, never rules or move legality. Deception colours how theatrical your exaggerations are when bluffing is allowed; never lie about the board or the rules.",
         name = persona.name,
         theatricality = persona.theatricality,
         confidence = persona.confidence,
@@ -1819,6 +1829,7 @@ mod tests {
         object.remove("agentMode");
         object.remove("personaStyle");
         object.remove("customPersona");
+        object.remove("bluffIntensity");
         object.remove("clockEnabled");
         object.remove("timeControl");
         object.remove("clockInitialMs");
@@ -1832,6 +1843,7 @@ mod tests {
         assert_eq!(restored.agent_mode, "prompt");
         assert_eq!(restored.persona_style, "subtle");
         assert_eq!(restored.custom_persona.name, "Custom Persona");
+        assert_eq!(restored.bluff_intensity, 50);
         assert!(!restored.clock_enabled);
         assert_eq!(restored.time_control, "rapid");
         assert_eq!(restored.clock_initial_ms, 600_000);
@@ -1906,6 +1918,21 @@ mod tests {
             ..Default::default()
         });
         assert_eq!(settings.custom_persona.name.chars().count(), 40);
+    }
+
+    #[test]
+    fn bluff_intensity_is_bounded() {
+        let settings = normalize_settings(Settings {
+            bluff_intensity: 200,
+            ..Default::default()
+        });
+        assert_eq!(settings.bluff_intensity, 100);
+
+        let settings = normalize_settings(Settings {
+            bluff_intensity: 0,
+            ..Default::default()
+        });
+        assert_eq!(settings.bluff_intensity, 0);
     }
 
     #[test]
@@ -2154,6 +2181,26 @@ mod tests {
             eprintln!(
                 "{label}: {} — {}",
                 snapshot.history[1].san, snapshot.commentary[0].comment
+            );
+        }
+    }
+
+    /// Bluff-intensity smoke test. Ignored by default.
+    #[test]
+    #[ignore]
+    fn bluff_intensity_smoke() {
+        for intensity in [0u8, 100u8] {
+            let settings = Settings {
+                persona: "Trickster".to_string(),
+                bluff_intensity: intensity,
+                ..Default::default()
+            };
+            let mut session = Session::new_with_persist(settings, Color::White, false);
+            session.make_move("e2e4").unwrap();
+            let snapshot = session.agent_move().unwrap();
+            eprintln!(
+                "bluff {intensity}: {} | eval {:?} | {}",
+                snapshot.history[1].san, snapshot.history[1].eval, snapshot.commentary[0].comment
             );
         }
     }
