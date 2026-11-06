@@ -133,7 +133,7 @@ Valmis:
 
 Testid:
 
-- **54 Rust testi** rohelised (core 10, engine 2, agent 10, Tauri app 32) +
+- **55 Rust testi** rohelised (core 10, engine 2, agent 11, Tauri app 32) +
   6 ignored testi (päris-mudeli käigu-, vestluse/viigi-, MCP kahe käigu- ja
   eestikeelne smoke-test ning kaks Stockfishi analüüsi testi).
 - 1 ignored **agent_smoke** test: `e4` → `...c5` 8,9 sekundiga, 522 tokenit.

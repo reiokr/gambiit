@@ -698,9 +698,15 @@ fn fallback_comment(game: &Game, config: &AgentConfig, mv: &str) -> String {
     }
 }
 
-pub fn build_mcp_move_prompt(game: &Game, config: &AgentConfig) -> String {
+pub fn build_mcp_move_prompt(
+    game: &Game,
+    config: &AgentConfig,
+    candidates: &[Candidate],
+) -> String {
     let agent_color = game.turn();
     let human_color = !agent_color;
+    let legal = game.legal_moves();
+    let candidates_text = format_candidates(candidates, &legal);
     let language = if config.language_name.trim().is_empty() {
         "English"
     } else {
@@ -722,11 +728,13 @@ FEN: {fen}
 Move history (SAN): {history}
 Game status: {status}
 
+Stockfish candidate moves (strongest first): {candidates}
+
 {persona}
 
-Workflow:
-1. Call `get_state` to inspect the board.
-2. Call `get_candidates` to see the Stockfish candidate moves for this turn.
+Fast path:
+1. The board state and candidate moves are already included above. Do not call `get_state` or `get_candidates` mechanically.
+2. If you need to re-check something, you may call `get_state`, `get_candidates`, or `get_clock`.
 3. Call `submit_move` exactly once with:
    - `move`: UCI (preferred) or SAN, chosen from the candidates and played for strength;
    - `comment`: non-empty Theater commentary in {language};
@@ -744,6 +752,7 @@ Rules:
         fen = game.fen(),
         history = history,
         status = game.status_text(),
+        candidates = candidates_text,
         persona = persona,
         language = language,
     )
@@ -1048,6 +1057,24 @@ mod tests {
         };
         let prompt = build_move_prompt(&game, &config, &[]);
         assert!(prompt.contains("Commentary language: Estonian"));
+    }
+
+    #[test]
+    fn mcp_prompt_includes_candidates_and_fast_path() {
+        let game = Game::new();
+        let candidates = vec![Candidate {
+            uci: "e2e4".to_string(),
+            score_cp: Some(24),
+            mate_in: None,
+            depth: 10,
+            multipv: 1,
+            pv: Vec::new(),
+        }];
+        let prompt = build_mcp_move_prompt(&game, &AgentConfig::default(), &candidates);
+        assert!(prompt.contains("Stockfish candidate moves"));
+        assert!(prompt.contains("e2e4"));
+        assert!(prompt.contains("Fast path"));
+        assert!(prompt.contains("Do not call `get_state` or `get_candidates` mechanically"));
     }
 
     #[test]

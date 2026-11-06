@@ -153,7 +153,7 @@
     "agentModePromptHint": "Üks struktureeritud prompt käigu kohta",
     "agentModeMcp": "MCP",
     "agentModeMcpHint": "Mudel küsib tööriistu lokaalse MCP kaudu",
-    "agentModeHint": "MCP lubab mudelil lauda lugeda ja käik tööriista kaudu esitada. Prompt-režiim jääb turvaliseks varuplaaniks.",
+    "agentModeHint": "MCP lubab mudelil lauda lugeda ja käik tööriista kaudu esitada. See võib olla aeglasem kui prompt-režiim, mis jääb turvaliseks varuplaaniks.",
     "sound": "Heli",
     "animations": "Animatsioonid",
     "engine": "Mootor",

@@ -153,7 +153,7 @@
     "agentModePromptHint": "One structured prompt per move",
     "agentModeMcp": "MCP",
     "agentModeMcpHint": "The model queries tools over local MCP",
-    "agentModeHint": "MCP lets the model read the board and submit its move through tools. Prompt mode remains the safe fallback.",
+    "agentModeHint": "MCP lets the model read the board and submit its move through tools. It can be slower than prompt mode, which remains the safe fallback.",
     "sound": "Sound",
     "animations": "Animations",
     "engine": "Engine",

@@ -930,7 +930,7 @@ impl Session {
             &self.settings,
             credential_env_for_model(&self.settings.model),
         );
-        let prompt = gambiit_agent::build_mcp_move_prompt(game, &config);
+        let prompt = gambiit_agent::build_mcp_move_prompt(game, &config, candidates);
         let result = if let Some(agent) = self.agent.as_mut() {
             agent
                 .request_mcp_move(&prompt, &config_path)

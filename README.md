@@ -255,8 +255,10 @@ the game:
 
 The MCP bridge listens only on `127.0.0.1` with a random token. Gambiit uses a
 private temporary OpenCode project config for the bridge; the model never gets
-shell or file access. Prompt mode remains the fallback if MCP is unavailable or
-a model does not use tools well.
+shell or file access. MCP can be slower because the model may make tool calls;
+the fast path includes the board and candidate list in the first prompt and
+usually needs only `submit_move`. Prompt mode remains the fallback if MCP is
+unavailable or a model does not use tools well.
 
 ## Requirements
 
