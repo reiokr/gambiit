@@ -348,9 +348,9 @@ Tööriistad:
 - `submit_draw` — viigipakkumise turnil
 
 MCP sild loeb lokaalsest sillast pordi ja tokeni ning forwardib tööriistakutsed
-sellele. OpenCode'i agent saab ainult Gambiiti tööriistad; bash/edit/webfetch
-keelatakse. Iga turn on tüübistatud (move/chat/draw) ja valet tüüpi vastus
-lükatakse tagasi.
+sellele. Gambiit ise shelli- ega failitööriistu ei anna; OpenCode'i enda
+sisseehitatud tööriistad sõltuvad kasutaja OpenCode'i seadistusest. Iga turn on
+tüübistatud (move/chat/draw) ja valet tüüpi vastus lükatakse tagasi.
 
 ### 7.4 Stockfish hübriid
 
@@ -639,7 +639,9 @@ $XDG_RUNTIME_DIR/gambiit/session.json   # port + token, 0600
 - CSP ja sanitiseeritud kommentaarid: agendi tekst renderdatakse plain text /
   markdownina, mitte `{@html}`-ina.
 - PGN/teema import valideeritakse; suuruse piirid; ei mingit käivitatavat koodi.
-- Agent-workspace'is keelatud bash/edit/webfetch; ainult `gambiit_*` tööriistad.
+- Agent-workspace registreerib ainult Gambiiti MCP serveri; Gambiit ise
+  shelli-/failitööriistu ei anna. OpenCode'i sisseehitatud tööriistad sõltuvad
+  kasutaja OpenCode'i seadistusest.
 - Rakendus ei loe ega salvesta API-võtmeid; OpenCode haldab autentimist.
 - Logid redigeerivad tokenid.
 

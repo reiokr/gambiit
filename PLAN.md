@@ -313,8 +313,9 @@ Flow:
   is rejected, and the bridge never mutates the game directly.
 - `get_analysis` returns the latest post-game analysis summary plus the current
   engine evaluation, best move and candidates.
-- The model gets a temporary private OpenCode project config with only the
-  Gambiit MCP server; bash/edit/webfetch are unavailable.
+- The model gets a temporary private OpenCode project config that registers
+  only the Gambiit MCP server. Gambiit itself grants no shell or file tools;
+  OpenCode's own built-in tools depend on the user's OpenCode configuration.
 - MCP chat and draw offers use the same bridge. Prompt mode remains the fallback
   if MCP is unavailable or a model does not use tools well.
 
@@ -620,7 +621,9 @@ Atomic writes (temp + rename), PGN export always available.
 - API only on `127.0.0.1`, random token, 0600, CORS restricted to Tauri/browser origin.
 - CSP; sanitize commentary; render untrusted text as text/markdown, never `{@html}`.
 - Validate PGN/theme imports; size limits; no executable content.
-- Agent workspace denies bash/edit/webfetch; only `gambiit_*` tools.
+- Agent workspace registers only the Gambiit MCP server; Gambiit grants no
+  shell/file tools. OpenCode's own built-in tools depend on the user's OpenCode
+  configuration.
 - The app never reads or stores API keys; OpenCode handles auth.
 - Logs redact tokens; “Open logs” button in settings.
 
