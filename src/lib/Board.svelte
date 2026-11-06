@@ -18,7 +18,10 @@
   export let onSquareClick: (square: string) => void = () => {};
   export let onPromotion: (uci: string) => void = () => {};
 
+  let focusSquare = "e2";
+
   $: squares = orderedSquares(flipped);
+  $: if (!squares.includes(focusSquare)) focusSquare = squares[0];
   $: pieces = new Map(board.map((square) => [square.square, square.piece]));
   $: targets = selected
     ? legalMoves.filter((move) => move.from === selected)
@@ -51,12 +54,53 @@
     if (!interactive || promotion) return;
     onSquareClick(square);
   }
+
+  function handleKeydown(event: KeyboardEvent, square: string) {
+    const index = squares.indexOf(square);
+    if (index < 0) return;
+    const row = Math.floor(index / 8);
+    const column = index % 8;
+    let nextRow = row;
+    let nextColumn = column;
+    switch (event.key) {
+      case "ArrowLeft":
+        nextColumn = Math.max(0, column - 1);
+        break;
+      case "ArrowRight":
+        nextColumn = Math.min(7, column + 1);
+        break;
+      case "ArrowUp":
+        nextRow = Math.max(0, row - 1);
+        break;
+      case "ArrowDown":
+        nextRow = Math.min(7, row + 1);
+        break;
+      case "Home":
+        nextColumn = 0;
+        break;
+      case "End":
+        nextColumn = 7;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    const target = squares[nextRow * 8 + nextColumn];
+    if (target === square) return;
+    focusSquare = target;
+    const container = (event.currentTarget as HTMLElement).closest(".board");
+    container
+      ?.querySelector<HTMLElement>(`[data-square="${target}"]`)
+      ?.focus();
+  }
 </script>
 
 <div
   class="board"
   class:animations
+  role="group"
   aria-label={$i18n("board.label")}
+  aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Home End"
 >
   {#each cells as cell (cell.square)}
     <button
@@ -70,8 +114,12 @@
       class:legal={!!cell.target}
       class:capture={cell.capture}
       class:inactive={!interactive}
-      aria-label={`${cell.square}, ${cell.piece ? $i18n(`piece.${cell.piece.color}.${cell.piece.role}`) : $i18n("board.empty")}${cell.target ? `, ${$i18n("board.legalMove")}` : ""}`}
+      data-square={cell.square}
+      tabindex={interactive && cell.square === focusSquare ? 0 : -1}
+      aria-label={`${cell.square}, ${cell.piece ? $i18n(`piece.${cell.piece.color}.${cell.piece.role}`) : $i18n("board.empty")}${cell.target ? `, ${$i18n("board.legalMove")}` : ""}${cell.last ? `, ${$i18n("board.lastMove")}` : ""}${cell.check ? `, ${$i18n("board.inCheck")}` : ""}`}
       aria-disabled={!interactive}
+      on:focus={() => (focusSquare = cell.square)}
+      on:keydown={(event) => handleKeydown(event, cell.square)}
       on:click={() => handleClick(cell.square)}
     >
       {#if cell.piece}
@@ -166,6 +214,12 @@
     appearance: none;
     cursor: pointer;
     transition: filter 120ms ease;
+  }
+
+  .square:focus-visible {
+    z-index: 3;
+    outline: 3px solid var(--accent-strong);
+    outline-offset: -3px;
   }
 
   .square.light {

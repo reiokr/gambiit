@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { GameSummary } from "./types";
   import { i18n } from "./i18n";
+  import { focusTrap } from "./a11y";
 
   export let games: GameSummary[] = [];
   export let currentId = "";
@@ -83,7 +84,14 @@
     if (event.target === event.currentTarget) onClose();
   }}
 >
-  <div class="panel" role="dialog" aria-modal="true" tabindex="-1">
+  <div
+    class="panel"
+    role="dialog"
+    aria-modal="true"
+    aria-label={$i18n("games.title")}
+    tabindex="-1"
+    use:focusTrap={onClose}
+  >
     <header class="head">
       <div>
         <p class="eyebrow">{$i18n("games.title")}</p>
@@ -100,6 +108,7 @@
         role="tab"
         aria-selected={activeTab === "saved"}
         class:active={activeTab === "saved"}
+        data-autofocus
         on:click={() => (activeTab = "saved")}
       >
         {$i18n("games.saved")}

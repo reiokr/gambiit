@@ -144,7 +144,7 @@ Testid:
 ### 3.3 Mis veel puudub
 
 - rohkem sisseehitatud teemasid ja kureeritud malendikomplekte;
-- kontrasti hoiatused ja ülejäänud ligipääsetavus;
+- forced-colors/high-contrast režiim ja täielik ekraanilugeja audit;
 - MCP-režiim ja lokaalne Axum API;
 - vestlus (chat) agendiga;
 - Director's Cut, mudelite edetabel, broadcast-režiim.
@@ -474,7 +474,7 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 | **1. Core + API** | core, engine, agent; lokaalne API veel puudub | osaliselt |
 | **2. UI shell** | Tauri + Svelte, laud, kohalik mäng | ✅ valmis |
 | **3. Agent UI-s** | Auto/Button, mudel, isiksus, kommentaarid | ✅ valmis |
-| **4. Disainisüsteem** | 4 teemat ✅, teemaredaktor ✅, 5 sisseehitatud malendikomplekti ✅, kohandatud komplektid ✅, animatsioonid, helid | ✅ valmis; rohkem teemasid hiljem |
+| **4. Disainisüsteem** | 4 teemat ✅, teemaredaktor ✅, 5 sisseehitatud malendikomplekti ✅, kohandatud komplektid ✅, animatsioonid, helid, klaviatuuri/ekraanilugeja põhjad ✅ | ✅ valmis; rohkem teemasid hiljem |
 | **5. Mängu täiuslikkus** | PGN ✅, salvestus ✅, analüüs ✅, kellad ✅, viik/alistumine ✅; tulemus | osaliselt |
 | **6. Teater ja ekstra** | Vestlus ✅, viigipakkumised ✅, MCP-käigud ✅; MCP vestlus/analüüs, Director's Cut, edetabel | osaliselt |
 | **7. Pakend** | PKGBUILD, `.desktop`, release, docs | hiljem |

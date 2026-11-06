@@ -65,6 +65,7 @@
       class:running={clockActive}
       class:low={clockLow}
       title={$i18n("clock.label")}
+      aria-label={`${$i18n("clock.label")}: ${formatClock(clockMs)}`}
     >
       {formatClock(clockMs)}
     </span>

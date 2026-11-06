@@ -109,7 +109,7 @@ Not yet:
 - local Axum API;
 - MCP tools for chat, draw offers and analysis;
 - additional built-in themes and curated piece sets;
-- contrast warnings and the remaining accessibility pass;
+- forced-colors/high-contrast mode and a full screen-reader audit;
 - personas beyond the prompt presets, Director's Cut, leaderboard and broadcast
   mode.
 
@@ -474,7 +474,7 @@ Settings must expose game properties and theater features without code edits.
 | **1. Core + API** | `gambiit-core`, `GameService`, axum API, discovery file, fake agent, perft tests. | All rules/API tests green; fake agent plays 100 games. |
 | **2. UI shell** | Tauri + Svelte, board, moves, local two-player, save/resume. | Legal game in a native window; flip; restart resumes. |
 | **3. Agent in UI** | Prompt transport, Auto/Button modes, model/persona selection, commentary, error handling. | Full game vs OpenCode model without terminal typing; illegal move recovers. |
-| **4. Design system** | 4 themes ✅, theme editor ✅, 5 built-in piece sets ✅, custom sets ✅, animations, sounds, accessibility; more themes planned. | Theme switches live and persists; palette and pieces load from disk. |
+| **4. Design system** | 4 themes ✅, theme editor ✅, 5 built-in piece sets ✅, custom sets ✅, animations, sounds, keyboard/screen-reader basics ✅; more themes planned. | Theme switches live and persists; palette and pieces load from disk. |
 | **5. Game completeness** | PGN ✅, persistence ✅, analysis ✅, clocks ✅, draw/resign ✅; takebacks, result screen, tribute lines. | PGN round-trip; takeback rules enforced; analysis and flags work. |
 | **6. Theater extras** | Personas ✅, chat ✅, Truth Lens ✅, draw offers ✅, MCP move transport ✅; Director’s Cut, leaderboard, broadcast. | Toggleable and non-intrusive. |
 | **7. Packaging** | PKGBUILD, `.desktop`, icon, docs, tests, performance. | Installable on CachyOS; starts <2 s; README. |

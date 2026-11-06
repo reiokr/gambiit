@@ -52,6 +52,42 @@
     onChange(next);
   }
 
+  function luminance(hex: string): number {
+    const value = hex.replace("#", "");
+    const channels = [0, 2, 4].map((offset) =>
+      Number.parseInt(value.slice(offset, offset + 2), 16) / 255,
+    );
+    const linear = channels.map((channel) =>
+      channel <= 0.03928
+        ? channel / 12.92
+        : ((channel + 0.055) / 1.055) ** 2.4,
+    );
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+  }
+
+  function contrast(left: string, right: string): number {
+    const a = luminance(left);
+    const b = luminance(right);
+    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  }
+
+  $: contrastIssues = (() => {
+    const issues: string[] = [];
+    if (contrast(theme.text, theme.bg) < 4.5) {
+      issues.push($i18n("themeEditor.lowText"));
+    }
+    if (contrast(theme.muted, theme.bg) < 3) {
+      issues.push($i18n("themeEditor.lowMuted"));
+    }
+    if (contrast(theme.accent, theme.bg) < 3) {
+      issues.push($i18n("themeEditor.lowAccent"));
+    }
+    if (contrast(theme.boardLight, theme.boardDark) < 1.5) {
+      issues.push($i18n("themeEditor.lowBoard"));
+    }
+    return issues;
+  })();
+
   function setHex(key: ThemeKey, input: HTMLInputElement) {
     const value = input.value.trim();
     if (/^#[0-9a-f]{6}$/i.test(value)) {
@@ -86,6 +122,13 @@
       <i style={`background:${theme.boardDark}`}></i>
     </span>
   </div>
+
+  {#if contrastIssues.length > 0}
+    <div class="contrast-warning" role="status">
+      <strong>{$i18n("themeEditor.contrastTitle")}</strong>
+      <span>{contrastIssues.join(" · ")}</span>
+    </div>
+  {/if}
 
   <div class="groups">
     {#each GROUPS as group}
@@ -223,6 +266,25 @@
 
   .preview-board i {
     display: block;
+  }
+
+  .contrast-warning {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 7px 9px;
+    margin-bottom: 9px;
+    border: 1px solid color-mix(in srgb, #d9b34a 50%, var(--border));
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--panel) 90%, #d9b34a);
+    color: var(--muted);
+    font-size: calc(9px * var(--font-scale));
+    line-height: 1.45;
+  }
+
+  .contrast-warning strong {
+    color: #d9b34a;
+    font-size: calc(9px * var(--font-scale));
   }
 
   .groups {

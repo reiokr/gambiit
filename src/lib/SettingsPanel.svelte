@@ -5,7 +5,7 @@
   import { DEFAULT_CUSTOM_THEME, THEMES, applyTheme } from "./themes";
   import ThemeEditor from "./ThemeEditor.svelte";
   import { applyPieceSet, piecePreview } from "./pieces";
-  import { applyFontScale } from "./settings";
+  import { applyFontScale, applyMotion } from "./settings";
   import {
     availableLocales,
     i18n,
@@ -15,6 +15,7 @@
   import { PERSONAS } from "./personas";
   import { TIME_CONTROLS, clockLabel } from "./clock";
   import ModelBadge from "./ModelBadge.svelte";
+  import { focusTrap } from "./a11y";
   import { DIFFICULTIES, type DifficultyOption } from "./difficulty";
 
   export let settings: Settings;
@@ -72,6 +73,7 @@
   let bodyEl: HTMLDivElement | null = null;
 
   $: applyFontScale(draft.fontScale);
+  $: applyMotion(draft.animations);
   $: if (draft.theme === "custom") {
     applyTheme("custom", draft.customTheme);
   }
@@ -383,6 +385,7 @@
     aria-modal="true"
     aria-label={$i18n("settings.title")}
     tabindex="-1"
+    use:focusTrap={onClose}
   >
     <header class="head">
       <div>
@@ -405,6 +408,7 @@
         role="tab"
         aria-selected={activeTab === "game"}
         class:active={activeTab === "game"}
+        data-autofocus
         on:click={() => selectTab("game")}
       >
         {$i18n("settings.tabGame")}

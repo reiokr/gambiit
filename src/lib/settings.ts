@@ -109,6 +109,10 @@ export function saveSettings(settings: Settings): void {
   }
 }
 
+export function applyMotion(animations: boolean): void {
+  document.documentElement.dataset.motion = animations ? "on" : "off";
+}
+
 export function applyFontScale(scale: number): void {
   const value = Number.isFinite(scale)
     ? Math.min(1.5, Math.max(0.9, scale))

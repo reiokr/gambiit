@@ -37,8 +37,13 @@
     "drawDeclined": "Draw declined",
     "dismissNotice": "Dismiss notice"
   },
+  "a11y": {
+    "move": "{side} played {san}."
+  },
   "board": {
     "label": "Chess board",
+    "lastMove": "last move",
+    "inCheck": "in check",
     "empty": "empty",
     "legalMove": "legal move",
     "choosePromotion": "Choose promotion",
@@ -378,6 +383,11 @@
     "board": "Board",
     "boardLight": "Light square",
     "boardDark": "Dark square",
+    "contrastTitle": "Contrast warning",
+    "lowText": "Text and background are too close.",
+    "lowMuted": "Muted text may be hard to read.",
+    "lowAccent": "Accent may be hard to see.",
+    "lowBoard": "Light and dark squares are too similar.",
     "boardBorder": "Board border"
   }
 }

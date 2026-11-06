@@ -61,6 +61,8 @@ What works now:
   Master — plus Custom, with depth and MultiPV sliders;
 - localized UI and agent commentary from `src/locales/*.json`; English and
   Estonian included, new languages are added by dropping in a JSON catalog;
+- keyboard board navigation, screen-reader move announcements, focus-trapped
+  dialogs, reduced-motion support and custom-theme contrast warnings;
 - desktop and terminal builds share the same Rust core, engine and agent layers.
 
 Not yet: MCP tools for chat, draw offers and analysis, the local Axum API,
@@ -259,6 +261,24 @@ shell or file access. MCP can be slower because the model may make tool calls;
 the fast path includes the board and candidate list in the first prompt and
 usually needs only `submit_move`. Prompt mode remains the fallback if MCP is
 unavailable or a model does not use tools well.
+
+## Accessibility
+
+- **Keyboard board:** Tab into the board once, then use arrow keys, Home and End
+  to move focus. Enter or Space selects a square or plays the selected move.
+- **Screen readers:** moves, checks and results are announced through a polite
+  live region; clocks have accessible labels and chat is exposed as a log.
+- **Dialogs:** Settings and the game library trap focus, close with Escape and
+  restore focus to the trigger.
+- **Motion:** the Animations setting and `prefers-reduced-motion` disable
+  non-essential motion and transitions.
+- **Text and contrast:** the interface supports 90–150% text scaling; the theme
+  editor warns when custom text, accent or board colours are too close.
+- **Languages:** UI and agent languages are independent; Estonian and English
+  catalogs are included.
+
+Remaining audit work: forced-colors/high-contrast mode, a full Orca pass and
+screen-reader testing of the analysis graph.
 
 ## Requirements
 

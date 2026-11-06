@@ -21,6 +21,7 @@
   import { capturedPieces, materialScore } from "./lib/board";
   import {
     applyFontScale,
+    applyMotion,
     loadHumanColor,
     loadSettings,
     saveHumanColor,
@@ -56,6 +57,7 @@
   let drawBusy = false;
   let drawNotice: { accepted: boolean; comment: string } | null = null;
   let clockPolling = false;
+  let announcement = "";
 
   $: if (snapshot && !snapshot.settings.chatEnabled && activeTab === "chat") {
     activeTab = "theater";
@@ -156,6 +158,13 @@
     return "toMove";
   }
 
+  function statusTextFor(game: GameSnapshot): string {
+    return $i18n(
+      `status.${game.statusKey}`,
+      game.statusSide ? { side: $i18n(`side.${game.statusSide}`) } : {},
+    );
+  }
+
   function applySnapshot(next: GameSnapshot) {
     const previous = snapshot;
     snapshot = next;
@@ -166,6 +175,7 @@
     applyTheme(next.settings.theme, next.settings.customTheme);
     void applyPieceSet(next.settings.pieceSet);
     applyFontScale(next.settings.fontScale);
+    applyMotion(next.settings.animations);
     setLocale(next.settings.uiLanguage);
     thinking = next.thinking;
 
@@ -183,6 +193,22 @@
 
     if (next.gameOver && previous && !previous.gameOver) {
       resultDismissed = false;
+    }
+
+    if (
+      next.lastMove &&
+      (!previous || next.lastMove.ply !== previous.lastMove?.ply)
+    ) {
+      announcement = $i18n("a11y.move", {
+        side: $i18n(`side.${next.lastMove.color}`),
+        san: next.lastMove.san,
+      });
+      const status = statusTextFor(next);
+      if (status) {
+        announcement += ` ${status}`;
+      }
+    } else if (next.gameOver && previous && !previous.gameOver) {
+      announcement = statusTextFor(next);
     }
   }
 
@@ -557,6 +583,7 @@
     applyTheme(settings.theme, settings.customTheme);
     void applyPieceSet(settings.pieceSet);
     applyFontScale(settings.fontScale);
+    applyMotion(settings.animations);
     setLocale(settings.uiLanguage);
     showSettings = false;
   }
@@ -576,6 +603,7 @@
       applyTheme(next.theme, next.customTheme);
       void applyPieceSet(next.pieceSet);
       applyFontScale(next.fontScale);
+      applyMotion(next.animations);
       setLocale(next.uiLanguage);
       const message = await startGame(color);
       if (!message) {
@@ -610,6 +638,7 @@
     applyTheme(settings.theme, settings.customTheme);
     void applyPieceSet(settings.pieceSet);
     applyFontScale(settings.fontScale);
+    applyMotion(settings.animations);
     setLocale(settings.uiLanguage);
     const timer = window.setInterval(() => void refreshClock(), 250);
     void (async () => {
@@ -634,6 +663,9 @@
   </div>
 {:else}
   <div class="app">
+    <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+      {announcement}
+    </div>
     <header class="topbar">
       <div class="brand">
         <div class="brand-mark">G</div>

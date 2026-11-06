@@ -37,8 +37,13 @@
     "drawDeclined": "Viigipakkumine tagasi lükatud",
     "dismissNotice": "Sulge teade"
   },
+  "a11y": {
+    "move": "{side} mängis {san}."
+  },
   "board": {
     "label": "Malelaud",
+    "lastMove": "viimane käik",
+    "inCheck": "malekontroll",
     "empty": "tühi",
     "legalMove": "seaduslik käik",
     "choosePromotion": "Vali promotsioon",
@@ -378,6 +383,11 @@
     "board": "Laud",
     "boardLight": "Hele ruut",
     "boardDark": "Tume ruut",
+    "contrastTitle": "Kontrasti hoiatus",
+    "lowText": "Tekst ja taust on liiga lähedased.",
+    "lowMuted": "Vaigistatud tekst võib olla raskesti loetav.",
+    "lowAccent": "Aktsent võib olla raskesti nähtav.",
+    "lowBoard": "Hele ja tume ruut on liiga sarnased.",
     "boardBorder": "Laua ääris"
   }
 }

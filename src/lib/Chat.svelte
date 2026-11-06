@@ -104,7 +104,14 @@
     {/if}
   </header>
 
-  <div class="chat-list" bind:this={list}>
+  <div
+    class="chat-list"
+    bind:this={list}
+    role="log"
+    aria-live="polite"
+    aria-relevant="additions"
+    aria-label={$i18n("chat.eyebrow")}
+  >
     {#if messages.length === 0}
       <div class="empty">
         <div class="empty-mark">“</div>
