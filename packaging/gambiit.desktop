@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Gambiit
+GenericName=Chess Game
+GenericName[et]=Malemäng
+Comment=A theatrical desktop chess game with an AI opponent
+Comment[et]=Teatriline malemäng AI-vastasega
+Exec=gambiit
+Icon=gambiit
+Terminal=false
+Categories=Game;BoardGame;
+Keywords=chess;AI;theater;Stockfish;OpenCode;
+StartupNotify=true
+StartupWMClass=Gambiit

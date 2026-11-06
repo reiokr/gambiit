@@ -3,6 +3,7 @@ name = "gambiit-app"
 version = "0.1.0"
 edition = "2024"
 description = "Gambiit desktop chess game"
+license = "MIT"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

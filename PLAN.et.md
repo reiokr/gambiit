@@ -40,6 +40,18 @@ ja seitse liugurit. Esimene versioon redigeerib üht kohandatud isiksust; kahe
 isiksuse segamine on hilisem laiendus. Petlikkus on seotud Tõeobjektiivi
 bluff-seadega.
 
+## Pakendamine (2026-11-06)
+
+- `packaging/PKGBUILD` ehitab Gambiiti loodud lähtetarballist;
+  `packaging/build-package.sh` kinnitab automaatselt sha256-kontrollsumma.
+- Paigaldab `/usr/bin/gambiit`, `.desktop` faili, hicolor-ikoonid suurustes 32,
+  128, 256, 512 ja scalable, MIT-litsentsi ja README.
+- Käitusaegsed sõltuvused: `webkit2gtk-4.1`, `gtk3`, `libsoup3`. `opencode` või
+  `opencode-desktop` ning `stockfish` on valikulised; kumbagi ei bundeldata.
+- Kontrollitud `makepkg` build: 2,8 MB pakett, 9,9 MB paigaldatud, paketist
+  käivitatud binaar töötab ja `.desktop` fail läbib `desktop-file-validate`.
+- Litsents: MIT (`LICENSE`); Stockfish jääb väliseks GPL-tarkvaraks.
+
 ### Treenerirežiim (valmis)
 Valikuline mänguaegne treener inimesele, vastase isiksusest ja agent-sessioonist
 eraldi. Kasutab Stockfishi tõde ja ausat treeneri prompti ning värsket
@@ -538,13 +550,13 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 | **4. Disainisüsteem** | 4 teemat ✅, teemaredaktor ✅, 5 sisseehitatud malendikomplekti ✅, kohandatud komplektid ✅, animatsioonid, helid, klaviatuuri/ekraanilugeja põhjad ✅ | ✅ valmis; rohkem teemasid hiljem |
 | **5. Mängu täiuslikkus** | PGN ✅, salvestus ✅, analüüs ✅, kellad ✅, viik/alistumine ✅; tulemus | osaliselt |
 | **6. Teater ja ekstra** | Vestlus ✅, viigipakkumised ✅, MCP-käigud ✅, mudelite edetabel ✅, režissööri lõige ✅, eetrirežiim ✅; MCP vestlus/analüüs | osaliselt |
-| **7. Pakend** | PKGBUILD, `.desktop`, release, docs | hiljem |
+| **7. Pakend** | PKGBUILD ✅, `.desktop` ✅, release ✅, docs ✅ | valmis; pakett ehitatud ja testitud |
 
 Soovitatud järjekord:
 
-1. **Rohkem teemasid ja malendikomplekte** — disainipolish.
-2. **MCP tööriistad vestlusele, viigile ja analüüsile** — MCP-režiimi laiendus.
-3. **Pakend** — release, PKGBUILD.
+1. **MCP tööriistad vestlusele, viigile ja analüüsile** — MCP-režiimi laiendus.
+2. **Rohkem teemasid ja malendikomplekte** — disainipolish.
+3. **Lokaalne Axum API** — HTTP/SSE liides välistele klientidele.
 
 ---
 
@@ -660,9 +672,9 @@ broadcast-režiim.
 
 ## 16. Järgmised sammud
 
-1. **Rohkem teemasid ja malendikomplekte**.
-2. **MCP tööriistad vestlusele, viigile ja analüüsile**.
-3. **Pakend** (PKGBUILD, `.desktop`, release).
+1. **MCP tööriistad vestlusele, viigile ja analüüsile**.
+2. **Rohkem teemasid ja malendikomplekte**.
+3. **Lokaalne Axum API**.
 
 Salvestamine, jätkamine, mängude raamatukogu, PGN eksport/import, pärastmängu
 analüüs, teemaredaktor, kohandatud malendikomplektid, vestlus, viigipakkumised,

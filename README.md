@@ -76,7 +76,8 @@ What works now:
   Estonian included, new languages are added by dropping in a JSON catalog;
 - keyboard board navigation, screen-reader move announcements, focus-trapped
   dialogs, reduced-motion support and custom-theme contrast warnings;
-- desktop and terminal builds share the same Rust core, engine and agent layers.
+- desktop and terminal builds share the same Rust core, engine and agent layers;
+- a native Arch/CachyOS package recipe with a desktop entry and hicolor icons.
 
 Not yet: MCP tools for chat, draw offers and analysis, and the local Axum API.
 Those are the next phases in `PLAN.md`.
@@ -88,6 +89,23 @@ pnpm install
 pnpm tauri dev
 ```
 
+### Arch / CachyOS package
+
+The repository ships an Arch package recipe in [`packaging/`](packaging/):
+
+```bash
+./packaging/build-package.sh
+# build and install in one step:
+./packaging/build-package.sh -i
+```
+
+The package installs `/usr/bin/gambiit`, a desktop entry and hicolor icons.
+It depends on `webkit2gtk-4.1`, `gtk3` and `libsoup3`. `opencode` or
+`opencode-desktop` provides the AI opponent; `stockfish` provides candidate
+moves, hints and analysis. Both are optional runtime dependencies so the app
+can start and show a clear install prompt if they are missing. See
+[`packaging/README.md`](packaging/README.md) for manual `makepkg` and AUR notes.
+
 For a standalone release binary:
 
 ```bash
@@ -96,7 +114,7 @@ pnpm tauri build --no-bundle
 ```
 
 `pnpm tauri build` additionally produces a Debian package (the configured bundle
-target is `deb`). A PKGBUILD/AppImage is planned for the packaging phase.
+target is `deb`).
 
 `pnpm tauri dev` starts Vite and the Tauri window. The first move may take a few
 seconds while the model thinks; the UI stays responsive and shows a thinking

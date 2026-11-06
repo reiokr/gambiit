@@ -153,6 +153,19 @@ difficulty remain the ceiling. The first version edits one custom persona;
 blending two personas is a later extension. Deception is shared with the Truth
 Lens bluff setting.
 
+## Packaging (2026-11-06)
+
+- `packaging/PKGBUILD` builds Gambiit from a generated source tarball; the
+  checksum is pinned automatically by `packaging/build-package.sh`.
+- Installs `/usr/bin/gambiit`, a `.desktop` entry, hicolor icons at 32, 128,
+  256, 512 and scalable sizes, the MIT license and the README.
+- Runtime dependencies: `webkit2gtk-4.1`, `gtk3`, `libsoup3`. `opencode` or
+  `opencode-desktop` and `stockfish` are optional runtime dependencies; neither
+  is bundled.
+- Verified `makepkg` build: 2.8 MB package, 9.9 MB installed, the packaged
+  binary launches and the desktop entry passes `desktop-file-validate`.
+- License: MIT (`LICENSE`); Stockfish remains external GPL software.
+
 ### Coach mode (implemented)
 An optional in-game coach for the human, separate from the opponent persona and
 agent session. It uses Stockfish truth plus an honest coach prompt and a fresh
@@ -516,7 +529,7 @@ Settings must expose game properties and theater features without code edits.
 - Personas, structured commentary, chat.
 - MCP manual mode.
 - Model leaderboard, post-game analysis, eval bar toggle.
-- Tauri packaging, PKGBUILD, `.desktop`.
+- Tauri packaging, PKGBUILD ✅, `.desktop` ✅, release binary and archive.
 
 ### Stretch — “full theater”
 
@@ -536,7 +549,7 @@ Settings must expose game properties and theater features without code edits.
 | **4. Design system** | 4 themes ✅, theme editor ✅, 5 built-in piece sets ✅, custom sets ✅, animations, sounds, keyboard/screen-reader basics ✅; more themes planned. | Theme switches live and persists; palette and pieces load from disk. |
 | **5. Game completeness** | PGN ✅, persistence ✅, analysis ✅, clocks ✅, draw/resign ✅; takebacks, result screen, tribute lines. | PGN round-trip; takeback rules enforced; analysis and flags work. |
 | **6. Theater extras** | Personas ✅, chat ✅, Truth Lens ✅, draw offers ✅, MCP move transport ✅, model leaderboard ✅, Director’s Cut ✅, broadcast ✅. | Toggleable and non-intrusive. |
-| **7. Packaging** | PKGBUILD, `.desktop`, icon, docs, tests, performance. | Installable on CachyOS; starts <2 s; README. |
+| **7. Packaging** | PKGBUILD ✅, `.desktop` ✅, icon ✅, docs ✅, tests ✅, performance. | Installable on CachyOS; packaged binary verified; README. |
 
 Start with Phase 0. The biggest risk is the agent loop, not the board or themes.
 
