@@ -12,7 +12,8 @@
     localeMeta,
     setLocale,
   } from "./i18n";
-  import { PERSONAS } from "./personas";
+  import { CUSTOM_PERSONA, PERSONAS } from "./personas";
+  import PersonaMixer from "./PersonaMixer.svelte";
   import { TIME_CONTROLS, clockLabel } from "./clock";
   import ModelBadge from "./ModelBadge.svelte";
   import { focusTrap } from "./a11y";
@@ -88,6 +89,8 @@
     draft.persona !== settings.persona ||
     draft.agentMode !== settings.agentMode ||
     draft.personaStyle !== settings.personaStyle ||
+    (draft.persona === "Custom" &&
+      JSON.stringify(draft.customPersona) !== JSON.stringify(settings.customPersona)) ||
     draft.difficulty !== settings.difficulty ||
     draft.stockfishDepth !== settings.stockfishDepth ||
     draft.multipv !== settings.multipv ||
@@ -479,7 +482,29 @@
                 </span>
               </button>
             {/each}
+            <button
+              type="button"
+              class="persona-card"
+              class:active={draft.persona === "Custom"}
+              style={`--persona-accent:${draft.customPersona.accent}`}
+              on:click={() => (draft.persona = "Custom")}
+            >
+              <img src={CUSTOM_PERSONA.avatar} alt="" draggable="false" />
+              <span class="persona-copy">
+                <strong>
+                  {draft.customPersona.name.trim() ||
+                    $i18n("personas.custom")}
+                </strong>
+                <small>{$i18n("personas.customDescription")}</small>
+              </span>
+            </button>
           </div>
+          {#if draft.persona === "Custom"}
+            <PersonaMixer
+              persona={draft.customPersona}
+              onChange={(next) => (draft.customPersona = next)}
+            />
+          {/if}
           <small class="persona-hint">{$i18n("settings.personaHint")}</small>
         </div>
 

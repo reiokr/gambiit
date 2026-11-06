@@ -58,8 +58,9 @@ What works now:
 - separate UI and agent languages, both selected in Settings; the agent can
   answer in English while the UI is Estonian;
 - illustrated theater personas: Theater Master, Cold Calculator, Trickster,
-  Panicker, Coach and Chaotic; the persona changes commentary and a bounded,
-  near-best move style (default Subtle);
+  Panicker, Coach and Chaotic, plus a trait-based Custom persona with its own
+  name and accent; the persona changes commentary and a bounded, near-best move
+  style (default Subtle);
 - five Stockfish difficulty levels — Beginner, Casual, Intermediate, Strong and
   Master — plus Custom, with depth and MultiPV sliders;
 - localized UI and agent commentary from `src/locales/*.json`; English and
@@ -292,6 +293,12 @@ sacrifices; Theater Master prefers attacks; Chaotic prefers offbeat candidates.
 A style choice never leaves the candidate pool, and the model must still justify
 it. Persona traits therefore shape the performance without taking over the
 engine.
+
+**Custom persona:** choose **Custom** in the persona grid to open the mixer. Set
+a name, accent and seven traits — theatricality, confidence, warmth, humour,
+aggression, verbosity and deception. The same traits feed the voice prompt and
+the bounded style profile, so the opponent sounds and plays differently without
+changing the rules, legality or the Stockfish candidate pool.
 
 ## Accessibility
 

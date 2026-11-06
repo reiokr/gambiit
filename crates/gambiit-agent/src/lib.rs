@@ -76,6 +76,8 @@ pub struct AgentConfig {
     pub env: Vec<(String, String)>,
     /// Optional bounded move-style guidance from the selected persona.
     pub style_instruction: String,
+    /// Optional custom persona prompt; overrides the built-in persona text.
+    pub persona_prompt: String,
 }
 
 impl Default for AgentConfig {
@@ -89,7 +91,16 @@ impl Default for AgentConfig {
             retries: 1,
             env: Vec::new(),
             style_instruction: String::new(),
+            persona_prompt: String::new(),
         }
+    }
+}
+
+fn persona_instruction_for(config: &AgentConfig) -> String {
+    if config.persona_prompt.trim().is_empty() {
+        persona_instruction(&config.persona)
+    } else {
+        config.persona_prompt.trim().to_string()
     }
 }
 
@@ -524,7 +535,7 @@ pub fn build_move_prompt(game: &Game, config: &AgentConfig, candidates: &[Candid
     } else {
         config.language_name.as_str()
     };
-    let persona = persona_instruction(&config.persona);
+    let persona = persona_instruction_for(config);
     let style = config.style_instruction.trim();
     let style_section = if style.is_empty() {
         String::new()
@@ -560,7 +571,7 @@ MOVE SELECTION:
 
 {persona}
 
-COMMENTARY (the persona applies here):
+COMMENTARY (stay in character):
 1. Briefly evaluate the position.
 2. Name 3-4 candidate moves and explain why each rejected candidate was rejected.
 3. Explain the chosen move and your plan.
@@ -610,7 +621,7 @@ fn build_chat_prompt(
     } else {
         config.language_name.as_str()
     };
-    let persona = persona_instruction(&config.persona);
+    let persona = persona_instruction_for(config);
     let conversation = history
         .iter()
         .rev()
@@ -669,7 +680,7 @@ fn build_draw_prompt(game: &Game, config: &AgentConfig) -> String {
     } else {
         config.language_name.as_str()
     };
-    let persona = persona_instruction(&config.persona);
+    let persona = persona_instruction_for(config);
 
     format!(
         r#"You are playing chess as {agent_color} against a human ({human_color}).
@@ -734,7 +745,7 @@ pub fn build_mcp_move_prompt(
     } else {
         config.language_name.as_str()
     };
-    let persona = persona_instruction(&config.persona);
+    let persona = persona_instruction_for(config);
     let style = config.style_instruction.trim();
     let style_section = if style.is_empty() {
         String::new()
@@ -823,27 +834,27 @@ fn format_candidates(candidates: &[Candidate], legal: &[MoveInfo]) -> String {
 fn persona_instruction(persona: &str) -> String {
     match persona.to_ascii_lowercase().as_str() {
         "cold calculator" => {
-            "Persona: Cold Calculator. Commentary only: be terse, precise and slightly superior. Do not let the persona influence move choice."
+            "Persona: Cold Calculator. Be terse, precise and slightly superior. Always play the strongest available candidate; style never overrides strength."
                 .into()
         }
         "trickster" => {
-            "Persona: Trickster. Commentary only: be charming, elusive and fond of plausible misdirection. Never let it influence move choice."
+            "Persona: Trickster. Be charming, elusive and fond of plausible misdirection. When a style preference is listed, you may play it inside the allowed margin; otherwise choose the strongest candidate. Never invent a move outside the pool."
                 .into()
         }
         "coach" => {
-            "Persona: Coach. Commentary only: be honest, instructive and kind. The move must still be the strongest candidate."
+            "Persona: Coach. Be honest, instructive and kind. Choose a principled, sound move; a style preference must still be clean and inside the margin."
                 .into()
         }
         "panicker" => {
-            "Persona: Panicker. Commentary only: react emotionally to threats, but choose the strongest candidate anyway."
+            "Persona: Panicker. React emotionally to threats, but keep the move sound; prefer the cautious style candidate when it is inside the margin."
                 .into()
         }
         "chaotic" => {
-            "Persona: Chaotic. Commentary only: be unpredictable and funny; move choice must stay sound and legal."
+            "Persona: Chaotic. Be unpredictable and funny. Move choice must stay sound and legal; offbeat candidates are welcome only inside the margin."
                 .into()
         }
         _ => {
-            "Persona: Theater Master. Commentary only: confident, dramatic, fond of psychological pressure. Keep the move choice sound; the theater lives in the voice."
+            "Persona: Theater Master. Confident, dramatic, fond of psychological pressure. Prefer the style candidate when it stays sound; the theater lives in the voice and the bounded style."
                 .into()
         }
     }
@@ -1110,6 +1121,38 @@ mod tests {
         let mcp = build_mcp_move_prompt(&game, &config, &candidates);
         assert!(mcp.contains("Persona move style: trickster."));
         assert!(mcp.contains("style preference"));
+    }
+
+    #[test]
+    fn built_in_personas_allow_bounded_style() {
+        for persona in [
+            "Theater Master",
+            "Cold Calculator",
+            "Trickster",
+            "Panicker",
+            "Coach",
+            "Chaotic",
+        ] {
+            let text = persona_instruction(persona);
+            assert!(!text.contains("Commentary only"), "{persona}: {text}");
+            assert!(
+                text.contains("candidate") || text.contains("strongest") || text.contains("style"),
+                "{persona}: {text}"
+            );
+        }
+    }
+
+    #[test]
+    fn custom_persona_prompt_overrides_the_built_in_voice() {
+        let game = Game::new();
+        let config = AgentConfig {
+            persona: "Custom".to_string(),
+            persona_prompt: "Persona: Velvet Cipher. Theatricality 9/10.".to_string(),
+            ..Default::default()
+        };
+        let prompt = build_move_prompt(&game, &config, &[]);
+        assert!(prompt.contains("Velvet Cipher"));
+        assert!(!prompt.contains("Persona: Theater Master"));
     }
 
     #[test]

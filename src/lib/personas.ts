@@ -4,6 +4,7 @@ import tricksterAvatar from "../assets/personas/trickster.svg";
 import panickerAvatar from "../assets/personas/panicker.svg";
 import coachAvatar from "../assets/personas/coach.svg";
 import chaoticAvatar from "../assets/personas/chaotic.svg";
+import customAvatar from "../assets/personas/custom.svg";
 
 export interface PersonaOption {
   /** Stable value sent to the backend prompt. */
@@ -53,6 +54,14 @@ export const PERSONAS: PersonaOption[] = [
   },
 ];
 
+export const CUSTOM_PERSONA: PersonaOption = {
+  value: "Custom",
+  key: "custom",
+  avatar: customAvatar,
+  accent: "#c9a227",
+};
+
 export function personaFor(value: string): PersonaOption {
+  if (value === "Custom") return CUSTOM_PERSONA;
   return PERSONAS.find((persona) => persona.value === value) ?? PERSONAS[0];
 }

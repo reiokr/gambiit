@@ -21,9 +21,9 @@ ja põhjendama. Vaikimisi `subtle` = 20 cp, `theatrical` = 40 cp, `strong` = 70 
 Külm kalkulaatoril stiili pole. Nii tulevad isiksused esile ilma kontrollimatu
 tugevusekaota.
 
-## Kavandatud funktsioonide disain (2026-11-06)
+## Funktsioonide disain (2026-11-06)
 
-### Mudelite edetabel
+### Mudelite edetabel (valmis)
 Kohalik, filtreeritav tabel salvestatud mängudest. Rühmitab tulemused mudeli
 kaupa: mängud, võidud/viigid/kaotused, võiduprotsent, keskmine accuracy,
 blunderid/vead/ebatäpsused, Tõeobjektiivi lipukesed, keskmine vastuseaeg,
@@ -31,11 +31,12 @@ tokenid ja kulu. Accuracy ja bluff rate vajavad salvestatud analüüsi kokkuvõt
 analüüsimata mängud annavad siiski tulemuse ja kasutuse. Difficulty ja ajakontroll
 on filtrid, mitte vaikimisi eeldused.
 
-### Isiksusemikser
+### Isiksusemikser (valmis)
 Trait-põhine kohandatud isiksus: teatraalsus, enesekindlus, soojus, huumor,
 agressiivsus, sõnavõtu pikkus ja petlikkus, pluss nimi ja aktsent. Traitid
-mõjutavad ainult prompti ja kommentaari; Stockfishi kandidaadid ja difficulty
-jäävad puutumata. Esimene versioon redigeerib üht kohandatud isiksust; kahe
+mõjutavad prompti, kommentaari ja piiratud käigustiili; Stockfishi kandidaadid
+ja difficulty jäävad tugevuse ülempiiriks. Mikseris saab valida nime, aktsendi
+ja seitse liugurit. Esimene versioon redigeerib üht kohandatud isiksust; kahe
 isiksuse segamine on hilisem laiendus. Petlikkus on seotud Tõeobjektiivi
 bluff-seadega.
 
@@ -169,9 +170,10 @@ Valmis:
   Meister — pluss Kohandatud. Taseme valik seab depth/MultiPV liugurid; liuguri
   liigutamine valib Kohandatud. Igal preseedil on ka Stockfishi `Skill Level`.
 - Illustreeritud teatri-isiksusekaardid: Teatrimeister, Külm kalkulaator, Pettur,
-  Hirmunud, Treener ja Kaootiline. Isiksus mõjutab kommentaari ja piiratud
-  käigustiili; käik peab tulema Stockfishi kandidaatide hulgast. Avatar kuvatakse ka mängijaribas ja
-  kommentaarikaartidel.
+  Hirmunud, Treener ja Kaootiline, pluss trait-põhine kohandatud isiksus (nimi,
+  aktsent ja seitse liugurit). Isiksus mõjutab kommentaari ja piiratud
+  käigustiili; käik peab tulema Stockfishi kandidaatide hulgast. Avatar
+  kuvatakse ka mängijaribas ja kommentaarikaartidel.
 - Kommentaaripaneel: hinnang, kandidaadid koos tagasilükkamise põhjustega, plaan,
   mõtlemisaeg ja tokenikulu.
 - Tagasivõtt järgib `AGENTS.md` reeglit: ainult sinu enda viimast käiku saab
@@ -184,7 +186,7 @@ Valmis:
 
 Testid:
 
-- **61 Rust testi** rohelised (core 10, engine 2, agent 12, Tauri app 37) +
+- **67 Rust testi** rohelised (core 10, engine 2, agent 14, Tauri app 41) +
   7 ignored testi (päris-mudeli käigu-, isiksusestiili-, vestluse/viigi-,
   MCP kahe käigu- ja eestikeelne smoke-test ning kaks Stockfishi analüüsi testi).
 - 1 ignored **agent_smoke** test: `e4` → `...c5` 8,9 sekundiga, 522 tokenit.

@@ -7,6 +7,8 @@
 use gambiit_core::{Game, MoveInfo};
 use gambiit_engine::Candidate;
 
+use crate::CustomPersona;
+
 #[derive(Debug, Clone, Copy)]
 struct StyleProfile {
     aggression: f64,
@@ -41,6 +43,16 @@ pub fn tolerance(mode: &str) -> i32 {
     }
 }
 
+pub fn instruction_custom(persona: &CustomPersona) -> String {
+    format!(
+        "Persona move style: custom mix (aggression {aggression}/10, theatricality {theatricality}/10, humour {humor}/10, deception {deception}/10). Prefer the first candidate when it fits this style and stays inside the allowed strength margin.",
+        aggression = persona.aggression,
+        theatricality = persona.theatricality,
+        humor = persona.humor,
+        deception = persona.deception,
+    )
+}
+
 pub fn instruction(persona: &str) -> String {
     match persona.to_ascii_lowercase().as_str() {
         "panicker" => "Persona move style: cautious. Prefer castling, king safety and solid moves; avoid unnecessary sacrifices, sharp checks and pawn adventures. The first candidate is the safest style fit.".to_string(),
@@ -50,6 +62,16 @@ pub fn instruction(persona: &str) -> String {
         "chaotic" => "Persona move style: chaos. Prefer surprising and offbeat candidates while staying sound. The first candidate is the style fit.".to_string(),
         "theater master" => "Persona move style: theatrical attacker. Prefer checks, king-side pressure and dramatic piece activity. The first candidate is the style fit.".to_string(),
         _ => String::new(),
+    }
+}
+
+fn custom_profile(persona: &CustomPersona) -> StyleProfile {
+    StyleProfile {
+        aggression: (persona.aggression as f64 - 5.0) * 1.8,
+        safety: (10.0 - persona.aggression as f64) * 0.5 + persona.warmth as f64 * 0.2 - 1.0,
+        showmanship: persona.theatricality as f64 * 0.8,
+        chaos: persona.humor as f64 * 0.4 + persona.deception as f64 * 0.3,
+        risk: persona.aggression as f64 * 0.6 + persona.confidence as f64 * 0.2 - 3.0,
     }
 }
 
@@ -190,10 +212,27 @@ pub fn choose(
     persona: &str,
     tolerance: i32,
 ) -> Option<usize> {
+    choose_with_profile(game, candidates, profile(persona)?, tolerance)
+}
+
+pub fn choose_custom(
+    game: &Game,
+    candidates: &[Candidate],
+    persona: &CustomPersona,
+    tolerance: i32,
+) -> Option<usize> {
+    choose_with_profile(game, candidates, custom_profile(persona), tolerance)
+}
+
+fn choose_with_profile(
+    game: &Game,
+    candidates: &[Candidate],
+    style: StyleProfile,
+    tolerance: i32,
+) -> Option<usize> {
     if tolerance <= 0 || candidates.len() < 2 {
         return None;
     }
-    let style = profile(persona)?;
     let best = candidates.first()?;
     let legal = game.legal_moves();
     let mut best_choice: Option<(usize, f64)> = None;
@@ -231,6 +270,20 @@ mod tests {
     fn trickster_and_panicker_have_instructions() {
         assert!(instruction("Trickster").contains("sacrifices"));
         assert!(instruction("Panicker").contains("cautious"));
+    }
+
+    #[test]
+    fn custom_persona_has_style_guidance() {
+        let persona = CustomPersona {
+            theatricality: 9,
+            aggression: 8,
+            deception: 7,
+            ..Default::default()
+        };
+        let instruction = instruction_custom(&persona);
+        assert!(instruction.contains("aggression 8/10"));
+        assert!(instruction.contains("theatricality 9/10"));
+        assert!(instruction.contains("deception 7/10"));
     }
 
     #[test]

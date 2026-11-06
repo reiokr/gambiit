@@ -125,7 +125,7 @@
     "personaStyleTheatrical": "Teatraalne",
     "personaStyleStrong": "Tugev",
     "personaStyleHint": "Kui palju tohib isiksus käiku valida parimate kandidaatide seest. Peen hoiab tugevuse peaaegu muutumatuna.",
-    "personaHint": "Muudab ainult kommentaari ja lavalolekut — saab kombineerida iga raskusastmega.",
+    "personaHint": "Muudab häält ja piiratud parimate käikude stiili — saab kombineerida iga raskusastmega.",
     "afterMove": "Pärast sinu käiku",
     "auto": "Automaatne",
     "autoHint": "Agent vastab kohe",
@@ -173,7 +173,7 @@
     "depth": "Sügavus",
     "candidates": "Kandidaatkäigud",
     "engineMeta": "top {count} · sügavus {depth}",
-    "engineNote": "Raskusaste määrab Stockfishi kandidaatide valiku; isiksus muudab ainult häält. Stockfish pakub kandidaadid, mudel valib ühe ja võib hinnangu osas ikkagi bluffida. Laud jääb autoriteetseks.",
+    "engineNote": "Raskusaste määrab Stockfishi kandidaatide valiku; isiksus annab tooni ja võib valitud stiilitolerantsi piires parimaid kandidaate ümber järjestada. Stockfish pakub kandidaadid, mudel valib ühe ja võib hinnangu osas ikkagi bluffida. Laud jääb autoriteetseks.",
     "cancel": "Tühista",
     "saveChanges": "Salvesta muudatused",
     "saving": "Salvestan…",
@@ -257,7 +257,9 @@
     "coach": "Treener",
     "coachDescription": "Aus, õpetlik ja pettuseta.",
     "chaotic": "Kaootiline",
-    "chaoticDescription": "Ettearvamatu ja naljakas, aga ikka seaduslik."
+    "chaoticDescription": "Ettearvamatu ja naljakas, aga ikka seaduslik.",
+    "custom": "Kohandatud",
+    "customDescription": "Sinu enda hääl ja stiil."
   },
   "difficulty": {
     "beginner": {
@@ -377,6 +379,29 @@
     "empty": "Mänge veel pole.",
     "emptyHint": "Lõpeta mäng ja see ilmub siia. Pärastmängu analüüs avab täpsuse ja bluff rate'i.",
     "footnote": "Täpsus ja bluff rate tulevad salvestatud analüüsi kokkuvõtetest. Võiduprotsent ei arvesta pooleliolevaid mänge."
+  },
+  "personaMixer": {
+    "eyebrow": "Isiksusestuudio",
+    "title": "Ehita kohandatud vastane",
+    "hint": "Mikserda hääl ja piiratud käigustiil. Laud ja reeglid ei muutu.",
+    "reset": "Lähtesta",
+    "name": "Nimi",
+    "accent": "Aktsent",
+    "theatricality": "Teatraalsus",
+    "theatricalityHint": "Kui dramaatiline ja lavateadlik hääl on.",
+    "confidence": "Enesekindlus",
+    "confidenceHint": "Kui kindel ja domineeriv vastane kõlab.",
+    "warmth": "Soojus",
+    "warmthHint": "Sõbralik ja lugupidav versus külm ja distantne.",
+    "humor": "Huumor",
+    "humorHint": "Mänguline nali, iroonia ja eksitamine.",
+    "aggression": "Agressiivsus",
+    "aggressionHint": "Teravad, ründavad käigud ja toon.",
+    "verbosity": "Sõnavõtu pikkus",
+    "verbosityHint": "Üherealised repliigid versus pikad teatri­kõned.",
+    "deception": "Petlikkus",
+    "deceptionHint": "Kui kergesti vastane hinnanguid ja plaane liialdab.",
+    "styleNote": "Traitid mõjutavad häält ja piiratud parimate kandidaatide käigustiili. Need ei muuda reegleid, legaalsust ega Stockfishi kandidaatide hulka."
   },
   "themes": {
     "salon": {

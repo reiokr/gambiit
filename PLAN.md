@@ -95,9 +95,11 @@ Completed:
   Master — plus Custom. Selecting a level sets the depth/MultiPV sliders; moving
   a slider selects Custom. Stockfish `Skill Level` is part of each preset.
 - Illustrated theater persona cards: Theater Master, Cold Calculator, Trickster,
-  Panicker, Coach and Chaotic. Personas affect commentary and a bounded move
-  style; the move must come from the Stockfish candidate pool. The avatar is
-  also used in the player strip and commentary cards.
+  Panicker, Coach and Chaotic, plus a trait-based Custom persona. Personas
+  affect commentary and a bounded move style; the move must come from the
+  Stockfish candidate pool. The avatar is also used in the player strip and
+  commentary cards. The custom mixer edits a name, accent and seven traits that
+  feed both the voice prompt and the bounded style profile.
 - Rust commands: `new_game`, `get_state`, `make_move`, `agent_move`, `takeback`,
   `resign`, `list_models`; all moves validated by `gambiit-core`.
 - Takeback policy enforced: only the human's own last move can be undone.
@@ -132,16 +134,16 @@ is asked to play that candidate and justify it. Default `subtle` uses 20 cp;
 This keeps persona differences visible without allowing an uncontrolled
 strength drop.
 
-## Planned feature designs (2026-11-06)
+## Feature designs (2026-11-06)
 
-### Model leaderboard
+### Model leaderboard (implemented)
 A local, filterable table built from saved games. It groups results by model and
 shows games, W/D/L, win rate, average accuracy, blunders/mistakes/inaccuracies,
 Truth Lens flags, average response time, tokens and cost. Accuracy requires a
 stored post-game analysis summary; games without one still contribute results
 and usage. Difficulty and time control are filters, not silent assumptions.
 
-### Persona mixer
+### Persona mixer (implemented)
 A trait-based custom persona: theatricality, confidence, warmth, humour,
 aggression, verbosity and deception, plus a name and accent. Traits affect the
 prompt, commentary and a bounded move style. Style may only choose among

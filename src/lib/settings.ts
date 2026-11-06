@@ -9,6 +9,18 @@ import {
 const STORAGE_KEY = "gambiit.settings.v1";
 const COLOR_KEY = "gambiit.humanColor.v1";
 
+export const DEFAULT_CUSTOM_PERSONA: Settings["customPersona"] = {
+  name: "Custom Persona",
+  accent: "#c9a227",
+  theatricality: 7,
+  confidence: 6,
+  warmth: 5,
+  humor: 5,
+  aggression: 5,
+  verbosity: 5,
+  deception: 4,
+};
+
 export const DEFAULT_SETTINGS: Settings = {
   model: "opencode-go/deepseek-v4.1-flash",
   persona: "Theater Master",
@@ -18,6 +30,7 @@ export const DEFAULT_SETTINGS: Settings = {
   responseMode: "auto",
   agentMode: "prompt",
   personaStyle: "subtle",
+  customPersona: { ...DEFAULT_CUSTOM_PERSONA },
   stockfishDepth: 11,
   multipv: 4,
   difficulty: "intermediate",

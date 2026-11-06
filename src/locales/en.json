@@ -125,7 +125,7 @@
     "personaStyleTheatrical": "Theatrical",
     "personaStyleStrong": "Strong",
     "personaStyleHint": "How much the persona may bend move choice inside the near-best candidate pool. Subtle keeps strength almost unchanged.",
-    "personaHint": "Changes commentary and stage presence only — combine it with any difficulty.",
+    "personaHint": "Changes voice and a bounded near-best move style — combine it with any difficulty.",
     "afterMove": "After your move",
     "auto": "Auto",
     "autoHint": "Agent answers immediately",
@@ -173,7 +173,7 @@
     "depth": "Depth",
     "candidates": "Candidate moves",
     "engineMeta": "top {count} · depth {depth}",
-    "engineNote": "Difficulty sets the Stockfish candidate pool; the persona changes only the voice. Stockfish proposes the candidates, the model chooses one, and may still bluff about the evaluation. The board stays authoritative.",
+    "engineNote": "Difficulty sets the Stockfish candidate pool; the persona colours the voice and may reorder near-best candidates inside the chosen style tolerance. Stockfish proposes the candidates, the model chooses one, and may still bluff about the evaluation. The board stays authoritative.",
     "cancel": "Cancel",
     "saveChanges": "Save changes",
     "saving": "Saving…",
@@ -257,7 +257,9 @@
     "coach": "Coach",
     "coachDescription": "Honest, instructive, no deception.",
     "chaotic": "Chaotic",
-    "chaoticDescription": "Unpredictable and funny, but still legal."
+    "chaoticDescription": "Unpredictable and funny, but still legal.",
+    "custom": "Custom",
+    "customDescription": "Your own mix of voice and style."
   },
   "difficulty": {
     "beginner": {
@@ -377,6 +379,29 @@
     "empty": "No games yet.",
     "emptyHint": "Finish a game and it will appear here. Run post-game analysis to unlock accuracy and bluff rate.",
     "footnote": "Accuracy and bluff rate come from saved post-game analysis summaries. Win rate excludes unfinished games."
+  },
+  "personaMixer": {
+    "eyebrow": "Persona studio",
+    "title": "Build a custom opponent",
+    "hint": "Mix the voice and bounded move style. The board and the rules never change.",
+    "reset": "Reset",
+    "name": "Name",
+    "accent": "Accent",
+    "theatricality": "Theatricality",
+    "theatricalityHint": "How dramatic and stage-aware the voice is.",
+    "confidence": "Confidence",
+    "confidenceHint": "How certain and dominant the opponent sounds.",
+    "warmth": "Warmth",
+    "warmthHint": "Friendly and respectful versus cold and distant.",
+    "humor": "Humor",
+    "humorHint": "Playful jokes, irony and misdirection.",
+    "aggression": "Aggression",
+    "aggressionHint": "Sharp, attacking move preferences and tone.",
+    "verbosity": "Verbosity",
+    "verbosityHint": "One-liners versus longer theatrical speeches.",
+    "deception": "Deception",
+    "deceptionHint": "How readily the opponent exaggerates evaluations and plans.",
+    "styleNote": "Traits affect voice and the bounded near-best move style. They never change rules, legality or the Stockfish candidate pool."
   },
   "themes": {
     "salon": {

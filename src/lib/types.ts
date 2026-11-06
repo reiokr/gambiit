@@ -73,6 +73,18 @@ export interface ClockUpdate {
   gameOver: boolean;
 }
 
+export interface CustomPersona {
+  name: string;
+  accent: string;
+  theatricality: number;
+  confidence: number;
+  warmth: number;
+  humor: number;
+  aggression: number;
+  verbosity: number;
+  deception: number;
+}
+
 export interface CustomTheme {
   bg: string;
   panel: string;
@@ -94,6 +106,7 @@ export interface Settings {
   responseMode: "auto" | "button";
   agentMode: "prompt" | "mcp";
   personaStyle: "off" | "subtle" | "theatrical" | "strong";
+  customPersona: CustomPersona;
   stockfishDepth: number;
   multipv: number;
   difficulty: string;

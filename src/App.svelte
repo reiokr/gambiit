@@ -121,7 +121,11 @@
   $: humanClockRunning = snapshot?.clock?.running === snapshot?.humanColor;
   $: agentName = snapshot?.settings.persona ?? settings.persona;
   $: agentModel = snapshot?.settings.model ?? settings.model;
-  $: agentPersona = personaFor(agentName);
+  $: customPersona = snapshot?.settings.customPersona ?? settings.customPersona;
+  $: agentPersona =
+    agentName === "Custom"
+      ? { ...personaFor("Custom"), accent: customPersona.accent }
+      : personaFor(agentName);
   $: agentError = snapshot?.agentError ?? "";
   $: localizedStatus = snapshot
     ? $i18n(
@@ -133,6 +137,9 @@
     : "";
 
   function personaLabel(persona: string): string {
+    if (persona === "Custom") {
+      return customPersona.name.trim() || $i18n("personas.custom");
+    }
     return $i18n(`personas.${personaFor(persona).key}`);
   }
 
