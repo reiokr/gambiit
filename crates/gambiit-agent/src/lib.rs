@@ -492,6 +492,22 @@ impl AgentSession {
         Ok(output)
     }
 
+    /// Send one plain-text prompt and return the model's trimmed reply. Used by
+    /// the honest coach, which has its own prompt and never touches the board.
+    pub fn request_text(&mut self, prompt: &str) -> Result<(String, OpenCodeOutput), AgentError> {
+        let output = self
+            .client
+            .run(&self.config, prompt, self.session_id.as_deref())?;
+        if output.session_id.is_some() {
+            self.session_id = output.session_id.clone();
+        }
+        let reply: String = output.text.trim().chars().take(8_000).collect();
+        if reply.is_empty() {
+            return Err(AgentError::EmptyResponse);
+        }
+        Ok((reply, output))
+    }
+
     /// Ask the agent whether to accept a draw offer. The response is a small
     /// JSON object; the caller decides how to apply it to the game.
     pub fn request_draw_decision(

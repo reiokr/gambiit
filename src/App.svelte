@@ -4,6 +4,7 @@
   import Board from "./lib/Board.svelte";
   import Analysis from "./lib/Analysis.svelte";
   import Chat from "./lib/Chat.svelte";
+  import Coach from "./lib/Coach.svelte";
   import Commentary from "./lib/Commentary.svelte";
   import GameLibrary from "./lib/GameLibrary.svelte";
   import MoveList from "./lib/MoveList.svelte";
@@ -33,7 +34,7 @@
   import { i18n, localeMeta, setLocale } from "./lib/i18n";
   import { personaFor } from "./lib/personas";
 
-  type Tab = "moves" | "theater" | "chat" | "analysis";
+  type Tab = "moves" | "theater" | "chat" | "coach" | "analysis";
 
   let snapshot: GameSnapshot | null = null;
   let settings: Settings = loadSettings();
@@ -54,6 +55,7 @@
   let resultDismissed = false;
   let lastSoundPly = 0;
   let chatBusy = false;
+  let coachBusy = false;
   let drawBusy = false;
   let drawNotice: { accepted: boolean; comment: string } | null = null;
   let clockPolling = false;
@@ -62,20 +64,28 @@
   $: if (snapshot && !snapshot.settings.chatEnabled && activeTab === "chat") {
     activeTab = "theater";
   }
+  $: if (snapshot && !snapshot.settings.coachEnabled && activeTab === "coach") {
+    activeTab = "theater";
+  }
   $: canAgentMove =
     !!snapshot &&
     !snapshot.gameOver &&
     snapshot.turn === snapshot.agentColor &&
     !thinking &&
     !chatBusy &&
+    !coachBusy &&
     !drawBusy;
   $: canTakeback =
     !!snapshot &&
     !snapshot.gameOver &&
     !thinking &&
     !chatBusy &&
+    !coachBusy &&
     !drawBusy &&
     snapshot.lastMove?.color === snapshot.humanColor;
+  $: hasHumanMove =
+    !!snapshot &&
+    snapshot.history.some((move) => move.color === snapshot!.humanColor);
   $: material = snapshot
     ? materialScore(snapshot.board)
     : { white: 0, black: 0, diff: 0 };
@@ -103,6 +113,7 @@
     !snapshot.gameOver &&
     !thinking &&
     !chatBusy &&
+    !coachBusy &&
     !drawBusy &&
     snapshot.turn === snapshot.humanColor &&
     !promotion;
@@ -449,6 +460,42 @@
       error = failure;
       return failure;
     }
+  }
+
+  async function coachRequest(
+    command: string,
+    args?: Record<string, unknown>,
+  ): Promise<string | null> {
+    if (!snapshot || coachBusy) return "The coach is busy.";
+    coachBusy = true;
+    error = "";
+    try {
+      const next = await invoke<GameSnapshot>(command, args);
+      applySnapshot(next);
+      return null;
+    } catch (value) {
+      const failure = errorMessage(value);
+      error = failure;
+      return failure;
+    } finally {
+      coachBusy = false;
+    }
+  }
+
+  function coachExplain(): Promise<string | null> {
+    return coachRequest("coach_explain");
+  }
+
+  function coachHint(level: number): Promise<string | null> {
+    return coachRequest("coach_hint", { level });
+  }
+
+  function coachReview(): Promise<string | null> {
+    return coachRequest("coach_review");
+  }
+
+  function coachClear(): Promise<string | null> {
+    return coachRequest("coach_clear");
   }
 
   function newGame() {
@@ -815,7 +862,7 @@
           <button
             class="btn ghost"
             type="button"
-            disabled={chatBusy || drawBusy}
+            disabled={chatBusy || coachBusy || drawBusy}
             on:click={newGame}
           >
             {$i18n("app.newGame")}
@@ -833,7 +880,7 @@
             <button
               class="btn ghost"
               type="button"
-              disabled={snapshot.gameOver || thinking || chatBusy || drawBusy}
+              disabled={snapshot.gameOver || thinking || chatBusy || coachBusy || drawBusy}
               on:click={offerDraw}
             >
               {drawBusy ? $i18n("app.offeringDraw") : $i18n("app.offerDraw")}
@@ -842,7 +889,7 @@
           <button
             class="btn ghost danger"
             type="button"
-            disabled={snapshot.gameOver || chatBusy || drawBusy}
+            disabled={snapshot.gameOver || chatBusy || coachBusy || drawBusy}
             on:click={resign}
           >
             {$i18n("app.resign")}
@@ -913,6 +960,18 @@
               <span>{chatBusy ? "…" : snapshot.chat.length}</span>
             </button>
           {/if}
+          {#if snapshot.settings.coachEnabled}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "coach"}
+              class:active={activeTab === "coach"}
+              on:click={() => (activeTab = "coach")}
+            >
+              {$i18n("app.tabCoach")}
+              <span>{coachBusy ? "…" : snapshot.coach.length}</span>
+            </button>
+          {/if}
           <button
             type="button"
             role="tab"
@@ -944,9 +1003,27 @@
                 avatar={agentPersona.avatar}
                 accent={agentPersona.accent}
                 busy={chatBusy}
-                disabled={thinking}
+                disabled={thinking || coachBusy || drawBusy}
                 onSend={sendChat}
                 onClear={clearChat}
+              />
+            </div>
+          {/if}
+          {#if snapshot.settings.coachEnabled}
+            <div class="coach-pane" class:active={activeTab === "coach"}>
+              <Coach
+                gameId={snapshot.gameId}
+                historyLength={snapshot.history.length}
+                humanTurn={snapshot.turn === snapshot.humanColor && !snapshot.gameOver}
+                gameOver={snapshot.gameOver}
+                hasHumanMove={hasHumanMove}
+                messages={snapshot.coach}
+                busy={coachBusy || snapshot.coachThinking}
+                disabled={thinking || chatBusy || drawBusy}
+                onExplain={coachExplain}
+                onHint={coachHint}
+                onReview={coachReview}
+                onClear={coachClear}
               />
             </div>
           {/if}
@@ -1297,6 +1374,7 @@
   .tabs {
     display: flex;
     flex: 0 0 auto;
+    flex-wrap: wrap;
     gap: 2px;
     padding: 7px 7px 0;
     border-bottom: 1px solid var(--border);
@@ -1307,12 +1385,12 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    padding: 9px 11px 10px;
+    padding: 9px 8px 10px;
     border: 0;
     border-bottom: 2px solid transparent;
     background: transparent;
     color: var(--faint);
-    font-size: calc(11px * var(--font-scale));
+    font-size: calc(10.5px * var(--font-scale));
     font-weight: 600;
     cursor: pointer;
   }
@@ -1342,13 +1420,15 @@
   }
 
   .analysis-pane,
-  .chat-pane {
+  .chat-pane,
+  .coach-pane {
     display: none;
     height: 100%;
   }
 
   .analysis-pane.active,
-  .chat-pane.active {
+  .chat-pane.active,
+  .coach-pane.active {
     display: block;
   }
 

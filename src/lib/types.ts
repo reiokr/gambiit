@@ -85,6 +85,15 @@ export interface CustomPersona {
   deception: number;
 }
 
+export interface CoachMessage {
+  action: "explain" | "hint" | "review";
+  level: number | null;
+  text: string;
+  model: string;
+  tokens: number | null;
+  cost: number | null;
+}
+
 export interface CustomTheme {
   bg: string;
   panel: string;
@@ -108,6 +117,7 @@ export interface Settings {
   personaStyle: "off" | "subtle" | "theatrical" | "strong";
   customPersona: CustomPersona;
   bluffIntensity: number;
+  coachEnabled: boolean;
   stockfishDepth: number;
   multipv: number;
   difficulty: string;
@@ -190,6 +200,8 @@ export interface GameSnapshot {
   board: SquareView[];
   commentary: CommentaryCard[];
   chat: ChatMessage[];
+  coach: CoachMessage[];
+  coachThinking: boolean;
   clock: ClockView | null;
   settings: Settings;
   agentError: string | null;

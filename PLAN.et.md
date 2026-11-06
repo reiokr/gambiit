@@ -40,11 +40,13 @@ ja seitse liugurit. Esimene versioon redigeerib üht kohandatud isiksust; kahe
 isiksuse segamine on hilisem laiendus. Petlikkus on seotud Tõeobjektiivi
 bluff-seadega.
 
-### Treenerirežiim
+### Treenerirežiim (valmis)
 Valikuline mänguaegne treener inimesele, vastase isiksusest ja agent-sessioonist
-eraldi. Kasutab Stockfishi tõde ja ausat treeneri prompti. Tegevused: seisu
-selgitamine, järkjärguline vihje (idee → kandidaat → käik) ja viimase käigu
-ülevaade. Ainult nupuvajutusel, mitte automaatselt; ei muuda vastase käiku.
+eraldi. Kasutab Stockfishi tõde ja ausat treeneri prompti ning värsket
+mudelisessiooni iga päringu jaoks. Tegevused: seisu selgitamine, järkjärguline
+vihje (idee → kandidaat → käik) ja viimase käigu ülevaade centipawn-lossi ning
+klassifikatsiooniga. Ainult nupuvajutusel, mitte automaatselt; ei muuda vastase
+käiku.
 
 ### Tõeobjektiiv 2.0 (valmis)
 Pärastmängu Tõeobjektiiv loeb nüüd numbrilisi hinnanguid (`+0,3`), mativäiteid
@@ -159,6 +161,9 @@ Valmis:
   valitud käigu detailid ja Tõeobjektiiv.
 - Tõeobjektiiv 2.0 loeb numbrilisi, mati- ja seisuväiteid; bluff-intensiivsuse
   liugur (0–100) läheb igasse agendi prompti ega luba kunagi reeglivalet.
+- Aus treener: seisuülevaade, kolmeastmeline vihje (idee → kandidaadid → käik)
+  ja Stockfishi-põhine viimase käigu ülevaade. Treener ei bluffi ega muuda
+  vastase käiku.
 - Kohandatud teemaredaktor live-eelvaatega ja lokaalselt salvestatud paletiga.
 - Viis sisseehitatud malendikomplekti (Cburnett, Livius, Meridian, Meridian
   Shaded ja Letter) ning kohandatud kaustad `~/.local/share/gambiit/pieces/`
@@ -191,10 +196,10 @@ Valmis:
 
 Testid:
 
-- **74 Rust testi** rohelised (core 10, engine 2, agent 15, Tauri app 47) +
-  9 ignored testi (päris-mudeli käigu-, isiksusestiili-, bluff-intensiivsuse-,
-  vestluse/viigi-, MCP kahe käigu- ja eestikeelne smoke-test ning kolm
-  Stockfishi analüüsi testi).
+- **81 Rust testi** rohelised (core 10, engine 2, agent 15, Tauri app 54) +
+  11 ignored testi (päris-mudeli käigu-, isiksusestiili-, bluff-intensiivsuse-,
+  treeneri-, vestluse/viigi-, MCP kahe käigu- ja eestikeelne smoke-test ning
+  neli Stockfishi testi).
 - 1 ignored **agent_smoke** test: `e4` → `...c5` 8,9 sekundiga, 522 tokenit.
 - `cargo clippy --all-targets -- -D warnings` puhas.
 - `pnpm check` — 0 viga, 0 hoiatust.
@@ -521,7 +526,7 @@ Kui Stockfish puudub, töötab mäng edasi ilma engine'ita; kuvatakse paigaldusj
 ### Stretch
 
 - avangurolet, handikapid, pressikonverents, grudge match;
-- treenerirežiim, kohalik TTS, pusled;
+- kohalik TTS, pusled;
 - online-mäng (eraldi suur projekt).
 
 ---
@@ -651,7 +656,7 @@ $XDG_RUNTIME_DIR/gambiit/session.json   # port + token, 0600
 7. **Handikapid** — agent ilma liputa, inimesele lisaaeg jne.
 8. **Pressikonverents** — pärast mängu küsimused-vastused rollis.
 9. **Grudge match** — sama mudel/isiksus mäletab eelmist mängu.
-10. **Treenerirežiim** — aus Stockfishi + LLM analüüs.
+10. **Treenerirežiim** — valmis: aus Stockfishi + LLM seisuülevaade, järkjärgulised vihjed ja käiguülevaated.
 11. **Kohalik TTS** — Piper loeb kommentaare; valikuline.
 12. **Teemastuudio jagamine** — `.gambiit-theme` failid, galerii.
 

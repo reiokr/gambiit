@@ -154,11 +154,13 @@ difficulty remain the ceiling. The first version edits one custom persona;
 blending two personas is a later extension. Deception is shared with the Truth
 Lens bluff setting.
 
-### Coach mode
+### Coach mode (implemented)
 An optional in-game coach for the human, separate from the opponent persona and
-agent session. It uses Stockfish truth plus an honest coach prompt. Actions:
-explain position, progressive hint (idea → candidate → move), and review the
-last move. It is on demand, not automatic, and never changes the opponent’s move.
+agent session. It uses Stockfish truth plus an honest coach prompt and a fresh
+model session per request. Actions: explain position, progressive hint
+(idea → candidate → move), and review the last move with centipawn loss and a
+classification. It is on demand, not automatic, and never changes the
+opponent’s move.
 
 ### Truth Lens 2.0 (implemented)
 The post-game Truth Lens now parses numeric evaluations (`+0.3`), mate claims
@@ -522,7 +524,7 @@ Settings must expose game properties and theater features without code edits.
 
 - Truth Lens, Director’s Cut, broadcast mode.
 - Opening roulette, handicaps, press conference, grudge-match memory.
-- Coach mode, local TTS, puzzles, online play (separate large project).
+- Local TTS, puzzles, online play (separate large project).
 
 ---
 
@@ -627,7 +629,7 @@ Atomic writes (temp + rename), PGN export always available.
 7. **Handicaps** — agent without a queen, human extra time, etc.
 8. **Press conference** — post-game Q&A in character.
 9. **Grudge match** — same model/persona remembers the previous game; rivalry dossier.
-10. **Coach mode** — honest Stockfish + LLM analysis.
+10. **Coach mode** — implemented: honest Stockfish + LLM position reports, progressive hints and move reviews.
 11. **Local TTS** — Piper reads commentary; optional.
 12. **Theme sharing** — `.gambiit-theme` files, import/export, eventual gallery.
 

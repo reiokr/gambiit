@@ -105,6 +105,7 @@
     draft.animations !== settings.animations ||
     draft.responseMode !== settings.responseMode ||
     draft.chatEnabled !== settings.chatEnabled ||
+    draft.coachEnabled !== settings.coachEnabled ||
     draft.drawOffersEnabled !== settings.drawOffersEnabled ||
     draft.bluffIntensity !== settings.bluffIntensity ||
     Math.abs(draft.fontScale - settings.fontScale) > 0.001;
@@ -736,6 +737,10 @@
             <label class="check">
               <input type="checkbox" bind:checked={draft.chatEnabled} />
               <span>{$i18n("settings.opponentChat")}</span>
+            </label>
+            <label class="check" title={$i18n("settings.coachHint")}>
+              <input type="checkbox" bind:checked={draft.coachEnabled} />
+              <span>{$i18n("settings.coach")}</span>
             </label>
             <label class="check">
               <input type="checkbox" bind:checked={draft.drawOffersEnabled} />

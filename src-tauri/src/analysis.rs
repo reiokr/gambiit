@@ -106,7 +106,7 @@ struct EngineEval {
     best_san: Option<String>,
 }
 
-fn mate_cp(mate_in: i32, turn: Color) -> i32 {
+pub(crate) fn mate_cp(mate_in: i32, turn: Color) -> i32 {
     let magnitude = 10_000;
     if mate_in > 0 {
         if turn == Color::White {
@@ -179,7 +179,11 @@ fn win_probability(cp: i32) -> f64 {
     1.0 / (1.0 + 10f64.powf(-(cp.clamp(-2_000, 2_000) as f64) / 400.0))
 }
 
-fn classify(played: &str, best: Option<&str>, loss_cp: i32) -> &'static str {
+pub(crate) fn eval_white_cp(engine: &mut Stockfish, fen: &str, depth: u32) -> Result<i32, String> {
+    eval_position(engine, fen, depth).map(|eval| eval.cp_white)
+}
+
+pub(crate) fn classify(played: &str, best: Option<&str>, loss_cp: i32) -> &'static str {
     if loss_cp >= 300 {
         "blunder"
     } else if loss_cp >= 150 {

@@ -2,6 +2,7 @@
 
 mod analysis;
 mod bluff;
+mod coach;
 mod credentials;
 mod leaderboard;
 mod mcp;
@@ -12,7 +13,7 @@ mod style;
 
 use gambiit_agent::{AgentConfig, AgentSession, AgentTurn, OpenCodeClient};
 use gambiit_core::{Game, GameStatus, MoveInfo, MoveRecord, color_key};
-use gambiit_engine::Stockfish;
+use gambiit_engine::{Candidate, Stockfish};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use shakmaty::{Color, Role, Square};
@@ -152,6 +153,8 @@ pub(crate) struct Settings {
     #[serde(default = "default_true")]
     chat_enabled: bool,
     #[serde(default = "default_true")]
+    coach_enabled: bool,
+    #[serde(default = "default_true")]
     draw_offers_enabled: bool,
     #[serde(default)]
     clock_enabled: bool,
@@ -186,6 +189,7 @@ impl Default for Settings {
             custom_theme: CustomTheme::default(),
             piece_set: default_piece_set(),
             chat_enabled: true,
+            coach_enabled: true,
             draw_offers_enabled: true,
             clock_enabled: false,
             time_control: default_time_control(),
@@ -242,6 +246,17 @@ pub(crate) struct ChatMessage {
     role: String,
     text: String,
     at: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct CoachMessage {
+    action: String,
+    level: Option<u8>,
+    text: String,
+    model: String,
+    tokens: Option<u64>,
+    cost: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -338,6 +353,17 @@ struct DrawOfferOutcome {
     snapshot: GameSnapshot,
 }
 
+#[derive(Clone, Debug)]
+struct CoachJob {
+    game_id: String,
+    fen: String,
+    history_len: usize,
+    action: String,
+    level: Option<u8>,
+    prompt: String,
+    config: AgentConfig,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct GameSnapshot {
@@ -360,6 +386,8 @@ struct GameSnapshot {
     board: Vec<SquareView>,
     commentary: Vec<CommentaryCard>,
     chat: Vec<ChatMessage>,
+    coach: Vec<CoachMessage>,
+    coach_thinking: bool,
     clock: Option<ClockView>,
     settings: Settings,
     agent_error: Option<String>,
@@ -374,6 +402,8 @@ struct Session {
     stockfish: Option<Stockfish>,
     commentary: Vec<CommentaryCard>,
     chat: Vec<ChatMessage>,
+    coach: Vec<CoachMessage>,
+    coach_thinking: bool,
     clock: Option<GameClock>,
     analysis: Option<analysis::AnalysisSummary>,
     thinking: bool,
@@ -519,6 +549,8 @@ impl Session {
             stockfish,
             commentary,
             chat,
+            coach: Vec::new(),
+            coach_thinking: false,
             clock,
             analysis,
             thinking: false,
@@ -595,6 +627,128 @@ impl Session {
             }
         }
         self.persist();
+        Ok(self.snapshot())
+    }
+
+    fn prepare_coach(&mut self, action: &str, level: Option<u8>) -> Result<CoachJob, String> {
+        if !self.settings.coach_enabled {
+            return Err("Coach is disabled in settings.".to_string());
+        }
+        if self.coach_thinking {
+            return Err("The coach is already thinking.".to_string());
+        }
+        if self.game.status().is_over() {
+            return Err("The game is over.".to_string());
+        }
+
+        let game = self.game.clone();
+        let human_color = game.human_color();
+        let language = self.settings.agent_language_name.clone();
+
+        let (prompt, level) = match action {
+            "explain" => {
+                let (eval_text, _) = {
+                    let engine = self.stockfish.as_mut().ok_or_else(|| {
+                        "The coach needs Stockfish. Install it to get honest analysis.".to_string()
+                    })?;
+                    coach_context(engine, &game, 1)?
+                };
+                (
+                    coach::explain_prompt(&game, human_color, &eval_text, &language),
+                    None,
+                )
+            }
+            "hint" => {
+                if game.turn() != human_color {
+                    return Err("Hints are available on your turn.".to_string());
+                }
+                let level = level.unwrap_or(1).clamp(1, 3);
+                let (eval_text, candidates) = {
+                    let engine = self.stockfish.as_mut().ok_or_else(|| {
+                        "The coach needs Stockfish. Install it to get honest hints.".to_string()
+                    })?;
+                    coach_context(engine, &game, 3)?
+                };
+                (
+                    coach::hint_prompt(
+                        &game,
+                        human_color,
+                        level,
+                        &candidates,
+                        &eval_text,
+                        &language,
+                    ),
+                    Some(level),
+                )
+            }
+            "review" => {
+                let facts = {
+                    let engine = self.stockfish.as_mut().ok_or_else(|| {
+                        "The coach needs Stockfish. Install it to review moves.".to_string()
+                    })?;
+                    coach::review_facts(engine, &game, human_color)?
+                };
+                (coach::review_prompt(&facts, &language), None)
+            }
+            _ => return Err("Unknown coach action.".to_string()),
+        };
+
+        let config = coach_agent_config(
+            &self.settings,
+            credential_env_for_model(&self.settings.model),
+        );
+        self.coach_thinking = true;
+        Ok(CoachJob {
+            game_id: self.game_id.clone(),
+            fen: self.game.fen(),
+            history_len: self.game.history().len(),
+            action: action.to_string(),
+            level,
+            prompt,
+            config,
+        })
+    }
+
+    fn finish_coach(
+        &mut self,
+        job: &CoachJob,
+        result: Result<(String, Option<u64>, Option<f64>), String>,
+    ) -> Result<GameSnapshot, String> {
+        self.coach_thinking = false;
+        let (text, tokens, cost) = result?;
+        if !self.settings.coach_enabled {
+            return Err("Coach is disabled in settings.".to_string());
+        }
+        if job.game_id != self.game_id
+            || job.fen != self.game.fen()
+            || job.history_len != self.game.history().len()
+        {
+            return Err(
+                "The position changed while the coach was thinking. Ask again.".to_string(),
+            );
+        }
+        self.coach.push(CoachMessage {
+            action: job.action.clone(),
+            level: job.level,
+            text,
+            model: job.config.model.clone(),
+            tokens,
+            cost,
+        });
+        if self.coach.len() > 40 {
+            self.coach.remove(0);
+        }
+        Ok(self.snapshot())
+    }
+
+    fn clear_coach(&mut self) -> Result<GameSnapshot, String> {
+        if !self.settings.coach_enabled {
+            return Err("Coach is disabled in settings.".to_string());
+        }
+        if self.coach_thinking {
+            return Err("The coach is still thinking.".to_string());
+        }
+        self.coach.clear();
         Ok(self.snapshot())
     }
 
@@ -800,6 +954,8 @@ impl Session {
             board,
             commentary: self.commentary.clone(),
             chat: self.chat.clone(),
+            coach: self.coach.clone(),
+            coach_thinking: self.coach_thinking,
             clock: self.clock_view(),
             settings: self.settings.clone(),
             agent_error: self.agent_error.clone(),
@@ -1076,6 +1232,51 @@ impl Session {
 struct AppState {
     session: Arc<Mutex<Session>>,
     mcp: Option<Arc<mcp::Bridge>>,
+}
+
+async fn run_coach(
+    session: Arc<Mutex<Session>>,
+    action: &str,
+    level: Option<u8>,
+) -> Result<GameSnapshot, String> {
+    let job = { session.lock().prepare_coach(action, level)? };
+    let worker = job.clone();
+    let joined = tauri::async_runtime::spawn_blocking(move || {
+        let mut agent =
+            AgentSession::new(worker.config.clone()).map_err(|error| error.to_string())?;
+        let (text, output) = agent
+            .request_text(&worker.prompt)
+            .map_err(|error| error.to_string())?;
+        Ok::<_, String>((text, output.tokens, output.cost))
+    })
+    .await;
+    match joined {
+        Ok(result) => session.lock().finish_coach(&job, result),
+        Err(error) => {
+            session.lock().coach_thinking = false;
+            Err(error.to_string())
+        }
+    }
+}
+
+#[tauri::command]
+async fn coach_explain(state: State<'_, AppState>) -> Result<GameSnapshot, String> {
+    run_coach(state.session.clone(), "explain", None).await
+}
+
+#[tauri::command]
+async fn coach_hint(state: State<'_, AppState>, level: u8) -> Result<GameSnapshot, String> {
+    run_coach(state.session.clone(), "hint", Some(level)).await
+}
+
+#[tauri::command]
+async fn coach_review(state: State<'_, AppState>) -> Result<GameSnapshot, String> {
+    run_coach(state.session.clone(), "review", None).await
+}
+
+#[tauri::command]
+fn coach_clear(state: State<'_, AppState>) -> Result<GameSnapshot, String> {
+    state.session.lock().clear_coach()
 }
 
 #[tauri::command]
@@ -1493,6 +1694,42 @@ fn write_mcp_config(bridge: &mcp::Bridge) -> Result<std::path::PathBuf, String> 
     Ok(directory)
 }
 
+fn coach_context(
+    engine: &mut Stockfish,
+    game: &Game,
+    multipv: usize,
+) -> Result<(String, Vec<Candidate>), String> {
+    let candidates = engine
+        .candidates(&game.fen(), multipv, coach::DEPTH)
+        .map_err(|error| error.to_string())?;
+    let best = candidates
+        .first()
+        .ok_or_else(|| "Stockfish found no move.".to_string())?;
+    let eval_white = coach::candidate_white_cp(best, game.turn())
+        .ok_or_else(|| "Stockfish did not return an evaluation.".to_string())?;
+    let eval_human = if game.human_color() == Color::White {
+        eval_white
+    } else {
+        -eval_white
+    };
+    Ok((coach::format_eval(eval_human), candidates))
+}
+
+fn coach_agent_config(settings: &Settings, env: Vec<(String, String)>) -> AgentConfig {
+    AgentConfig {
+        model: settings.model.clone(),
+        persona: "Coach".to_string(),
+        language: settings.agent_language.clone(),
+        language_name: settings.agent_language_name.clone(),
+        timeout_secs: 120,
+        retries: 0,
+        env,
+        style_instruction: String::new(),
+        persona_prompt: String::new(),
+        bluff_instruction: String::new(),
+    }
+}
+
 fn agent_config(settings: &Settings, env: Vec<(String, String)>) -> AgentConfig {
     AgentConfig {
         model: settings.model.clone(),
@@ -1611,6 +1848,10 @@ pub fn run() {
             agent_move,
             chat_send,
             clear_chat,
+            coach_explain,
+            coach_hint,
+            coach_review,
+            coach_clear,
             offer_draw,
             takeback,
             resign,
@@ -1830,6 +2071,7 @@ mod tests {
         object.remove("personaStyle");
         object.remove("customPersona");
         object.remove("bluffIntensity");
+        object.remove("coachEnabled");
         object.remove("clockEnabled");
         object.remove("timeControl");
         object.remove("clockInitialMs");
@@ -1844,6 +2086,7 @@ mod tests {
         assert_eq!(restored.persona_style, "subtle");
         assert_eq!(restored.custom_persona.name, "Custom Persona");
         assert_eq!(restored.bluff_intensity, 50);
+        assert!(restored.coach_enabled);
         assert!(!restored.clock_enabled);
         assert_eq!(restored.time_control, "rapid");
         assert_eq!(restored.clock_initial_ms, 600_000);
@@ -1933,6 +2176,33 @@ mod tests {
             ..Default::default()
         });
         assert_eq!(settings.bluff_intensity, 0);
+    }
+
+    #[test]
+    fn coach_disabled_blocks_requests() {
+        let settings = Settings {
+            coach_enabled: false,
+            ..Default::default()
+        };
+        let mut session = Session::new_with_persist(settings, Color::White, false);
+        assert!(
+            session
+                .prepare_coach("explain", None)
+                .unwrap_err()
+                .contains("disabled")
+        );
+    }
+
+    #[test]
+    fn hints_wait_for_human_turn() {
+        let mut session = Session::new_with_persist(Settings::default(), Color::White, false);
+        session.make_move("e2e4").unwrap();
+        assert!(
+            session
+                .prepare_coach("hint", Some(1))
+                .unwrap_err()
+                .contains("your turn")
+        );
     }
 
     #[test]
@@ -2183,6 +2453,39 @@ mod tests {
                 snapshot.history[1].san, snapshot.commentary[0].comment
             );
         }
+    }
+
+    /// Real-model coach smoke test: hint levels and a move review.
+    /// Ignored because it spends provider tokens.
+    #[test]
+    #[ignore]
+    fn coach_smoke() {
+        fn ask(session: &mut Session, action: &str, level: Option<u8>) {
+            let job = session.prepare_coach(action, level).unwrap();
+            let mut agent = AgentSession::new(job.config.clone()).unwrap();
+            let (text, output) = agent.request_text(&job.prompt).unwrap();
+            session
+                .finish_coach(&job, Ok((text, output.tokens, output.cost)))
+                .unwrap();
+            eprintln!(
+                "coach {action} {:?}: {}\n",
+                level,
+                session.coach.last().unwrap().text
+            );
+        }
+
+        let mut session = Session::new_with_persist(Settings::default(), Color::White, false);
+        ask(&mut session, "hint", Some(1));
+        ask(&mut session, "hint", Some(2));
+        session.make_move("e2e4").unwrap();
+        ask(&mut session, "review", None);
+        assert_eq!(session.coach.len(), 3);
+        assert!(
+            session
+                .coach
+                .iter()
+                .all(|message| !message.text.trim().is_empty())
+        );
     }
 
     /// Bluff-intensity smoke test. Ignored by default.

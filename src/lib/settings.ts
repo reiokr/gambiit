@@ -32,6 +32,7 @@ export const DEFAULT_SETTINGS: Settings = {
   personaStyle: "subtle",
   customPersona: { ...DEFAULT_CUSTOM_PERSONA },
   bluffIntensity: 50,
+  coachEnabled: true,
   stockfishDepth: 11,
   multipv: 4,
   difficulty: "intermediate",

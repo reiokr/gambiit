@@ -50,11 +50,13 @@ What works now:
 - a bluff-intensity slider (0 honest, 50 theatrical but plausible, 100
   unreliable narrator) that controls exaggeration without ever allowing lies
   about the board or rules;
+- an optional honest coach with a position report, three-step hints and a
+  Stockfish-backed review of your last move;
 - a local model leaderboard built from saved games, with win rate, accuracy,
   blunder counts, bluff rate, response time, tokens and cost;
 - settings for model, persona, response mode, colour, theme, font size
   (90–150%, default 120%), language, sound, animations, bluff intensity,
-  Stockfish depth and candidate count;
+  coach mode, Stockfish depth and candidate count;
 - searchable model picker grouped by provider, with a model-list refresh;
 - optional provider API keys stored locally with 0600 permissions and passed to
   OpenCode as environment variables; no key means OpenCode's own auth is used;
@@ -243,6 +245,25 @@ declines based on the position and its persona. An accepted offer ends the game
 as a draw; a declined offer leaves a dismissible note and, when chat is enabled,
 the opponent's reply appears in the chat. Draw offers work even when chat is
 disabled.
+
+## Coach
+
+Enable **Coach** in **Settings → Game → Features** to show the **Coach** tab.
+The coach is separate from the opponent: no persona, no theater, no bluff. It
+uses the same model with its own prompt and a Stockfish search at depth 14.
+
+- **Explain position** — material, king safety, pawn structure, threats and a
+  practical plan. It deliberately does not name a move.
+- **Hint** — three progressive levels: a thematic idea, then 2–3 candidate
+  moves without revealing which one the engine prefers, then the engine's move
+  and the idea behind it.
+- **Review my last move** — compares your move with Stockfish, reports the
+  centipawn loss and classification, and gives one concrete lesson.
+
+The coach never changes the opponent's move or the board. It is on demand, not
+automatic. Hints are available on your turn; review works after you have made a
+move. Coach notes are kept for the current session and are not saved with the
+game. Stockfish is required for honest position reports, hints and reviews.
 
 ## Clocks
 
