@@ -3,6 +3,8 @@ name = "gambiit-agent"
 version = "0.1.0"
 edition = "2024"
 description = "OpenCode prompt transport and agent orchestration for Gambiit"
+license = "MIT"
+repository = "https://github.com/reiokr/gambiit"
 
 [dependencies]
 gambiit-core = { path = "../gambiit-core" }

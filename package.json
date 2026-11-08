@@ -4,6 +4,11 @@
   "license": "MIT",
   "version": "0.1.0",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reiokr/gambiit.git"
+  },
+  "homepage": "https://github.com/reiokr/gambiit#readme",
   "scripts": {
     "dev": "vite --port 1420",
     "build": "vite build",

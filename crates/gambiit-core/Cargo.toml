@@ -3,6 +3,8 @@ name = "gambiit-core"
 version = "0.1.0"
 edition = "2024"
 description = "Chess rules, game state and PGN helpers for Gambiit"
+license = "MIT"
+repository = "https://github.com/reiokr/gambiit"
 
 [dependencies]
 shakmaty = "0.30.2"

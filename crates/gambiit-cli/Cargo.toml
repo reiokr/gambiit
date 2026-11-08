@@ -3,6 +3,8 @@ name = "gambiit-cli"
 version = "0.1.0"
 edition = "2024"
 description = "Terminal prototype for Gambiit"
+license = "MIT"
+repository = "https://github.com/reiokr/gambiit"
 
 [dependencies]
 gambiit-core = { path = "../gambiit-core" }

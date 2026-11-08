@@ -5,7 +5,7 @@ pkgrel=1
 pkgdesc="A theatrical desktop chess game with an AI opponent"
 arch=('x86_64' 'aarch64')
 # Update this when the public repository is available.
-url="https://github.com/rk/gambiit"
+url="https://github.com/reiokr/gambiit"
 license=('MIT')
 depends=(
   'webkit2gtk-4.1'

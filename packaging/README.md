@@ -45,7 +45,7 @@ makepkg -si
 The committed PKGBUILD uses `sha256sums=('SKIP')` for local builds.
 `build-package.sh` pins the real checksum automatically. For an AUR release,
 upload the tarball, point `source=` at the release URL and run `updpkgsums`.
-The `url=` field is a placeholder until the public repository is available.
+The `url=` field points to the public repository.
 
 ## Release binary
 

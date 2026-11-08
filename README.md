@@ -3,6 +3,8 @@
 A Rust-based desktop chess game where your opponent is an OpenCode model — with a
 personality, a plan, and a taste for theater.
 
+[github.com/reiokr/gambiit](https://github.com/reiokr/gambiit)
+
 > **The board is truth; the voice is free.**
 > Move legality, checkmate and results are always verified by the game. The agent
 > may bluff about evaluations and plans, but never about the mechanics.
