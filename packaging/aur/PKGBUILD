@@ -1,0 +1,63 @@
+# Maintainer: Reio Kruusement <reiokr@gmail.com>
+pkgname=gambiit
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="A theatrical desktop chess game with an AI opponent"
+arch=('x86_64' 'aarch64')
+url="https://github.com/reiokr/gambiit"
+license=('MIT')
+depends=(
+  'webkit2gtk-4.1'
+  'gtk3'
+  'libsoup3'
+)
+makedepends=(
+  'rust'
+  'nodejs'
+  'pnpm'
+  'pkgconf'
+)
+optdepends=(
+  'opencode: local AI opponent via the OpenCode CLI'
+  'opencode-desktop: local AI opponent via the OpenCode desktop app'
+  'stockfish: chess engine for candidate moves, hints and analysis'
+)
+source=("$pkgname-$pkgver.tar.gz::https://github.com/reiokr/gambiit/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz")
+sha256sums=('4a2e24131a5e040888f0f211670d2a83ac51c2d30a89fbcd25b92d42ae42bf09')
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver"
+  export CI=true
+  pnpm install --frozen-lockfile
+  pnpm tauri build --no-bundle
+}
+
+check() {
+  cd "$srcdir/$pkgname-$pkgver"
+  pnpm check
+  cargo test --release
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  install -Dm755 target/release/gambiit-app "$pkgdir/usr/bin/gambiit"
+  install -Dm644 packaging/gambiit.desktop \
+    "$pkgdir/usr/share/applications/gambiit.desktop"
+
+  install -Dm644 src-tauri/icons/icon.svg \
+    "$pkgdir/usr/share/icons/hicolor/scalable/apps/gambiit.svg"
+  install -Dm644 src-tauri/icons/32x32.png \
+    "$pkgdir/usr/share/icons/hicolor/32x32/apps/gambiit.png"
+  install -Dm644 src-tauri/icons/128x128.png \
+    "$pkgdir/usr/share/icons/hicolor/128x128/apps/gambiit.png"
+  install -Dm644 src-tauri/icons/128x128@2x.png \
+    "$pkgdir/usr/share/icons/hicolor/256x256/apps/gambiit.png"
+  install -Dm644 src-tauri/icons/icon.png \
+    "$pkgdir/usr/share/icons/hicolor/512x512/apps/gambiit.png"
+
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+  install -d "$pkgdir/usr/share/doc/$pkgname/docs"
+  install -m644 docs/*.md "$pkgdir/usr/share/doc/$pkgname/docs/"
+}

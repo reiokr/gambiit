@@ -47,6 +47,12 @@ The committed PKGBUILD uses `sha256sums=('SKIP')` for local builds.
 upload the tarball, point `source=` at the release URL and run `updpkgsums`.
 The `url=` field points to the public repository.
 
+## AUR
+
+`packaging/aur/` contains a release-based `PKGBUILD` for AUR. It downloads the
+source archive attached to the GitHub release and verifies its SHA-256 checksum.
+See [`aur/README.md`](aur/README.md) for publishing and version-bump steps.
+
 ## Release binary
 
 Tauri's regular bundle target is a Debian package:

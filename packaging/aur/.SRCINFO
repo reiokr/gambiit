@@ -1,0 +1,22 @@
+pkgbase = gambiit
+	pkgdesc = A theatrical desktop chess game with an AI opponent
+	pkgver = 0.1.0
+	pkgrel = 1
+	url = https://github.com/reiokr/gambiit
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	makedepends = rust
+	makedepends = nodejs
+	makedepends = pnpm
+	makedepends = pkgconf
+	depends = webkit2gtk-4.1
+	depends = gtk3
+	depends = libsoup3
+	optdepends = opencode: local AI opponent via the OpenCode CLI
+	optdepends = opencode-desktop: local AI opponent via the OpenCode desktop app
+	optdepends = stockfish: chess engine for candidate moves, hints and analysis
+	source = gambiit-0.1.0.tar.gz::https://github.com/reiokr/gambiit/releases/download/v0.1.0/gambiit-0.1.0.tar.gz
+	sha256sums = 4a2e24131a5e040888f0f211670d2a83ac51c2d30a89fbcd25b92d42ae42bf09
+
+pkgname = gambiit
