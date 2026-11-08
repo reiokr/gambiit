@@ -8,6 +8,8 @@
   import Coach from "./lib/Coach.svelte";
   import Commentary from "./lib/Commentary.svelte";
   import GameLibrary from "./lib/GameLibrary.svelte";
+  import GameStage from "./lib/GameStage.svelte";
+  import GameSidebar from "./lib/GameSidebar.svelte";
   import MoveList from "./lib/MoveList.svelte";
   import PlayerBar from "./lib/PlayerBar.svelte";
   import SettingsPanel from "./lib/SettingsPanel.svelte";
@@ -20,7 +22,6 @@
     MoveInfo,
     Settings,
   } from "./lib/types";
-  import { capturedPieces, materialScore } from "./lib/board";
   import {
     applyFontScale,
     applyMotion,
@@ -90,50 +91,6 @@
   $: hasHumanMove =
     !!snapshot &&
     snapshot.history.some((move) => move.color === snapshot!.humanColor);
-  $: material = snapshot
-    ? materialScore(snapshot.board)
-    : { white: 0, black: 0, diff: 0 };
-  $: captured = snapshot
-    ? capturedPieces(snapshot.board)
-    : { byWhite: [], byBlack: [] };
-  $: agentMaterial = snapshot
-    ? snapshot.agentColor === "white"
-      ? material.diff
-      : -material.diff
-    : 0;
-  $: humanMaterial = -agentMaterial;
-  $: agentCaptured = snapshot
-    ? snapshot.agentColor === "white"
-      ? captured.byWhite
-      : captured.byBlack
-    : [];
-  $: humanCaptured = snapshot
-    ? snapshot.humanColor === "white"
-      ? captured.byWhite
-      : captured.byBlack
-    : [];
-  $: boardInteractive =
-    !!snapshot &&
-    !snapshot.gameOver &&
-    !thinking &&
-    !chatBusy &&
-    !coachBusy &&
-    !drawBusy &&
-    snapshot.turn === snapshot.humanColor &&
-    !promotion;
-  $: promotionColor = snapshot?.humanColor ?? humanColor;
-  $: agentClock = snapshot?.clock
-    ? snapshot.agentColor === "white"
-      ? snapshot.clock.whiteMs
-      : snapshot.clock.blackMs
-    : null;
-  $: humanClock = snapshot?.clock
-    ? snapshot.humanColor === "white"
-      ? snapshot.clock.whiteMs
-      : snapshot.clock.blackMs
-    : null;
-  $: agentClockRunning = snapshot?.clock?.running === snapshot?.agentColor;
-  $: humanClockRunning = snapshot?.clock?.running === snapshot?.humanColor;
   $: agentName = snapshot?.settings.persona ?? settings.persona;
   $: agentModel = snapshot?.settings.model ?? settings.model;
   $: customPersona = snapshot?.settings.customPersona ?? settings.customPersona;
@@ -166,18 +123,6 @@
     } catch {
       return "Unexpected error";
     }
-  }
-
-  function playerStatus(color: ColorKey): string {
-    if (!snapshot) return "waiting";
-    if (snapshot.gameOver) {
-      if (snapshot.winner === color) return "won";
-      if (snapshot.winner) return "lost";
-      return "draw";
-    }
-    if (thinking && color === snapshot.agentColor) return "thinking";
-    if (snapshot.turn !== color) return "waiting";
-    return "toMove";
   }
 
   function statusTextFor(game: GameSnapshot): string {
@@ -812,299 +757,56 @@
     </header>
 
     <main class="main">
-      <section class="stage">
-        <PlayerBar
-          name={personaLabel(agentName)}
-          subtitle={`${agentModel} · ${$i18n(`side.${snapshot.agentColor}`)}`}
-          color={snapshot.agentColor}
-          isAgent
-          thinking={thinking}
-          active={snapshot.turn === snapshot.agentColor && !snapshot.gameOver}
-          statusKey={playerStatus(snapshot.agentColor)}
-          captured={agentCaptured}
-          material={agentMaterial}
-          avatar={agentPersona.avatar}
-          accent={agentPersona.accent}
-          clockMs={agentClock}
-          clockActive={agentClockRunning}
-          clockStopped={snapshot.gameOver}
-          broadcast={broadcast}
-        />
+      <GameStage
+        {snapshot}
+        agentLabel={personaLabel(agentName)}
+        {agentModel}
+        {agentPersona}
+        {localizedStatus}
+        {thinking}
+        {chatBusy}
+        {coachBusy}
+        {drawBusy}
+        {selected}
+        {flipped}
+        {promotion}
+        {drawNotice}
+        showResult={snapshot.gameOver && !resultDismissed}
+        {broadcast}
+        {canAgentMove}
+        onSquareClick={onSquareClick}
+        onPromotion={choosePromotion}
+        onRematch={startGame}
+        onReviewBoard={() => (resultDismissed = true)}
+        onNewGame={newGame}
+        onTakeback={takeback}
+        onOfferDraw={offerDraw}
+        onResign={resign}
+        onAgentMove={agentMove}
+        onDismissDraw={() => (drawNotice = null)}
+      />
 
-        <div class="board-shell">
-          <Board
-            board={snapshot.board}
-            legalMoves={snapshot.legalMoves}
-            lastMove={snapshot.lastMove}
-            checkSquare={snapshot.checkSquare}
-            {selected}
-            {flipped}
-            interactive={boardInteractive}
-            animations={snapshot.settings.animations}
-            {promotion}
-            {promotionColor}
-            onSquareClick={onSquareClick}
-            onPromotion={choosePromotion}
-          />
-
-          {#if thinking}
-            <div class="thinking-ribbon">
-              <span class="spinner"></span>
-              {$i18n("app.thinking", { name: personaLabel(agentName) })}
-            </div>
-          {:else if drawBusy}
-            <div class="thinking-ribbon">
-              <span class="spinner"></span>
-              {$i18n("app.consideringDraw")}
-            </div>
-          {/if}
-
-          {#if snapshot.gameOver && !resultDismissed}
-            <div class="result-overlay">
-              <div class="result-card">
-                <p class="eyebrow">{$i18n("app.finalCurtain")}</p>
-                <h2>{localizedStatus}</h2>
-                {#if snapshot.winner}
-                  <p class="winner">
-                    {$i18n("app.takesTheStage", {
-                      side: $i18n(`side.${snapshot.winner}`),
-                    })}
-                  </p>
-                {/if}
-                <div class="result-actions">
-                  <button
-                    class="btn primary"
-                    type="button"
-                    on:click={() =>
-                      snapshot && startGame(snapshot.humanColor)}
-                  >
-                    {$i18n("app.rematch")}
-                  </button>
-                  <button
-                    class="btn ghost"
-                    type="button"
-                    on:click={() => (resultDismissed = true)}
-                  >
-                    {$i18n("app.reviewBoard")}
-                  </button>
-                </div>
-              </div>
-            </div>
-          {/if}
-        </div>
-
-        <PlayerBar
-          name={$i18n("app.you")}
-          subtitle={`${$i18n(`side.${snapshot.humanColor}`)} · ${$i18n("app.localPlayer")}`}
-          color={snapshot.humanColor}
-          active={snapshot.turn === snapshot.humanColor && !snapshot.gameOver}
-          statusKey={playerStatus(snapshot.humanColor)}
-          captured={humanCaptured}
-          material={humanMaterial}
-          clockMs={humanClock}
-          clockActive={humanClockRunning}
-          clockStopped={snapshot.gameOver}
-          broadcast={broadcast}
-        />
-
-        <div class="board-actions">
-          <button
-            class="btn ghost"
-            type="button"
-            disabled={chatBusy || coachBusy || drawBusy}
-            on:click={newGame}
-          >
-            {$i18n("app.newGame")}
-          </button>
-          <button
-            class="btn ghost"
-            type="button"
-            disabled={!canTakeback}
-            title={$i18n("app.onlyOwnMove")}
-            on:click={takeback}
-          >
-            {$i18n("app.takeBack")}
-          </button>
-          {#if snapshot.settings.drawOffersEnabled}
-            <button
-              class="btn ghost"
-              type="button"
-              disabled={snapshot.gameOver || thinking || chatBusy || coachBusy || drawBusy}
-              on:click={offerDraw}
-            >
-              {drawBusy ? $i18n("app.offeringDraw") : $i18n("app.offerDraw")}
-            </button>
-          {/if}
-          <button
-            class="btn ghost danger"
-            type="button"
-            disabled={snapshot.gameOver || chatBusy || coachBusy || drawBusy}
-            on:click={resign}
-          >
-            {$i18n("app.resign")}
-          </button>
-          {#if canAgentMove && snapshot.settings.responseMode === "button"}
-            <button class="btn primary agent-move" type="button" on:click={agentMove}>
-              {$i18n("app.agentMove")}
-            </button>
-          {/if}
-        </div>
-
-        {#if drawNotice}
-          <div class="draw-notice" class:accepted={drawNotice.accepted}>
-            <div>
-              <strong>
-                {drawNotice.accepted
-                  ? $i18n("app.drawAccepted")
-                  : $i18n("app.drawDeclined")}
-              </strong>
-              {#if drawNotice.comment}<span>{drawNotice.comment}</span>{/if}
-            </div>
-            <button
-              type="button"
-              aria-label={$i18n("app.dismissNotice")}
-              on:click={() => (drawNotice = null)}
-            >
-              ✕
-            </button>
-          </div>
-        {/if}
-      </section>
-
-      <aside class="sidebar">
-        <div
-          class="tabs"
-          role="tablist"
-          aria-label={$i18n("app.gamePanels")}
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "moves"}
-            class:active={activeTab === "moves"}
-            on:click={() => (activeTab = "moves")}
-          >
-            {$i18n("app.tabMoves")}
-            <span>{snapshot.history.length}</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "theater"}
-            class:active={activeTab === "theater"}
-            on:click={() => (activeTab = "theater")}
-          >
-            {$i18n("app.tabTheater")}
-            <span>{snapshot.commentary.length}</span>
-          </button>
-          {#if snapshot.settings.chatEnabled}
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "chat"}
-              class:active={activeTab === "chat"}
-              on:click={() => (activeTab = "chat")}
-            >
-              {$i18n("app.tabChat")}
-              <span>{chatBusy ? "…" : snapshot.chat.length}</span>
-            </button>
-          {/if}
-          {#if snapshot.settings.coachEnabled}
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "coach"}
-              class:active={activeTab === "coach"}
-              on:click={() => (activeTab = "coach")}
-            >
-              {$i18n("app.tabCoach")}
-              <span>{coachBusy ? "…" : snapshot.coach.length}</span>
-            </button>
-          {/if}
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "analysis"}
-            class:active={activeTab === "analysis"}
-            on:click={() => (activeTab = "analysis")}
-          >
-            {$i18n("app.tabAnalysis")}
-          </button>
-        </div>
-
-        <div class="tab-body">
-          {#if activeTab === "moves"}
-            <MoveList history={snapshot.history} />
-          {:else if activeTab === "theater"}
-            <Commentary
-              cards={snapshot.commentary}
-              persona={personaLabel(agentName)}
-              model={agentModel}
-              avatar={agentPersona.avatar}
-              accent={agentPersona.accent}
-            />
-          {/if}
-          {#if snapshot.settings.chatEnabled}
-            <div class="chat-pane" class:active={activeTab === "chat"}>
-              <Chat
-                messages={snapshot.chat}
-                personaName={personaLabel(agentName)}
-                avatar={agentPersona.avatar}
-                accent={agentPersona.accent}
-                busy={chatBusy}
-                disabled={thinking || coachBusy || drawBusy}
-                onSend={sendChat}
-                onClear={clearChat}
-              />
-            </div>
-          {/if}
-          {#if snapshot.settings.coachEnabled}
-            <div class="coach-pane" class:active={activeTab === "coach"}>
-              <Coach
-                gameId={snapshot.gameId}
-                historyLength={snapshot.history.length}
-                humanTurn={snapshot.turn === snapshot.humanColor && !snapshot.gameOver}
-                gameOver={snapshot.gameOver}
-                hasHumanMove={hasHumanMove}
-                messages={snapshot.coach}
-                busy={coachBusy || snapshot.coachThinking}
-                disabled={thinking || chatBusy || drawBusy}
-                onExplain={coachExplain}
-                onHint={coachHint}
-                onReview={coachReview}
-                onClear={coachClear}
-              />
-            </div>
-          {/if}
-          <div class="analysis-pane" class:active={activeTab === "analysis"}>
-            <Analysis
-              gameId={snapshot.gameId}
-              historyLength={snapshot.history.length}
-              humanColor={snapshot.humanColor}
-            />
-          </div>
-        </div>
-
-        <footer class="sidebar-footer">
-          {#if agentError}
-            <div class="agent-error">
-              <strong>{$i18n("app.opponentUnavailable")}</strong>
-              <span>{agentError}</span>
-              {#if canAgentMove}
-                <button class="btn small" type="button" on:click={agentMove}>
-                  {$i18n("app.retryAgent")}
-                </button>
-              {/if}
-            </div>
-          {:else}
-            <div class="footer-line">
-              <span class="footer-dot"></span>
-              <span class="footer-model">{agentModel}</span>
-            </div>
-            <div class="footer-persona">{personaLabel(agentName)}</div>
-          {/if}
-        </footer>
-      </aside>
+      <GameSidebar
+        bind:activeTab
+        {snapshot}
+        agentLabel={personaLabel(agentName)}
+        {agentModel}
+        {agentPersona}
+        {agentError}
+        {hasHumanMove}
+        {thinking}
+        {chatBusy}
+        {coachBusy}
+        {drawBusy}
+        {canAgentMove}
+        onSendChat={sendChat}
+        onClearChat={clearChat}
+        onCoachExplain={coachExplain}
+        onCoachHint={coachHint}
+        onCoachReview={coachReview}
+        onCoachClear={coachClear}
+        onAgentMove={agentMove}
+      />
     </main>
 
     {#if broadcast}
@@ -1193,16 +895,6 @@
     justify-content: center;
   }
 
-  .app.broadcast .sidebar,
-  .app.broadcast .board-actions {
-    display: none;
-  }
-
-  .app.broadcast .stage {
-    max-width: max(320px, min(1100px, calc(100vh - 345px)));
-    gap: 10px;
-  }
-
   .broadcast-strip {
     flex: 0 0 auto;
     margin-top: 10px;
@@ -1212,6 +904,32 @@
     padding: 7px 12px;
     border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
     color: var(--text);
+  }
+
+  .btn {
+    padding: 8px 13px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel);
+    color: var(--text);
+    font-size: calc(11px * var(--font-scale));
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      border-color 120ms ease,
+      background 120ms ease,
+      color 120ms ease,
+      opacity 120ms ease;
+  }
+
+  .btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: var(--panel-2);
+  }
+
+  .btn:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
   }
 
   .topbar {
@@ -1325,335 +1043,6 @@
     gap: 22px;
   }
 
-  .stage {
-    display: flex;
-    width: 100%;
-    max-width: max(
-      320px,
-      min(780px, calc(100vh - 300px - (var(--font-scale) - 1) * 160px))
-    );
-    margin: 0 auto;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .board-shell {
-    position: relative;
-    width: 100%;
-  }
-
-  .thinking-ribbon {
-    position: absolute;
-    top: 14px;
-    left: 50%;
-    z-index: 7;
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 7px 12px;
-    border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--border));
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--panel) 88%, transparent);
-    color: var(--accent-strong);
-    font-family: var(--font-mono);
-    font-size: calc(10px * var(--font-scale));
-    pointer-events: none;
-    transform: translateX(-50%);
-    backdrop-filter: blur(8px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
-  }
-
-  .board-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 2px;
-  }
-
-  .draw-notice {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 8px 10px;
-    border: 1px solid color-mix(in srgb, var(--danger) 42%, var(--border));
-    border-radius: 9px;
-    background: color-mix(in srgb, var(--panel) 92%, var(--danger));
-    color: var(--muted);
-    font-size: calc(10px * var(--font-scale));
-    line-height: 1.5;
-  }
-
-  .draw-notice.accepted {
-    border-color: color-mix(in srgb, var(--success) 45%, var(--border));
-    background: color-mix(in srgb, var(--panel) 92%, var(--success));
-  }
-
-  .draw-notice div {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .draw-notice strong {
-    color: var(--text);
-    font-size: calc(10px * var(--font-scale));
-  }
-
-  .draw-notice button {
-    flex: 0 0 auto;
-    padding: 0 3px;
-    border: 0;
-    background: transparent;
-    color: var(--faint);
-    cursor: pointer;
-  }
-
-  .draw-notice button:hover {
-    color: var(--text);
-  }
-
-  .btn {
-    padding: 8px 13px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--panel);
-    color: var(--text);
-    font-size: calc(11px * var(--font-scale));
-    font-weight: 600;
-    cursor: pointer;
-    transition:
-      border-color 120ms ease,
-      background 120ms ease,
-      color 120ms ease,
-      opacity 120ms ease;
-  }
-
-  .btn:hover:not(:disabled) {
-    border-color: var(--accent);
-    background: var(--panel-2);
-  }
-
-  .btn:disabled {
-    opacity: 0.38;
-    cursor: not-allowed;
-  }
-
-  .btn.primary {
-    border-color: var(--accent);
-    background: var(--accent);
-    color: #17120b;
-  }
-
-  .btn.primary:hover:not(:disabled) {
-    background: var(--accent-strong);
-  }
-
-  .btn.danger:hover:not(:disabled) {
-    border-color: var(--danger);
-    color: var(--danger);
-  }
-
-  .btn.agent-move {
-    margin-left: auto;
-  }
-
-  .btn.small {
-    padding: 5px 9px;
-    font-size: calc(10px * var(--font-scale));
-  }
-
-  .sidebar {
-    position: sticky;
-    top: 20px;
-    display: flex;
-    height: calc(100vh - 100px);
-    min-height: 540px;
-    flex-direction: column;
-    overflow: hidden;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--panel);
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
-  }
-
-  .tabs {
-    display: flex;
-    flex: 0 0 auto;
-    flex-wrap: wrap;
-    gap: 2px;
-    padding: 7px 7px 0;
-    border-bottom: 1px solid var(--border);
-    background: var(--panel);
-  }
-
-  .tabs button {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 9px 8px 10px;
-    border: 0;
-    border-bottom: 2px solid transparent;
-    background: transparent;
-    color: var(--faint);
-    font-size: calc(10.5px * var(--font-scale));
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .tabs button:hover {
-    color: var(--muted);
-  }
-
-  .tabs button.active {
-    border-bottom-color: var(--accent);
-    color: var(--text);
-  }
-
-  .tabs button span {
-    padding: 1px 4px;
-    border-radius: 4px;
-    background: var(--panel-2);
-    color: var(--faint);
-    font-family: var(--font-mono);
-    font-size: calc(8px * var(--font-scale));
-  }
-
-  .tab-body {
-    min-height: 0;
-    flex: 1;
-    overflow: hidden;
-  }
-
-  .analysis-pane,
-  .chat-pane,
-  .coach-pane {
-    display: none;
-    height: 100%;
-  }
-
-  .analysis-pane.active,
-  .chat-pane.active,
-  .coach-pane.active {
-    display: block;
-  }
-
-  .sidebar-footer {
-    flex: 0 0 auto;
-    padding: 10px 13px;
-    border-top: 1px solid var(--border);
-    background: var(--panel);
-  }
-
-  .footer-line {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-  }
-
-  .footer-dot {
-    width: 5px;
-    height: 5px;
-    flex: 0 0 5px;
-    border-radius: 50%;
-    background: var(--success);
-  }
-
-  .footer-model {
-    overflow: hidden;
-    color: var(--muted);
-    font-family: var(--font-mono);
-    font-size: calc(9px * var(--font-scale));
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .footer-persona {
-    margin-top: 3px;
-    color: var(--faint);
-    font-family: var(--font-display);
-    font-size: calc(11px * var(--font-scale));
-    font-style: italic;
-  }
-
-  .agent-error {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    color: var(--muted);
-    font-size: calc(10px * var(--font-scale));
-    line-height: 1.45;
-  }
-
-  .agent-error strong {
-    color: var(--danger);
-    font-size: calc(10px * var(--font-scale));
-  }
-
-  .agent-error span {
-    max-height: 54px;
-    overflow: hidden;
-  }
-
-  .agent-error .btn {
-    align-self: flex-start;
-    margin-top: 3px;
-  }
-
-  .result-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 20;
-    display: grid;
-    padding: 24px;
-    place-items: center;
-    border-radius: 14px;
-    background: rgba(8, 6, 4, 0.68);
-    backdrop-filter: blur(4px);
-  }
-
-  .result-card {
-    width: min(420px, 100%);
-    padding: 26px;
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    background: var(--panel);
-    box-shadow: var(--shadow);
-    text-align: center;
-  }
-
-  .eyebrow {
-    margin: 0 0 7px;
-    color: var(--accent);
-    font-family: var(--font-mono);
-    font-size: calc(9px * var(--font-scale));
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-  }
-
-  .result-card h2 {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: calc(28px * var(--font-scale));
-    font-weight: 500;
-    line-height: 1.15;
-  }
-
-  .winner {
-    margin: 8px 0 0;
-    color: var(--muted);
-    font-size: calc(12px * var(--font-scale));
-  }
-
-  .result-actions {
-    display: flex;
-    justify-content: center;
-    gap: 9px;
-    margin-top: 20px;
-  }
-
   .error-banner {
     position: fixed;
     right: 20px;
@@ -1734,14 +1123,6 @@
     .main {
       grid-template-columns: 1fr;
     }
-    .sidebar {
-      position: static;
-      height: 560px;
-      min-height: 0;
-    }
-    .stage {
-      max-width: 720px;
-    }
   }
 
   @media (max-width: 700px) {
@@ -1759,12 +1140,6 @@
     .status-pill {
       flex: 1;
       justify-content: center;
-    }
-    .sidebar {
-      height: 520px;
-    }
-    .board-actions .btn.agent-move {
-      margin-left: 0;
     }
   }
 </style>
