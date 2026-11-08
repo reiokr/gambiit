@@ -1,6 +1,6 @@
 //! Tauri command boundary: validation, locking and background work.
 
-use gambiit_agent::{AgentSession, OpenCodeClient};
+use gambiit_agent::{AgentCancel, AgentSession, OpenCodeClient};
 use parking_lot::Mutex;
 use shakmaty::Color;
 use std::sync::Arc;
@@ -10,16 +10,25 @@ use crate::session::{ClockUpdate, DrawOfferOutcome, GameSnapshot, Session, parse
 use crate::settings::{
     Settings, credential_env_for_model, director_agent_config, ui_language_name,
 };
-use crate::{analysis, credentials, director, leaderboard, mcp, pgn, pieces, storage};
+use crate::{analysis, credentials, diagnostics, director, leaderboard, mcp, pgn, pieces, storage};
 
 pub(crate) struct AppState {
     session: Arc<Mutex<Session>>,
     mcp: Option<Arc<mcp::Bridge>>,
+    cancel: AgentCancel,
 }
 
 impl AppState {
-    pub(crate) fn new(session: Arc<Mutex<Session>>, mcp: Option<Arc<mcp::Bridge>>) -> Self {
-        Self { session, mcp }
+    pub(crate) fn new(
+        session: Arc<Mutex<Session>>,
+        mcp: Option<Arc<mcp::Bridge>>,
+        cancel: AgentCancel,
+    ) -> Self {
+        Self {
+            session,
+            mcp,
+            cancel,
+        }
     }
 }
 
@@ -33,6 +42,7 @@ pub(crate) async fn run_coach(
     let joined = tauri::async_runtime::spawn_blocking(move || {
         let mut agent =
             AgentSession::new(worker.config.clone()).map_err(|error| error.to_string())?;
+        agent.set_cancel(Some(worker.cancel.clone()));
         let (text, output) = agent
             .request_text(&worker.prompt)
             .map_err(|error| error.to_string())?;
@@ -115,8 +125,10 @@ pub(crate) async fn director_cut(
     let worker_plan = plan.clone();
     let worker_config = config.clone();
     let worker_model = settings.model.clone();
+    let cancel = state.cancel.begin();
     let cut = tauri::async_runtime::spawn_blocking(move || {
         let mut agent = AgentSession::new(worker_config).map_err(|error| error.to_string())?;
+        agent.set_cancel(Some(cancel));
         let mut total_tokens = 0u64;
         let mut total_cost = 0f64;
         let mut last_error = String::new();
@@ -168,6 +180,17 @@ pub(crate) fn get_state(state: State<'_, AppState>) -> Result<GameSnapshot, Stri
 }
 
 #[tauri::command]
+pub(crate) async fn setup_diagnostics(
+    state: State<'_, AppState>,
+) -> Result<diagnostics::SetupDiagnostics, String> {
+    let settings = state.session.lock().settings.clone();
+    let mcp_available = state.mcp.is_some();
+    tauri::async_runtime::spawn_blocking(move || diagnostics::collect(&settings, mcp_available))
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 pub(crate) fn clock_tick(state: State<'_, AppState>) -> Result<ClockUpdate, String> {
     let mut session = state.session.lock();
     session.tick_clock();
@@ -187,9 +210,11 @@ pub(crate) fn new_game(
 ) -> Result<GameSnapshot, String> {
     let color = parse_color(&human_color)
         .ok_or_else(|| "human_color must be white or black".to_string())?;
-    let mut session = state.session.lock();
-    *session = Session::new(settings, color);
-    Ok(session.snapshot())
+    let mut session = Session::new(settings, color);
+    session.use_cancel(state.cancel.clone());
+    let snapshot = session.snapshot();
+    *state.session.lock() = session;
+    Ok(snapshot)
 }
 
 #[tauri::command]
@@ -243,6 +268,12 @@ pub(crate) async fn offer_draw(state: State<'_, AppState>) -> Result<DrawOfferOu
 }
 
 #[tauri::command]
+pub(crate) fn cancel_agent(state: State<'_, AppState>) -> bool {
+    state.cancel.cancel();
+    true
+}
+
+#[tauri::command]
 pub(crate) fn takeback(state: State<'_, AppState>) -> Result<GameSnapshot, String> {
     state.session.lock().takeback()
 }
@@ -283,6 +314,7 @@ pub(crate) fn list_games() -> Result<Vec<storage::GameSummary>, String> {
 pub(crate) fn load_game(state: State<'_, AppState>, id: String) -> Result<GameSnapshot, String> {
     let saved = storage::load(&id)?;
     let mut session = Session::from_saved(saved)?;
+    session.use_cancel(state.cancel.clone());
     let snapshot = session.snapshot();
     *state.session.lock() = session;
     Ok(snapshot)
@@ -325,6 +357,7 @@ pub(crate) fn import_pgn(
     let imported = pgn::parse(&pgn)?;
     let mut session =
         Session::from_import(imported.game, settings, imported.commentary, imported.name);
+    session.use_cancel(state.cancel.clone());
     let snapshot = session.snapshot();
     *state.session.lock() = session;
     Ok(snapshot)

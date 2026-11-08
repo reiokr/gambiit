@@ -9,6 +9,8 @@
   export let accent = "#c9a227";
   export let busy = false;
   export let disabled = false;
+  export let cancelling = false;
+  export let onCancel: () => void = () => {};
   export let onSend: (message: string) => Promise<string | null> = async () => null;
   export let onClear: () => Promise<string | null> = async () => null;
 
@@ -91,17 +93,29 @@
         </span>
       </div>
     </div>
-    {#if messages.length > 0}
-      <button
-        class="clear"
-        type="button"
-        disabled={busy || clearing}
-        title={$i18n("chat.clear")}
-        on:click={clear}
-      >
-        {$i18n("chat.clear")}
-      </button>
-    {/if}
+    <div class="head-actions">
+      {#if busy}
+        <button
+          class="stop"
+          type="button"
+          disabled={cancelling}
+          on:click={onCancel}
+        >
+          {cancelling ? $i18n("app.cancelling") : $i18n("app.cancelAgent")}
+        </button>
+      {/if}
+      {#if messages.length > 0}
+        <button
+          class="clear"
+          type="button"
+          disabled={busy || clearing}
+          title={$i18n("chat.clear")}
+          on:click={clear}
+        >
+          {$i18n("chat.clear")}
+        </button>
+      {/if}
+    </div>
   </header>
 
   <div
@@ -288,6 +302,12 @@
     box-shadow: 0 0 6px var(--success);
   }
 
+  .head-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
   .clear {
     padding: 4px 7px;
     border: 1px solid var(--border);
@@ -458,6 +478,27 @@
 
   .dots i:nth-child(3) {
     animation-delay: 0.36s;
+  }
+
+  .stop {
+    padding: 4px 7px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--panel);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: calc(8px * var(--font-scale));
+    cursor: pointer;
+  }
+
+  .stop:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  .stop:disabled {
+    opacity: 0.5;
+    cursor: wait;
   }
 
   @keyframes blink {

@@ -12,7 +12,10 @@ use std::{
     io::{Read, Write},
     path::{Path, PathBuf},
     process::{Command, Stdio},
-    sync::OnceLock,
+    sync::{
+        Arc, Mutex, OnceLock,
+        atomic::{AtomicBool, Ordering},
+    },
     thread,
     time::{Duration, Instant, SystemTime},
 };
@@ -36,6 +39,41 @@ pub enum AgentError {
     EmptyResponse,
     #[error("could not prepare the Gambiit agent workspace: {0}")]
     Workspace(String),
+    #[error("{CANCELLED_MESSAGE}")]
+    Cancelled,
+}
+
+/// Stable error text used by the UI to distinguish a user cancellation from a
+/// real agent failure.
+pub const CANCELLED_MESSAGE: &str = "agent request was cancelled";
+
+/// Cancellation handle shared by the Tauri state and the running agent request.
+///
+/// `begin` installs a fresh flag for a new operation, so a late `cancel` can
+/// never poison the next request. `cancel` only needs the handle, not the game
+/// session lock, which is important because agent moves hold that lock while
+/// the child process runs.
+#[derive(Clone, Default)]
+pub struct AgentCancel {
+    current: Arc<Mutex<Option<Arc<AtomicBool>>>>,
+}
+
+impl AgentCancel {
+    pub fn begin(&self) -> Arc<AtomicBool> {
+        let flag = Arc::new(AtomicBool::new(false));
+        if let Ok(mut current) = self.current.lock() {
+            *current = Some(flag.clone());
+        }
+        flag
+    }
+
+    pub fn cancel(&self) {
+        if let Ok(current) = self.current.lock()
+            && let Some(flag) = current.as_ref()
+        {
+            flag.store(true, Ordering::Relaxed);
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -118,6 +156,21 @@ fn persona_instruction_for(config: &AgentConfig) -> String {
     } else {
         config.persona_prompt.trim().to_string()
     }
+}
+
+fn terminate_child(child: &mut std::process::Child) {
+    #[cfg(unix)]
+    {
+        let pid = child.id() as i32;
+        if pid > 0 {
+            // Negative pid targets the process group created above.
+            unsafe {
+                libc::kill(-pid, libc::SIGKILL);
+            }
+        }
+    }
+    let _ = child.kill();
+    let _ = child.wait();
 }
 
 #[derive(Debug, Clone)]
@@ -226,6 +279,15 @@ impl OpenCodeClient {
         })
     }
 
+    /// Construct a client for an explicit binary. Used by cancellation tests
+    /// and by embedders that already resolved the executable.
+    pub fn with_binary(binary: PathBuf, timeout_secs: u64) -> Self {
+        Self {
+            binary,
+            timeout_secs,
+        }
+    }
+
     pub fn binary(&self) -> &PathBuf {
         &self.binary
     }
@@ -242,15 +304,18 @@ impl OpenCodeClient {
         prompt: &str,
         session: Option<&str>,
     ) -> Result<OpenCodeOutput, AgentError> {
+        self.run_with_cancel(config, prompt, session, None)
+    }
+
+    pub fn run_with_cancel(
+        &self,
+        config: &AgentConfig,
+        prompt: &str,
+        session: Option<&str>,
+        cancel: Option<&AtomicBool>,
+    ) -> Result<OpenCodeOutput, AgentError> {
         let workspace = restricted_workspace()?;
-        self.run_with_agent(
-            config,
-            prompt,
-            session,
-            &[],
-            Some(&workspace),
-            Some("gambiit"),
-        )
+        self.run_with_agent(config, prompt, session, &[], Some(&workspace), cancel)
     }
 
     /// Run an MCP turn in the restricted agent project prepared by the caller.
@@ -260,15 +325,9 @@ impl OpenCodeClient {
         prompt: &str,
         session: Option<&str>,
         working_dir: &Path,
+        cancel: Option<&AtomicBool>,
     ) -> Result<OpenCodeOutput, AgentError> {
-        self.run_with_agent(
-            config,
-            prompt,
-            session,
-            &[],
-            Some(working_dir),
-            Some("gambiit"),
-        )
+        self.run_with_agent(config, prompt, session, &[], Some(working_dir), cancel)
     }
 
     fn run_with_agent(
@@ -278,9 +337,19 @@ impl OpenCodeClient {
         session: Option<&str>,
         extra_env: &[(String, String)],
         working_dir: Option<&Path>,
-        agent: Option<&str>,
+        cancel: Option<&AtomicBool>,
     ) -> Result<OpenCodeOutput, AgentError> {
+        if cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)) {
+            return Err(AgentError::Cancelled);
+        }
         let mut command = Command::new(&self.binary);
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::CommandExt;
+            // A dedicated process group lets cancellation terminate helpers such
+            // as the shell and its child processes, not just the parent.
+            command.process_group(0);
+        }
         if let Some(directory) = working_dir {
             command.current_dir(directory);
             command.env("PWD", directory);
@@ -306,10 +375,9 @@ impl OpenCodeClient {
             .arg(&config.model)
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-        if let Some(agent) = agent {
-            command.arg("--agent").arg(agent);
-        }
+            .stderr(Stdio::piped())
+            .arg("--agent")
+            .arg("gambiit");
         if let Some(session) = session {
             command.arg("-s").arg(session);
         }
@@ -340,12 +408,17 @@ impl OpenCodeClient {
 
         let started = Instant::now();
         let status = loop {
+            if cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)) {
+                terminate_child(&mut child);
+                let _ = stdout_reader.join();
+                let _ = stderr_reader.join();
+                return Err(AgentError::Cancelled);
+            }
             if let Some(status) = child.try_wait()? {
                 break status;
             }
             if started.elapsed() > Duration::from_secs(self.timeout_secs) {
-                let _ = child.kill();
-                let _ = child.wait();
+                terminate_child(&mut child);
                 let _ = stdout_reader.join();
                 let _ = stderr_reader.join();
                 return Err(AgentError::Timeout(self.timeout_secs));
@@ -450,6 +523,7 @@ pub struct AgentSession {
     config: AgentConfig,
     session_id: Option<String>,
     last_raw: Option<String>,
+    cancel: Option<Arc<AtomicBool>>,
 }
 
 impl AgentSession {
@@ -460,7 +534,13 @@ impl AgentSession {
             config,
             session_id: None,
             last_raw: None,
+            cancel: None,
         })
+    }
+
+    /// Attach the cancellation flag for the current operation.
+    pub fn set_cancel(&mut self, cancel: Option<Arc<AtomicBool>>) {
+        self.cancel = cancel;
     }
 
     pub fn config(&self) -> &AgentConfig {
@@ -516,10 +596,12 @@ impl AgentSession {
                 )
             };
 
-            let output = match self
-                .client
-                .run(&self.config, &prompt, self.session_id.as_deref())
-            {
+            let output = match self.client.run_with_cancel(
+                &self.config,
+                &prompt,
+                self.session_id.as_deref(),
+                self.cancel.as_deref(),
+            ) {
                 Ok(output) => output,
                 Err(error) => {
                     if let Some((turn, output)) = fallback.take() {
@@ -575,9 +657,12 @@ impl AgentSession {
         message: &str,
     ) -> Result<(String, OpenCodeOutput), AgentError> {
         let prompt = build_chat_prompt(game, &self.config, history, message);
-        let output = self
-            .client
-            .run(&self.config, &prompt, self.session_id.as_deref())?;
+        let output = self.client.run_with_cancel(
+            &self.config,
+            &prompt,
+            self.session_id.as_deref(),
+            self.cancel.as_deref(),
+        )?;
         if output.session_id.is_some() {
             self.session_id = output.session_id.clone();
         }
@@ -600,6 +685,7 @@ impl AgentSession {
             prompt,
             self.session_id.as_deref(),
             working_dir,
+            self.cancel.as_deref(),
         )?;
         if output.session_id.is_some() {
             self.session_id = output.session_id.clone();
@@ -611,9 +697,12 @@ impl AgentSession {
     /// Send one plain-text prompt and return the model's trimmed reply. Used by
     /// the honest coach, which has its own prompt and never touches the board.
     pub fn request_text(&mut self, prompt: &str) -> Result<(String, OpenCodeOutput), AgentError> {
-        let output = self
-            .client
-            .run(&self.config, prompt, self.session_id.as_deref())?;
+        let output = self.client.run_with_cancel(
+            &self.config,
+            prompt,
+            self.session_id.as_deref(),
+            self.cancel.as_deref(),
+        )?;
         if output.session_id.is_some() {
             self.session_id = output.session_id.clone();
         }
@@ -641,9 +730,12 @@ impl AgentSession {
                     last_error.as_deref().unwrap_or("invalid response"),
                 )
             };
-            let output = self
-                .client
-                .run(&self.config, &prompt, self.session_id.as_deref())?;
+            let output = self.client.run_with_cancel(
+                &self.config,
+                &prompt,
+                self.session_id.as_deref(),
+                self.cancel.as_deref(),
+            )?;
             if output.session_id.is_some() {
                 self.session_id = output.session_id.clone();
             }
@@ -1325,6 +1417,19 @@ fn find_on_path(binary: &str) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cancellation_handle_targets_only_the_current_request() {
+        let cancel = AgentCancel::default();
+        let first = cancel.begin();
+        assert!(!first.load(Ordering::Relaxed));
+        cancel.cancel();
+        assert!(first.load(Ordering::Relaxed));
+
+        let second = cancel.begin();
+        assert!(!second.load(Ordering::Relaxed));
+        assert_eq!(AgentError::Cancelled.to_string(), CANCELLED_MESSAGE);
+    }
 
     #[test]
     fn parses_plain_json() {

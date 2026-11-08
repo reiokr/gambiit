@@ -3,6 +3,7 @@
   import Board from "./Board.svelte";
   import { boardFromFen } from "./board";
   import { i18n } from "./i18n";
+  import { AGENT_CANCELLED_MESSAGE } from "./agent";
   import type {
     AnalysisClass,
     AnalysisReport,
@@ -17,6 +18,7 @@
 
   let director: DirectorCut | null = null;
   let busy = false;
+  let cancelling = false;
   let error = "";
   let token = 0;
   let lastGameId = "";
@@ -51,12 +53,25 @@
       }
     } catch (value) {
       if (run === token) {
-        error = value instanceof Error ? value.message : String(value);
+        const message = value instanceof Error ? value.message : String(value);
+        error = message === AGENT_CANCELLED_MESSAGE ? "" : message;
       }
     } finally {
       if (run === token) {
         busy = false;
       }
+    }
+  }
+
+  async function cancel() {
+    if (cancelling) return;
+    cancelling = true;
+    try {
+      await invoke("cancel_agent");
+    } catch {
+      // The running command reports the cancellation through its own error.
+    } finally {
+      cancelling = false;
     }
   }
 
@@ -117,6 +132,18 @@
             ? $i18n("analysis.directorWriting")
             : $i18n("analysis.directorCreate")}
         </button>
+        {#if busy}
+          <button
+            class="cancel-run"
+            type="button"
+            disabled={cancelling}
+            on:click={cancel}
+          >
+            {cancelling
+              ? $i18n("analysis.directorStopping")
+              : $i18n("analysis.directorCancel")}
+          </button>
+        {/if}
         {#if report.positions.length < 8}
           <small>{$i18n("analysis.directorTooShort")}</small>
         {/if}
@@ -198,6 +225,18 @@
               ? $i18n("analysis.directorWriting")
               : $i18n("analysis.directorRegenerate")}
           </button>
+          {#if busy}
+            <button
+              class="cancel-run"
+              type="button"
+              disabled={cancelling}
+              on:click={cancel}
+            >
+              {cancelling
+                ? $i18n("analysis.directorStopping")
+                : $i18n("analysis.directorCancel")}
+            </button>
+          {/if}
         </footer>
         {#if error}
           <p class="director-error">{error}</p>
@@ -315,6 +354,27 @@
   .run:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+  }
+
+  .cancel-run {
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--panel);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: calc(8px * var(--font-scale));
+    cursor: pointer;
+  }
+
+  .cancel-run:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  .cancel-run:disabled {
+    opacity: 0.5;
+    cursor: wait;
   }
 
   .director-cut {

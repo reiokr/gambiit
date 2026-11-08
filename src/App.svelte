@@ -35,6 +35,7 @@
   import { playSound } from "./lib/sound";
   import { i18n, localeMeta, setLocale } from "./lib/i18n";
   import { personaFor } from "./lib/personas";
+  import { AGENT_CANCELLED_MESSAGE } from "./lib/agent";
 
   type Tab = "moves" | "theater" | "chat" | "coach" | "analysis";
 
@@ -44,6 +45,8 @@
   let selected: string | null = null;
   let flipped = humanColor === "black";
   let thinking = false;
+  let agentCancelling = false;
+  let agentCancelled = false;
   let loading = true;
   let error = "";
   let activeTab: Tab = "theater";
@@ -198,6 +201,7 @@
     lastSoundPly = 0;
     drawNotice = null;
     thinking = false;
+    agentCancelled = false;
     humanColor = color;
     flipped = color === "black";
     saveHumanColor(color);
@@ -230,12 +234,19 @@
   async function agentMove() {
     if (!snapshot || thinking || snapshot.gameOver) return;
     thinking = true;
+    agentCancelled = false;
     error = "";
     try {
       const next = await invoke<GameSnapshot>("agent_move");
       applySnapshot(next);
+      agentCancelled = false;
     } catch (value) {
-      error = errorMessage(value);
+      const failure = errorMessage(value);
+      if (failure === AGENT_CANCELLED_MESSAGE) {
+        agentCancelled = true;
+      } else {
+        error = failure;
+      }
       try {
         const state = await invoke<GameSnapshot>("get_state");
         snapshot = state;
@@ -248,6 +259,18 @@
     }
   }
 
+  async function cancelAgent() {
+    if (agentCancelling) return;
+    agentCancelling = true;
+    try {
+      await invoke("cancel_agent");
+    } catch {
+      // The running command reports the cancellation through its own error.
+    } finally {
+      agentCancelling = false;
+    }
+  }
+
   async function humanMove(uci: string) {
     if (!snapshot || thinking || snapshot.gameOver) return;
     selected = null;
@@ -257,6 +280,7 @@
     try {
       const next = await invoke<GameSnapshot>("make_move", { mv: uci });
       applySnapshot(next);
+      agentCancelled = false;
       if (
         next.settings.responseMode === "auto" &&
         next.turn === next.agentColor &&
@@ -355,7 +379,10 @@
         comment: outcome.comment,
       };
     } catch (value) {
-      error = errorMessage(value);
+      const failure = errorMessage(value);
+      if (failure !== AGENT_CANCELLED_MESSAGE) {
+        error = failure;
+      }
     } finally {
       drawBusy = false;
     }
@@ -402,6 +429,9 @@
       return null;
     } catch (value) {
       const failure = errorMessage(value);
+      if (failure === AGENT_CANCELLED_MESSAGE) {
+        return $i18n("chat.cancelled");
+      }
       error = failure;
       return failure;
     } finally {
@@ -435,6 +465,9 @@
       return null;
     } catch (value) {
       const failure = errorMessage(value);
+      if (failure === AGENT_CANCELLED_MESSAGE) {
+        return null;
+      }
       error = failure;
       return failure;
     } finally {
@@ -521,6 +554,7 @@
       drawNotice = null;
       showGames = false;
       error = "";
+      agentCancelled = false;
       if (next.turn === next.agentColor && !next.gameOver) {
         await agentMove();
       }
@@ -586,6 +620,7 @@
       drawNotice = null;
       showGames = false;
       error = "";
+      agentCancelled = false;
       if (next.turn === next.agentColor && !next.gameOver) {
         await agentMove();
       }
@@ -774,6 +809,8 @@
         showResult={snapshot.gameOver && !resultDismissed}
         {broadcast}
         {canAgentMove}
+        {agentCancelled}
+        agentCancelling={agentCancelling}
         onSquareClick={onSquareClick}
         onPromotion={choosePromotion}
         onRematch={startGame}
@@ -783,6 +820,7 @@
         onOfferDraw={offerDraw}
         onResign={resign}
         onAgentMove={agentMove}
+        onCancelAgent={cancelAgent}
         onDismissDraw={() => (drawNotice = null)}
       />
 

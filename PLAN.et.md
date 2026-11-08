@@ -66,6 +66,9 @@ bluff-seadega.
 - Avalik GitHubi release `v0.1.0` sisaldab lähtetarballi, Archi paketti ja
   `SHA256SUMS` faili; GitHub Actions jooksutab iga push'i ja PR-i peale
   frontendi check/build'i, Rusti vormingu, clippy ja testid.
+- Seadistuse diagnostika kontrollib OpenCode'i, Stockfishi, mudelit, volitusi,
+  mängude salvestust ja MCP-silda. Agentkäigud, chat, coach ja Director's Cut
+  on peatatavad ning agentkäigul on eraldi kordusnupp.
 - `packaging/aur/` sisaldab release-põhist AUR-retsepti kinnitatud
   kontrollsummaga ja `.SRCINFO`-ga; AUR-i avaldamine on edasi lükatud, kuni AUR-i konto on olemas.
 - Litsents: MIT (`LICENSE`); Stockfish jääb väliseks GPL-tarkvaraks.
@@ -226,7 +229,7 @@ Valmis:
 
 Testid:
 
-- **101 Rust testi** rohelised (core 10, engine 2, agent 19, Tauri app 70) +
+- **104 Rust testi** rohelised (core 10, engine 2, agent 20, Tauri app 72) +
   13 ignored testi (päris-mudeli käigu-, eestikeelne, isiksusestiili-,
   bluff-intensiivsuse-, treeneri-, režissööri-, MCP kahe käigu- ja MCP
   vestluse/viigi-smoke-test ning neli Stockfishi testi).

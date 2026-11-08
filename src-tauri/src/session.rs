@@ -1,6 +1,8 @@
 //! Game session state, clocks, persisted snapshots and agent turns.
 
-use gambiit_agent::{AgentConfig, AgentSession, AgentTurn, DrawDecision};
+use gambiit_agent::{
+    AgentCancel, AgentConfig, AgentSession, AgentTurn, CANCELLED_MESSAGE, DrawDecision,
+};
 use gambiit_core::{Game, GameStatus, MoveInfo, MoveRecord, color_key};
 use gambiit_engine::{Candidate, Stockfish};
 use serde::{Deserialize, Serialize};
@@ -8,7 +10,10 @@ use shakmaty::{Color, Role, Square};
 use std::{
     hash::{Hash, Hasher},
     io::Write,
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
     time::{Instant, SystemTime, UNIX_EPOCH},
 };
 
@@ -178,6 +183,7 @@ pub(crate) struct CoachJob {
     pub(crate) level: Option<u8>,
     pub(crate) prompt: String,
     pub(crate) config: AgentConfig,
+    pub(crate) cancel: Arc<AtomicBool>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -227,6 +233,7 @@ pub(crate) struct Session {
     pub(crate) game_name: String,
     pub(crate) created_at: u64,
     pub(crate) persist_enabled: bool,
+    cancel: AgentCancel,
 }
 
 impl Session {
@@ -370,7 +377,22 @@ impl Session {
             game_name,
             created_at,
             persist_enabled: true,
+            cancel: AgentCancel::default(),
         }
+    }
+
+    /// Share the cancellation handle with the Tauri state so Cancel does not
+    /// need to wait for the session lock held during an agent request.
+    pub(crate) fn use_cancel(&mut self, cancel: AgentCancel) {
+        self.cancel = cancel;
+    }
+
+    fn begin_agent_request(&mut self) -> Arc<AtomicBool> {
+        let token = self.cancel.begin();
+        if let Some(agent) = self.agent.as_mut() {
+            agent.set_cancel(Some(token.clone()));
+        }
+        token
     }
 
     /// Start Stockfish on first use instead of on every session creation.
@@ -474,6 +496,7 @@ impl Session {
             return Err("The game is over.".to_string());
         }
 
+        let cancel = self.begin_agent_request();
         let game = self.game.clone();
         let human_color = game.human_color();
         let language = self.settings.agent_language_name.clone();
@@ -539,6 +562,7 @@ impl Session {
             level,
             prompt,
             config,
+            cancel,
         })
     }
 
@@ -606,6 +630,7 @@ impl Session {
             return Err("The message is too long (maximum 2000 characters).".to_string());
         }
 
+        self.begin_agent_request();
         let history: Vec<(String, String)> = self
             .chat
             .iter()
@@ -628,6 +653,13 @@ impl Session {
                 .unwrap_or_else(|| "Agent is unavailable.".to_string()))
         };
 
+        if result
+            .as_ref()
+            .err()
+            .is_some_and(|error| error == CANCELLED_MESSAGE)
+        {
+            return Err(CANCELLED_MESSAGE.to_string());
+        }
         self.chat.push(ChatMessage {
             role: "user".to_string(),
             text: text.to_string(),
@@ -676,6 +708,7 @@ impl Session {
             return Err("The game is over.".to_string());
         }
 
+        self.begin_agent_request();
         let use_mcp = self.settings.agent_mode == "mcp" && bridge.is_some();
         let result = if use_mcp {
             self.request_mcp_draw(bridge.as_ref().expect("checked above"))
@@ -918,6 +951,7 @@ impl Session {
             return Err("It is the human's turn.".into());
         }
 
+        let cancel = self.begin_agent_request();
         let (multipv, depth, skill) = engine_params(&self.settings);
         let fen = self.game.fen();
         let mut candidates = match self.engine() {
@@ -939,6 +973,9 @@ impl Session {
             }
         };
 
+        if cancel.load(Ordering::Relaxed) {
+            return Err(CANCELLED_MESSAGE.to_string());
+        }
         let prompt_game = self.game.clone();
         let tolerance = style::tolerance(&self.settings.persona_style);
         let style_index = if self.settings.persona == "Custom" {
@@ -1004,7 +1041,9 @@ impl Session {
         let (turn, output) = match result {
             Ok(value) => value,
             Err(error) => {
-                self.agent_error = Some(error.clone());
+                if error != CANCELLED_MESSAGE {
+                    self.agent_error = Some(error.clone());
+                }
                 return Err(error);
             }
         };

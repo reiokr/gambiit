@@ -38,6 +38,10 @@ What works now:
 - optional MCP agent transport: the model queries the board and candidates and
   submits its move through local tools; prompt mode remains the fallback;
 - automatic agent replies after the human move, or an “Agent move” button;
+- cancellable agent turns with Stop and Retry for moves, chat, coach requests and
+  the Director's Cut;
+- setup diagnostics in Settings → Connection: OpenCode, Stockfish, model,
+  credentials, game storage and MCP bridge readiness;
 - session reuse across moves, so the opponent remembers the game;
 - commentary cards with evaluations, candidate moves, rejection reasons, plan,
   elapsed time and token usage;

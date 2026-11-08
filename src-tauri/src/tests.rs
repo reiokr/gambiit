@@ -3,12 +3,59 @@ use crate::session::{CandidateView, GameClock, shuffle_candidates, write_mcp_con
 use crate::settings::{
     credential_env_for_model, director_agent_config, engine_params, normalize_settings,
 };
-use gambiit_agent::AgentSession;
+use gambiit_agent::{AgentCancel, AgentConfig, AgentError, AgentSession, OpenCodeClient};
 use gambiit_core::{Game, GameStatus};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 fn session() -> Session {
     Session::new_with_persist(Settings::default(), Color::White, false)
+}
+
+#[cfg(unix)]
+#[test]
+fn cancelling_an_agent_request_kills_the_child_process() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let directory = std::env::temp_dir().join(format!("gambiit-cancel-{}", std::process::id()));
+    std::fs::create_dir_all(&directory).unwrap();
+    let binary = directory.join("fake-opencode");
+    std::fs::write(
+        &binary,
+        "#!/bin/sh\nprintf '%s\\n' '{\"type\":\"text\",\"part\":{\"text\":\"working\"}}'\nsleep 30\n",
+    )
+    .unwrap();
+    std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+    let client = OpenCodeClient::with_binary(binary, 60);
+    let cancel = AgentCancel::default();
+    let token = cancel.begin();
+    let started = Instant::now();
+    let worker = std::thread::spawn(move || {
+        client.run_with_cancel(&AgentConfig::default(), "hello", None, Some(&token))
+    });
+    std::thread::sleep(Duration::from_millis(250));
+    cancel.cancel();
+    let result = worker.join().unwrap();
+    let elapsed = started.elapsed();
+    assert!(matches!(result, Err(AgentError::Cancelled)));
+    assert!(
+        elapsed < Duration::from_secs(5),
+        "cancellation took {elapsed:?}"
+    );
+    let _ = std::fs::remove_dir_all(&directory);
+}
+
+#[test]
+fn setup_diagnostics_reports_the_expected_checks() {
+    let report = crate::diagnostics::collect(&Settings::default(), false);
+    assert_eq!(report.app_version, env!("CARGO_PKG_VERSION"));
+    assert_eq!(report.checks.len(), 6);
+    let check = |key: &str| report.checks.iter().find(|check| check.key == key).unwrap();
+    assert!(check("model").ok);
+    assert!(check("storage").ok);
+    assert!(!check("mcp").ok);
+    assert!(!check("mcp").required);
+    assert!(check("opencode").required);
 }
 
 #[test]

@@ -179,6 +179,9 @@ Lens bluff setting.
 - Public GitHub release `v0.1.0` ships the source archive, the Arch package and
   `SHA256SUMS`; GitHub Actions runs the frontend check/build, Rust formatting,
   clippy and tests on every push and pull request.
+- Setup diagnostics report OpenCode, Stockfish, model, credentials, game
+  storage and MCP bridge readiness. Agent moves, chat, coach requests and the
+  Director's Cut can be cancelled; agent moves expose an explicit retry action.
 - `packaging/aur/` contains the release-based AUR recipe with a pinned checksum
   and `.SRCINFO`; AUR publication is deferred until an AUR account is available.
 - License: MIT (`LICENSE`); Stockfish remains external GPL software.

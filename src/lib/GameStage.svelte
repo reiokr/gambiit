@@ -28,6 +28,8 @@
   export let showResult = false;
   export let broadcast = false;
   export let canAgentMove = false;
+  export let agentCancelled = false;
+  export let agentCancelling = false;
   export let onSquareClick: (square: string) => void = () => {};
   export let onPromotion: (uci: string) => void = () => {};
   export let onRematch: (color: ColorKey) => void = () => {};
@@ -37,6 +39,7 @@
   export let onOfferDraw: () => void = () => {};
   export let onResign: () => void = () => {};
   export let onAgentMove: () => void = () => {};
+  export let onCancelAgent: () => void = () => {};
   export let onDismissDraw: () => void = () => {};
 
   $: agentClock = snapshot.clock
@@ -127,11 +130,31 @@
       <div class="thinking-ribbon">
         <span class="spinner"></span>
         {$i18n("app.thinking", { name: agentLabel })}
+        <button
+          class="cancel-agent"
+          type="button"
+          disabled={agentCancelling}
+          on:click={onCancelAgent}
+        >
+          {agentCancelling
+            ? $i18n("app.cancelling")
+            : $i18n("app.cancelAgent")}
+        </button>
       </div>
     {:else if drawBusy}
       <div class="thinking-ribbon">
         <span class="spinner"></span>
         {$i18n("app.consideringDraw")}
+        <button
+          class="cancel-agent"
+          type="button"
+          disabled={agentCancelling}
+          on:click={onCancelAgent}
+        >
+          {agentCancelling
+            ? $i18n("app.cancelling")
+            : $i18n("app.cancelAgent")}
+        </button>
       </div>
     {/if}
 
@@ -218,9 +241,10 @@
     >
       {$i18n("app.resign")}
     </button>
-    {#if canAgentMove && snapshot.settings.responseMode === "button"}
+    {#if canAgentMove &&
+    (snapshot.settings.responseMode === "button" || agentCancelled)}
       <button class="btn primary agent-move" type="button" on:click={onAgentMove}>
-        {$i18n("app.agentMove")}
+        {agentCancelled ? $i18n("app.retryAgent") : $i18n("app.agentMove")}
       </button>
     {/if}
   </div>
@@ -283,6 +307,28 @@
     transform: translateX(-50%);
     backdrop-filter: blur(8px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+  }
+
+  .cancel-agent {
+    padding: 2px 7px;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+    border-radius: 999px;
+    background: var(--panel);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: calc(8px * var(--font-scale));
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  .cancel-agent:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent-strong);
+  }
+
+  .cancel-agent:disabled {
+    opacity: 0.55;
+    cursor: wait;
   }
 
   .board-actions {

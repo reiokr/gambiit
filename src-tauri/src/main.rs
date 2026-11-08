@@ -6,6 +6,7 @@ mod bluff;
 mod coach;
 mod commands;
 mod credentials;
+mod diagnostics;
 mod director;
 mod leaderboard;
 mod mcp;
@@ -16,6 +17,7 @@ mod settings;
 mod storage;
 mod style;
 
+use gambiit_agent::AgentCancel;
 use parking_lot::Mutex;
 use shakmaty::Color;
 use std::sync::Arc;
@@ -33,11 +35,10 @@ pub fn run() {
             None
         }
     };
-    let session = Arc::new(Mutex::new(Session::new_with_persist(
-        Settings::default(),
-        Color::White,
-        false,
-    )));
+    let cancel = AgentCancel::default();
+    let mut session = Session::new_with_persist(Settings::default(), Color::White, false);
+    session.use_cancel(cancel.clone());
+    let session = Arc::new(Mutex::new(session));
     let local_api = match api::start(session.clone()) {
         Ok(api) => {
             eprintln!(
@@ -53,9 +54,10 @@ pub fn run() {
         }
     };
     let app = tauri::Builder::default()
-        .manage(commands::AppState::new(session, bridge))
+        .manage(commands::AppState::new(session, bridge, cancel))
         .invoke_handler(tauri::generate_handler![
             commands::get_state,
+            commands::setup_diagnostics,
             commands::clock_tick,
             commands::new_game,
             commands::update_settings,
@@ -68,6 +70,7 @@ pub fn run() {
             commands::coach_review,
             commands::coach_clear,
             commands::offer_draw,
+            commands::cancel_agent,
             commands::takeback,
             commands::resign,
             commands::list_models,

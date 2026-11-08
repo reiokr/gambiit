@@ -3,6 +3,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import type { Settings } from "./types";
   import ModelBadge from "./ModelBadge.svelte";
+  import SetupDiagnostics from "./SetupDiagnostics.svelte";
   import { i18n } from "./i18n";
 
   export let draft: Settings;
@@ -148,6 +149,7 @@
 </script>
 
 <section class="section">
+  <SetupDiagnostics />
   <div class="section-title">
     <h3>{$i18n("settings.connections")}</h3>
     <span>{$i18n("settings.connectionsHint")}</span>

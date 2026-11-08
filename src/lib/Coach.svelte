@@ -11,6 +11,8 @@
   export let messages: CoachMessage[] = [];
   export let busy = false;
   export let disabled = false;
+  export let cancelling = false;
+  export let onCancel: () => void = () => {};
   export let onExplain: () => Promise<string | null> = async () => null;
   export let onHint: (level: number) => Promise<string | null> = async () => null;
   export let onReview: () => Promise<string | null> = async () => null;
@@ -207,6 +209,14 @@
       <div class="thinking">
         <i></i>
         {$i18n("coach.thinking")}
+        <button
+          class="stop"
+          type="button"
+          disabled={cancelling}
+          on:click={onCancel}
+        >
+          {cancelling ? $i18n("app.cancelling") : $i18n("app.cancelAgent")}
+        </button>
       </div>
     {/if}
   </div>
@@ -421,6 +431,28 @@
     border-radius: 50%;
     background: var(--accent);
     animation: pulse 1.1s ease-in-out infinite;
+  }
+
+  .stop {
+    margin-left: auto;
+    padding: 4px 7px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--panel);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: calc(8px * var(--font-scale));
+    cursor: pointer;
+  }
+
+  .stop:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  .stop:disabled {
+    opacity: 0.5;
+    cursor: wait;
   }
 
   @keyframes pulse {

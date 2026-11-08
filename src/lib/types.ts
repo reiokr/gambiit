@@ -180,6 +180,21 @@ export interface GameSummary {
   result: string;
 }
 
+export interface SetupCheck {
+  key: string;
+  ok: boolean;
+  required: boolean;
+  path: string | null;
+  version: string | null;
+  detail: string | null;
+}
+
+export interface SetupDiagnostics {
+  appVersion: string;
+  overallOk: boolean;
+  checks: SetupCheck[];
+}
+
 export interface GameSnapshot {
   gameId: string;
   gameName: string;
