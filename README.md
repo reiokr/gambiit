@@ -89,6 +89,8 @@ steps in `PLAN.md`.
 ## Run the desktop app
 
 ```bash
+git clone https://github.com/reiokr/gambiit.git
+cd gambiit
 pnpm install
 pnpm tauri dev
 ```
