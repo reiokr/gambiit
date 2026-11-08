@@ -67,7 +67,7 @@ bluff-seadega.
   `SHA256SUMS` faili; GitHub Actions jooksutab iga push'i ja PR-i peale
   frontendi check/build'i, Rusti vormingu, clippy ja testid.
 - `packaging/aur/` sisaldab release-põhist AUR-retsepti kinnitatud
-  kontrollsummaga ja `.SRCINFO`-ga; AUR-i avaldamine ootab maintainer'i SSH-võtit.
+  kontrollsummaga ja `.SRCINFO`-ga; AUR-i avaldamine on edasi lükatud, kuni AUR-i konto on olemas.
 - Litsents: MIT (`LICENSE`); Stockfish jääb väliseks GPL-tarkvaraks.
 
 ### Treenerirežiim (valmis)

@@ -180,7 +180,7 @@ Lens bluff setting.
   `SHA256SUMS`; GitHub Actions runs the frontend check/build, Rust formatting,
   clippy and tests on every push and pull request.
 - `packaging/aur/` contains the release-based AUR recipe with a pinned checksum
-  and `.SRCINFO`; AUR publication waits for the maintainer's SSH key.
+  and `.SRCINFO`; AUR publication is deferred until an AUR account is available.
 - License: MIT (`LICENSE`); Stockfish remains external GPL software.
 
 ### Coach mode (implemented)
