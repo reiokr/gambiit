@@ -61,8 +61,13 @@ bluff-seadega.
   128, 256, 512 ja scalable, MIT-litsentsi ja README.
 - Käitusaegsed sõltuvused: `webkit2gtk-4.1`, `gtk3`, `libsoup3`. `opencode` või
   `opencode-desktop` ning `stockfish` on valikulised; kumbagi ei bundeldata.
-- Kontrollitud `makepkg` build: 2,8 MB pakett, 9,9 MB paigaldatud, paketist
+- Kontrollitud `makepkg` build: 3,1 MB pakett, 10,7 MB paigaldatud, paketist
   käivitatud binaar töötab ja `.desktop` fail läbib `desktop-file-validate`.
+- Avalik GitHubi release `v0.1.0` sisaldab lähtetarballi, Archi paketti ja
+  `SHA256SUMS` faili; GitHub Actions jooksutab iga push'i ja PR-i peale
+  frontendi check/build'i, Rusti vormingu, clippy ja testid.
+- `packaging/aur/` sisaldab release-põhist AUR-retsepti kinnitatud
+  kontrollsummaga ja `.SRCINFO`-ga; AUR-i avaldamine ootab maintainer'i SSH-võtit.
 - Litsents: MIT (`LICENSE`); Stockfish jääb väliseks GPL-tarkvaraks.
 
 ### Treenerirežiim (valmis)

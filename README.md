@@ -1,5 +1,7 @@
 # Gambiit
 
+[![CI](https://github.com/reiokr/gambiit/actions/workflows/ci.yml/badge.svg)](https://github.com/reiokr/gambiit/actions/workflows/ci.yml)
+
 A Rust-based desktop chess game where your opponent is an OpenCode model — with a
 personality, a plan, and a taste for theater.
 
@@ -98,7 +100,14 @@ pnpm tauri dev
 
 ### Arch / CachyOS package
 
-The repository ships an Arch package recipe in [`packaging/`](packaging/):
+A prebuilt package is attached to the
+[latest GitHub release](https://github.com/reiokr/gambiit/releases/latest):
+
+```bash
+sudo pacman -U gambiit-0.1.0-1-x86_64.pkg.tar.zst
+```
+
+The repository also ships an Arch package recipe in [`packaging/`](packaging/):
 
 ```bash
 ./packaging/build-package.sh

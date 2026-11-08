@@ -174,8 +174,13 @@ Lens bluff setting.
 - Runtime dependencies: `webkit2gtk-4.1`, `gtk3`, `libsoup3`. `opencode` or
   `opencode-desktop` and `stockfish` are optional runtime dependencies; neither
   is bundled.
-- Verified `makepkg` build: 2.8 MB package, 9.9 MB installed, the packaged
+- Verified `makepkg` build: 3.1 MB package, 10.7 MB installed, the packaged
   binary launches and the desktop entry passes `desktop-file-validate`.
+- Public GitHub release `v0.1.0` ships the source archive, the Arch package and
+  `SHA256SUMS`; GitHub Actions runs the frontend check/build, Rust formatting,
+  clippy and tests on every push and pull request.
+- `packaging/aur/` contains the release-based AUR recipe with a pinned checksum
+  and `.SRCINFO`; AUR publication waits for the maintainer's SSH key.
 - License: MIT (`LICENSE`); Stockfish remains external GPL software.
 
 ### Coach mode (implemented)
