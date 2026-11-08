@@ -577,8 +577,20 @@ gambiit/
 │  ├─ gambiit-agent/          # transports, prompts, orchestration
 │  └─ gambiit-mcp/            # stdio MCP bridge -> local HTTP API
 ├─ src-tauri/                 # Tauri shell, axum API, commands
+│  ├─ src/main.rs             # startup and module root
+│  ├─ src/settings.rs         # settings, personas, agent config
+│  ├─ src/session.rs          # game state, clocks, snapshots, agent turns
+│  ├─ src/commands.rs         # Tauri commands and background work
+│  ├─ src/api.rs, mcp.rs      # local API and MCP bridge
+│  ├─ src/tests.rs            # application tests
 ├─ src/                       # Svelte UI
 │  ├─ App.svelte
+│  ├─ lib/GameStage.svelte    # board, players, result
+│  ├─ lib/GameSidebar.svelte  # tabs, chat, coach, analysis
+│  ├─ lib/SettingsPanel.svelte
+│  ├─ lib/SettingsGame.svelte
+│  ├─ lib/SettingsAppearance.svelte
+│  ├─ lib/SettingsConnection.svelte
 │  ├─ lib/*.svelte, *.ts
 │  ├─ locales/en.json         # UI + agent language catalogs
 │  ├─ locales/et.json

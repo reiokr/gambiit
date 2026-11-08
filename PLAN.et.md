@@ -585,17 +585,27 @@ gambiit/
 │  ├─ gambiit-agent/          # OpenCode prompt + JSON + retry
 │  └─ gambiit-cli/            # terminaliprototüüp
 ├─ src-tauri/                 # Tauri shell, käsud, sessioon
-│  ├─ src/main.rs
+│  ├─ src/main.rs             # käivitus ja moodulite juur
+│  ├─ src/settings.rs         # seaded, profiilid, agendi konfiguratsioon
+│  ├─ src/session.rs          # mänguseis, kellad, snapshot'id, agent-käigud
+│  ├─ src/commands.rs         # Tauri käsud ja taustatööd
+│  ├─ src/api.rs, mcp.rs      # lokaalne API ja MCP sild
+│  ├─ src/tests.rs            # Rakenduse testid
 │  ├─ tauri.conf.json
 │  ├─ capabilities/
 │  └─ icons/
 ├─ src/                       # Svelte UI
 │  ├─ App.svelte
+│  ├─ lib/GameStage.svelte    # laud, mängijad, tulemus
+│  ├─ lib/GameSidebar.svelte  # vahekaardid, chat, coach, analüüs
+│  ├─ lib/SettingsPanel.svelte
+│  ├─ lib/SettingsGame.svelte
+│  ├─ lib/SettingsAppearance.svelte
+│  ├─ lib/SettingsConnection.svelte
 │  ├─ lib/Board.svelte
 │  ├─ lib/PlayerBar.svelte
 │  ├─ lib/MoveList.svelte
 │  ├─ lib/Commentary.svelte
-│  ├─ lib/SettingsPanel.svelte
 │  ├─ lib/*.ts
 │  ├─ locales/en.json         # UI + agendi keel
 │  ├─ locales/et.json
